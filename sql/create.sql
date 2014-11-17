@@ -33,3 +33,7 @@ create table shopidentifyer.event_log (
   event_message varchar(255)
 
 );
+
+create table shopidentifyer.message_queue (
+  message varchar(255)
+);

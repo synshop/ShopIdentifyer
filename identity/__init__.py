@@ -1,16 +1,11 @@
-
-import serial
-
-import gevent
-
 from crypto import SettingsUtil, CryptoUtil
 
 import config
 import MySQLdb as mysql
 
-from flask import Flask, request, session, g, Response
-from flask import redirect, url_for, abort, make_response
-from flask import render_template, flash
+from flask import Flask, request, g
+from flask import redirect,  make_response
+from flask import render_template, jsonify
 
 # from identity.services import stripe
 from identity.models import Member
@@ -28,7 +23,10 @@ app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, E
 app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
 
 def connect_db():
-    return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER, passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
+    return mysql.connect(host=config.DATABASE_HOST,
+                         user=config.DATABASE_USER,
+                         passwd=app.config["DATABASE_PASSWORD"],
+                         db=config.DATABASE_SCHEMA)
 
 def get_db():
     if not hasattr(g, 'mysql_db'):
@@ -56,35 +54,23 @@ def load_test_data():
     db.commit()
     db.close()
 
-@app.route('/member')
-def show_member():
+@app.route('/member/<badge_serial>')
+def show_member(badge_serial):
+
     db = get_db()
     cur = db.cursor()
-    cur.execute('select * from members')
+    cur.execute('select badge_serial,full_name from members where badge_serial = %s', (badge_serial,))
     entries = cur.fetchall()
+
+    #
+    ## Stripe Stuff, Meetup Stuff goes here
+    #
 
     return render_template('show_member.html', entries=entries)
 
-def event_stream():
-    ser = serial.Serial(config.SERIAL_DEVICE, config.SERIAL_BAUD_RATE, timeout=1)
-
-    while True:
-        gevent.sleep(2)
-        str1 = ser.readline()
-        if len(str1) > 3:
-            yield 'data: %s \n\n' % (str1)
-            str1 = None
-
-@app.route('/my_event_source')
-def sse_request():
-    return Response(event_stream(),mimetype='text/event-stream')
-
-@app.route('/')
-def page():
-    return render_template('sse.html')
-
 @app.route('/member/photo/<badge_serial>.jpg')
 def member_photo(badge_serial):
+
     db = get_db()
     cur = db.cursor()
     cur.execute("select badge_photo from members where badge_serial = %s", (badge_serial,))
@@ -97,8 +83,9 @@ def member_photo(badge_serial):
 
     return response
 
-@app.route("/member/files/<badge_serial>-wavier.pdf")
+@app.route("/member/<badge_serial>/files/liability-waiver.pdf")
 def member_wavier(badge_serial):
+
     db = get_db()
     cur = db.cursor()
     cur.execute("select liability_waiver from members where badge_serial = %s", (badge_serial,))
@@ -108,12 +95,70 @@ def member_wavier(badge_serial):
     response.headers['Content-Description'] = 'Liability Wavier'
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/pdf'
-    #response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
+    # response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
     response.headers['Content-Disposition'] = 'inline'
-
 
     return response
 
-@app.route('/member/files/<badge_serial>-vetted.pdf')
-def member_vetted(badge_serial3):
-    pass
+@app.route('/member/<badge_serial>/files/vetted-membership-form.pdf')
+def member_vetted(badge_serial):
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("select vetted_membership_form from members where badge_serial = %s", (badge_serial,))
+    wavier = cur.fetchone()
+
+    response = make_response(wavier)
+    response.headers['Content-Description'] = 'Vetted Membership Form'
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Content-Type'] = 'application/pdf'
+    # response.headers['Content-Disposition'] = 'attachment; filename=vetted-membership-form.pdf'
+    response.headers['Content-Disposition'] = 'inline'
+
+    return response
+
+@app.route('/queue/message', methods=['PUT'])
+def add_message():
+
+    db = get_db()
+    cur = db.cursor()
+    message = request.form['message'].strip()
+    cur.execute("insert into message_queue (message) values (%s)", (message,))
+    db.commit()
+
+    return jsonify({'status':'enqueued successfully'})
+
+@app.route('/queue/message', methods=['DELETE'])
+def remove_message():
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("select message from message_queue limit 1")
+        message = cur.fetchall()
+        cur.execute("delete from message_queue")
+        db.commit()
+
+        message = {'message':message[0]}
+
+    except IndexError:
+        message = {'message':"NULL"}
+
+    except:
+        import sys
+        print sys.exc_info()[0]
+        message = {'message':"NULL"}
+
+    return jsonify(message)
+
+@app.route('/')
+def index():
+    return redirect("/validate", code=302)
+
+@app.route('/validate')
+def validate():
+    return render_template('validate.html')
+
+@app.route('/validate/manual')
+def validate_manual():
+    return render_template('validate_manual.html')
