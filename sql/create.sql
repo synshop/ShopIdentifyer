@@ -30,10 +30,17 @@ create table shopidentifyer.event_log (
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
   badge_id int NOT NULL,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  event_type ENUM('SWIPE','ACCESS') DEFAULT 'SWIPE',
   event_message varchar(255)
 
 );
 
 create table shopidentifyer.message_queue (
   message varchar(255)
+);
+
+create table shopidentifyer.stripe_lookup (
+  stripe_id varchar(255),
+  stripe_email varchar(255),
+  subscription varchar(255)
 );

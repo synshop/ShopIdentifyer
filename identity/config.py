@@ -3,7 +3,7 @@
 # command line utility to generate the encrypted values.
 #
 
-ENCRYPTED_STRIPE_TOKEN = ''
+ENCRYPTED_STRIPE_TOKEN = 'RDj4Uqm7xCvGQgJWH0Y3IcD0Px5uMNPKE77BDfgaj7ScrBuaOEvOC5ZPGMj3tnsj'
 ENCRYPTED_DATABASE_PASSWORD = ''
 
 DATABASE_USER = 'root'

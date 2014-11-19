@@ -1,12 +1,17 @@
 <html>
+
+<style type="text/css">
+
+</style>
+
 <body>
 
-  {% for entry in entries %}
-    <h2>{{ entry[1] }}</h2>
-    <a href="/member/{{ entry[0] }}/files/liability-waiver.pdf">Liability Wavier</a>
-  {% else %}
-    <h2>Huh, weird, this badge doesn't seem to exist in the system</h2>
-  {% endfor %}
+  <h2>{{ entry.full_name }}</h2>
+  <h2>{{ entry.is_vetted }}</h2>
+
+
+  <img src="/member/{{entry.badge_serial}}/files/photo.jpg"/>
+
 
 </body>
 </html>
