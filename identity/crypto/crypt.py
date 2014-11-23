@@ -6,8 +6,8 @@ __author__ = 'bryce'
 
 def main(args):
     if len(args) != 4 or args[1] not in ['dec', 'enc']:
-        print 'Usage: crypt.py enc plaintext key'
-        print '       crypt.py dec encrypted key'
+        print 'Usage: crypt.py enc <plaintext> <passphrase>'
+        print '       crypt.py dec <encrypted> <passphrase>'
         return
 
     op = args[1]
