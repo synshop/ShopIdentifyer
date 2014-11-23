@@ -8,7 +8,7 @@ Setup
         $ cd ShopIdentifyer
         $ pip install -r requirements.txt
 
-2. Additionally, the system needs a identity/config.py file to set up with the following properties:
+2. Additionally, the system needs a identity/config.py file including the following properties:
 
         #
         # Some of these values are encrypted.  Please use the ./crypto/crypto.py
