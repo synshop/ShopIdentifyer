@@ -1,7 +1,9 @@
+Setup
+===
 To run the system, you'll need to create a identity/config.py file with the following values:
 
     #
-    # Some of these values are encrypted.  Please use the./crypto/crypto.py
+    # Some of these values are encrypted.  Please use the ./crypto/crypto.py
     # command line utility to generate the encrypted values.
     #
 
@@ -13,7 +15,13 @@ To run the system, you'll need to create a identity/config.py file with the foll
     DATABASE_PORT = 3306
     DATABASE_SCHEMA = "shopidentifyer"
 
-    SERIAL_DEVICE = '/dev/tty.usbserial-A800509r'
-    SERIAL_BAUD_RATE = 9600
+The Serial Remote
+===
+In addtion to the Flask web application, there is a out of process deamon that listens for incoming
+RFID swipes on the serial port, and then pushes them to the system.
 
-    MESSAGE_QUEUE="http://localhost:5000/queue/message"
+The deamon is located in ./serial_remote/serial_listener.py and can be started as follows:
+
+    $ python serial_remote/serial_listener.py start
+
+Please note that this assumes you have already set up a virtualenv with the requirements.txt satisfied.
