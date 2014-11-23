@@ -4,6 +4,8 @@
 <title>SYN Shop Validate User</title>
 <head>
 
+<link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
 <style type="text/css">
 
 .scanner-icon {
@@ -19,7 +21,7 @@ h1 {
   text-align: center;
 }
 
-h5 {
+h4 {
   font-family: "Arial";
   text-align: center;
 }
@@ -35,7 +37,7 @@ h5 {
 
 </style>
 
-<script type="text/javascript" src="//code.jquery.com/jquery-1.8.0.min.js"></script>
+<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
 <script type="text/javascript">
 
   $(document).ready (
@@ -62,7 +64,7 @@ h5 {
 <h1>swipe card on reader to begin</h1>
 <img class="scanner-icon" src="{{ url_for('static', filename='images/swipe-icon.png')}}" />
 
-<h5><a href="/validate/manual">or click here to manually verify someone</a></h5>
+<h4><a href="/validate/manual">or click here to manually verify someone</a></h4>
 </div>
 
 </body>

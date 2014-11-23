@@ -1,7 +1,7 @@
 from crypto import SettingsUtil, CryptoUtil
 
 from identity.stripe import get_stripe_cache
-from identity.stripe import get_membership_status
+from identity.stripe import get_payment_status
 
 import config
 #import logging
@@ -39,12 +39,12 @@ def stripe_cache():
         db = get_db()
 
         cur = db.cursor()
-        cur.execute('delete from stripe_lookup')
+        cur.execute('delete from stripe_cache')
         db.commit()
 
         for member in member_array:
             cur = db.cursor()
-            cur.execute("insert into stripe_lookup values (%s, %s, %s)",(member['stripe_id'],member['stripe_email'], member["member_sub_plan"]))
+            cur.execute("insert into stripe_cache values (%s, %s, %s)",(member['stripe_id'],member['stripe_email'], member["member_sub_plan"]))
             db.commit()
 
 s1.start()
@@ -72,17 +72,20 @@ def load_test_data():
     with open("/Users/bmunroe/mug.jpg", mode='rb') as file:
         badge_photo = file.read()
 
-    with open("/Users/bmunroe/microcontrollers.pdf", mode='rb') as file:
+    with open("/Users/bmunroe/liability-waiver.pdf", mode='rb') as file:
         waiver_pdf = file.read()
+
+    with open("/Users/bmunroe/vetted_membership_form.pdf", mode='rb') as file:
+        vetted_pdf = file.read()
 
     db = connect_db()
     cur = db.cursor()
 
-    insert_data = ("53006599FE51","ACTIVE","Aakin Patel","aakin@aakin.net",badge_photo, waiver_pdf)
-    cur.execute('insert into members (badge_serial, badge_status, full_name, stripe_email,badge_photo, liability_waiver) values (%s,%s,%s,%s,%s,%s)', insert_data)
+    insert_data = ("53006599FE51","ACTIVE","Aakin Patel","aakin@synshop.org","aakin@aakin.net",badge_photo, waiver_pdf,vetted_pdf,1,"702-123-1234","Aakins Mom","702-123-1235","aakin","aakin")
+    cur.execute('insert into members (badge_serial, badge_status, full_name, primary_email, stripe_email,badge_photo, liability_waiver, vetted_membership_form,is_vetted,mobile,emergency_contact_name,emergency_contact_mobile,drupal_name,nick_name) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
 
-    insert_data = ("450052BA9B36","ACTIVE","James Wynhoff","jimmypopali96@gmail.com",badge_photo, waiver_pdf)
-    cur.execute('insert into members (badge_serial, badge_status, full_name, stripe_email,badge_photo, liability_waiver) values (%s,%s,%s,%s,%s,%s)', insert_data)
+    insert_data = ("450052BA9B36","ACTIVE","James Wynhoff","jimmypopali96@gmail.com","jimmypopali96@gmail.com",badge_photo, waiver_pdf,"702-123-1234","Jimmys Mom","702-123-1235","TheProgramGuy","JimmyPop")
+    cur.execute('insert into members (badge_serial, badge_status, full_name,  primary_email, stripe_email,badge_photo, liability_waiver,mobile,emergency_contact_name,emergency_contact_mobile,drupal_name,nick_name) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
 
     db.commit()
     db.close()
@@ -90,33 +93,50 @@ def load_test_data():
 @app.route('/member/<badge_serial>')
 def show_member(badge_serial):
 
+    swipe_type = request.args.get('s')
+
+    if swipe_type != None:
+        swipe = "MANUAL_SWIPE"
+    else:
+        swipe = "BADGE_SWIPE"
+
     db = get_db()
     cur = db.cursor()
-    cur.execute('select badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile from members where badge_serial = %s', (badge_serial,))
+
+    cur.execute('select badge_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
     entries = cur.fetchall()
     member = entries[0]
 
-    cur.execute("select stripe_id from stripe_lookup where stripe_email = %s", [member[8]])
+    cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
+    db.commit()
+
+    cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
     entries = cur.fetchall()
     stripe_id = entries[0][0]
 
     user = {}
 
-    user["badge_serial"] = member[0]
-    user["badge_status"] = member[1]
-    user["created_on"] = member[2]
-    user["changed_on"] = member[3]
-    user["full_name"] = member[4]
-    user["nick_name"] = member[5]
-    user["drupal_name"] = member[6]
-    user["primary_email"] = member[7]
-    user["meetup_email"] = member[9]
-    user["mobile"] = member[10]
-    user["emergency_contact_name"] = member[11]
-    user["emergency_contact_mobile"] = member[12]
-    user['is_vetted'] = get_membership_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    user["badge_serial"] = member[1]
+    user["badge_status"] = member[2]
+    user["created_on"] = member[3]
+    user["changed_on"] = member[4]
+    user["full_name"] = member[5]
+    user["nick_name"] = member[6]
+    user["drupal_name"] = member[7]
+    user["primary_email"] = member[8]
+    user["meetup_email"] = member[10]
+    user["mobile"] = member[11]
+    user["emergency_contact_name"] = member[12]
+    user["emergency_contact_mobile"] = member[13]
 
-    return render_template('show_member.html', entry=user)
+    if member[14] == 1:
+        user['vetted_status'] = "Vetted Member"
+    else:
+        user["vetted_status"] = "Not Vetted Member"
+
+    user["payment_status"] = get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+
+    return render_template('show_member.html', member=user)
 
 @app.route('/member/<badge_serial>/files/photo.jpg')
 def member_photo(badge_serial):
@@ -212,3 +232,19 @@ def validate():
 @app.route('/validate/manual')
 def validate_manual():
     return render_template('validate_manual.html')
+
+@app.route('/search',methods=['GET'])
+def find_user():
+    user = request.args.get('s')
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select badge_serial,full_name,primary_email from members where full_name like %s', ("%" + user + '%',))
+    data = cur.fetchall()
+
+    results = []
+
+    for row in data:
+        results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2]})
+
+    return jsonify({'results':results})

@@ -27,7 +27,7 @@ def get_stripe_cache(key=None):
 
     return member_array
 
-def get_membership_status(key=None,member_id=None):
+def get_payment_status(key=None,member_id=None):
 
     stripe.api_version = '2013-02-13'
     stripe.api_key = key
@@ -35,6 +35,6 @@ def get_membership_status(key=None,member_id=None):
     count = stripe.Customer.retrieve(member_id).subscriptions.all()['count']
 
     if (count != 0):
-        return "Good Standing"
+        return "In Good Standing"
     else:
         return "Delinquent"
