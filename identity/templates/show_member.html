@@ -9,6 +9,7 @@
 
 <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
 
 <script type="text/javascript">
 
@@ -16,6 +17,23 @@
   $(document).ready (
 
     function() {
+
+      var data = {
+        labels: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri","Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri","Sat"],
+        datasets: [
+        {
+          label: "Swipe Dataset",
+          fillColor: "#6B8E23",
+          strokeColor: "rgba(220,220,220,0.8)",
+          highlightFill: "rgba(220,220,220,0.75)",
+          highlightStroke: "rgba(220,220,220,1)",
+          data: [1, 0, 2, 1, 1, 0, 0,1,1, 0, 2, 1, 1, 0, 1]
+        },
+        ]
+      };
+
+      var ctx = document.getElementById("swipeChart").getContext("2d");
+      var myBarChart = new Chart(ctx).Bar(data);
 
       $("#again").click(function(){
         window.location.href = "/validate/";
@@ -109,6 +127,14 @@ body {
         {% endif %}
 
       </table>
+    </div>
+
+    <div class="panel panel-primary">
+      <div class="panel-heading"><h1 class="panel-title">2 Week Swipe Frequency:</h1></div>
+      <div class="panel-body" style="text-align:center;">
+        <canvas id="swipeChart" style="padding-left:20px;padding-top:20px;" height="100" width="900"></canvas>
+      </div>
+    </div>
     </div>
 
 </div>

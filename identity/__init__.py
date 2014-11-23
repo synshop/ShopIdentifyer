@@ -240,12 +240,12 @@ def find_user():
 
     db = get_db()
     cur = db.cursor()
-    cur.execute('select badge_serial,full_name,primary_email from members where full_name like %s', ("%" + user + '%',))
+    cur.execute('select badge_serial,full_name,primary_email,badge_status from members where full_name like %s', ("%" + user + '%',))
     data = cur.fetchall()
 
     results = []
 
     for row in data:
-        results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2]})
+        results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2],'badge_status':row[3]})
 
     return jsonify({'results':results})
