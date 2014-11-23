@@ -25,12 +25,13 @@ app.config['DEBUG'] = True
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 # app.config['DATBASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
+app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
 
 # Start cron tasks
 # This helps with stripe information lookup performance
 s1 = BackgroundScheduler()
 
-@s1.scheduled_job('interval', seconds=30)
+@s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def stripe_cache():
 
     member_array = get_stripe_cache(key=app.config['STRIPE_TOKEN'])
