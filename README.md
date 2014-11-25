@@ -1,3 +1,9 @@
+Introduction
+===
+Over the past two years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where the management of validating membership when entering the shop is no longer a first-name basis and was in need of something more robust and automated.
+
+This system attempts to 
+
 Setup (Development)
 ===
 
@@ -56,4 +62,10 @@ Inside of ./serial_remote/config.py, you can change the value for the RFID seria
 The RFID Reader
 ===
 
-IN PROGRESS
+We are using the following RFID reader + USB breakout board:
+
+SparkFun RFID USB Reader
+  * https://www.sparkfun.com/products/9963
+
+RFID Reader ID-12LA (125 kHz)
+  * https://www.sparkfun.com/products/11827
