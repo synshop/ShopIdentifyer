@@ -4,18 +4,18 @@ from identity.stripe import get_stripe_cache
 from identity.stripe import get_payment_status
 
 import config
-#import logging
+import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import MySQLdb as mysql
 
-from flask import Flask, request, g
+from flask import Flask, request, g, flash
 from flask import redirect,  make_response
 from flask import render_template, jsonify
 
 RUN_MODE = 'development'
-# logging.basicConfig()
+#logging.basicConfig()
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
@@ -91,6 +91,79 @@ def load_test_data():
     db.commit()
     db.close()
 
+@app.route('/member/new', methods=['GET','POST'])
+def new_member():
+
+    # Give me a new form, or if a POST then save the data
+    if request.method == "GET":
+        return render_template('new-member.html')
+
+    if request.files['liability_wavier_form'].filename != None:
+        liability_wavier_form = request.files['liability_wavier_form'].read()
+
+    if request.files['vetted_membership_form'].filename != None:
+        vetted_membership_form = request.files['vetted_membership_form'].read()
+
+    if request.files['badge_photo'] != None:
+        badge_photo = request.files['badge_photo'].read()
+
+    insert_data = (
+        request.form.get('badge_serial'),
+        'ACTIVE',
+        request.form.get('full_name'),
+        request.form.get('nick_name'),
+        request.form.get('drupal_name'),
+        request.form.get('primary_email'),
+        request.form.get('stripe_email'),
+        request.form.get('meetup_email'),
+        request.form.get('mobile'),
+        request.form.get('emergency_contact_name'),
+        request.form.get('emergency_contact_mobile'),
+        request.form.get('is_vetted',0),
+        liability_wavier_form,
+        vetted_membership_form,
+        badge_photo
+    )
+
+    db = connect_db()
+    cur = db.cursor()
+    cur.execute('insert into members (badge_serial,badge_status,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+
+    db.commit()
+    db.close()
+
+    return render_template('new-member.html')
+
+@app.route('/member/<badge_serial>/edit')
+def edit_new_member(badge_serial):
+    db = connect_db()
+    cur = db.cursor()
+
+    cur.execute("select badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s", (badge_serial,))
+    entries = cur.fetchall()
+    member = entries[0]
+
+    user = {}
+
+    user["badge_serial"] = badge_serial
+    user["badge_status"] = member[0]
+    user["created_on"] = member[1]
+    user["changed_on"] = member[2]
+    user["full_name"] = member[3]
+    user["nick_name"] = member[4]
+    user["drupal_name"] = member[5]
+    user["primary_email"] = member[6]
+    user["meetup_email"] = member[7]
+    user["mobile"] = member[8]
+    user["emergency_contact_name"] = member[9]
+    user["emergency_contact_mobile"] = member[10]
+    user["is_vetted"] = member[11]
+
+    db.commit()
+    db.close()
+
+    return render_template('edit-member.html', member=user)
+
 @app.route('/member/<badge_serial>')
 def show_member(badge_serial):
 
@@ -114,6 +187,24 @@ def show_member(badge_serial):
     cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
     entries = cur.fetchall()
     stripe_id = entries[0][0]
+
+    swipe_freq_sql = """
+        select
+            date(el.created_on) as day, count(1)
+        from
+            shopidentifyer.members as m
+            inner join shopidentifyer.event_log as el
+            on (m.badge_id = el.badge_id)
+        where
+            el.created_on >= date_add(date(now()), interval -14 day)
+            and el.event_type in ("BADGE_SWIPE","MANUAL_SWIPE")
+            and m.badge_serial = %s
+        group by
+            date(el.created_on)
+        order by 1 desc
+    """
+
+    # cur.execute(swipe_freq_sql, [badge_serial,])
 
     user = {}
 
@@ -225,6 +316,10 @@ def remove_message():
 @app.route('/')
 def index():
     return redirect("/validate/", code=302)
+
+@app.route('/admin')
+def admin_page():
+    return render_template('admin.html')
 
 @app.route('/validate/')
 def validate():

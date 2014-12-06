@@ -35,7 +35,7 @@
             $('#results').append('<tr><th style="width:200px;">Full Name</th><th style="width:200px">Primary Email Address</th><th>Badge Serial</th><th>Badge Status</th><th>Action(s)</th></tr>');
 
             for (x in data.results) {
-              $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td>' + data.results[x].badge_serial + '</td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a> | <a href="#">Edit Information</a></td></tr>');
+              $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td>' + data.results[x].badge_serial + '</td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a> | <a href="/member/' + data.results[x].badge_serial + '/edit">Edit Information</a></td></tr>');
             }
 
           }});

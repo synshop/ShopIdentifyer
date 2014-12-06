@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<title>SYN Shop Member - Edit member</title>
+
+<head>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/jasny-bootstrap.min.css') }}" rel="stylesheet">
+
+  <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/jasny-bootstrap.min.js') }}"></script>
+
+  <style>
+  body {
+    min-height: 1000px;
+    padding-top: 70px;
+  }
+
+  </style>
+
+</head>
+<body>
+
+  <!-- Fixed navbar -->
+  <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="/">SYN Shop Identity Management System</a>
+      </div>
+      <div id="navbar" class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+        </ul>
+        <!--
+        <ul class="nav navbar-form navbar-right">
+          <li>  <button type="button" class="btn btn-default" id='again'>Validate a different user</button> </li></li>
+        </ul>
+        -->
+      </div><!--/.nav-collapse -->
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
+
+<!--
+      <div class="alert alert-warning alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <strong>How to use:</strong> Fields
+      </div>
+-->
+
+      <div class="form-group">
+        <label for="meta_info" class="col-sm-2 control-label">Badge Info:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="meta_info" name="meta_info" disabled value="Created On: {{ member.created_on }}, Last Updated: {{ member.changed_on }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="badge_serial" name="badge_serial" placeholder="" value="{{ member.badge_serial }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="badge_status" class="col-sm-2 control-label">Badge Status:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="badge_status" name="badge_status" placeholder="" value="{{ member.badge_status }}">
+        </div>
+      </div>
+
+      <hr/>
+
+      <div class="form-group">
+        <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
+        <div class="col-sm-10">
+          <input type="checkbox" id="is_vetted" name="is_vetted" value="1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="col-sm-2 control-label"><a href="/member/{{ member.badge_serial }}/files/photo.jpg">Photo:</a></label>
+        <div class="col-sm-10">
+          <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+            <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
+            <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
+            <input type="file" name="badge_photo"></span>
+            <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="full_name" name="full_name" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="nick_name" class="col-sm-2 control-label">Nickname:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="nick_name" name="nick_name" placeholder="">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="drupal_name" class="col-sm-2 control-label">Drupal Name:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="drupal_name" name="drupal_name" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="primary_email" class="col-sm-2 control-label">Primary Email:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="primary_email" name="primary_email" placeholder="">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="stripe_email" name="stripe_email" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="meetup_email" class="col-sm-2 control-label">Meetup Email:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="meetup_email" name="meetup_email" placeholder="">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="mobile" class="col-sm-2 control-label">Cell #:</label>
+        <div class="col-sm-10">
+          <input type="tel" class="form-control" id="mobile" name="mobile" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" placeholder="">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="emergency_contact_mobile" class="col-sm-2 control-label">Emergency Contact #:</label>
+        <div class="col-sm-10">
+          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="col-sm-2 control-label">Vetted Member Form:</label>
+        <div class="col-sm-10">
+          <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+            <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
+            <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
+            <input type="file" name="vetted_membership_form"></span>
+            <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+          </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+      <label class="col-sm-2 control-label">Liability Wavier:</label>
+      <div class="col-sm-10">
+        <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+          <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
+          <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
+          <input type="file" name="liability_wavier_form"></span>
+          <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+        </div>
+      </div>
+    </div>
+
+      <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+          <button type="submit" class="btn btn-default">Create!</button>
+        </div>
+      </div>
+    </form>
+
+  </div>
+
+</body>
+</html>

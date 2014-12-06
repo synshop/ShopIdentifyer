@@ -5,7 +5,7 @@ create database shopidentifyer;
 create table shopidentifyer.members (
 
   badge_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  badge_serial varchar(255) NOT NULL,
+  badge_serial varchar(255) NOT NULL UNIQUE,
   badge_status ENUM('ACTIVE', 'INACTIVE','LOST','BROKEN') NOT NULL DEFAULT "ACTIVE",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
