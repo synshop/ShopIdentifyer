@@ -63,7 +63,7 @@
       <div class="form-group">
         <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="badge_serial" name="badge_serial" placeholder="" value="{{ member.badge_serial }}">
+          <input type="text" class="form-control" id="badge_serial" name="badge_serial" disabled value="{{ member.badge_serial }}">
         </div>
       </div>
 
@@ -98,64 +98,64 @@
       <div class="form-group">
         <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="full_name" name="full_name" placeholder="">
+          <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
         </div>
       </div>
 
       <div class="form-group">
         <label for="nick_name" class="col-sm-2 control-label">Nickname:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="nick_name" name="nick_name" placeholder="">
+          <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.nick_name }}">
         </div>
       </div>
       <div class="form-group">
         <label for="drupal_name" class="col-sm-2 control-label">Drupal Name:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="drupal_name" name="drupal_name" placeholder="">
+          <input type="text" class="form-control" id="drupal_name" name="drupal_name" value="{{ member.drupal_name }}">
         </div>
       </div>
 
       <div class="form-group">
         <label for="primary_email" class="col-sm-2 control-label">Primary Email:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="primary_email" name="primary_email" placeholder="">
+          <input type="text" class="form-control" id="primary_email" name="primary_email" value="{{ member.primary_email }}">
         </div>
       </div>
       <div class="form-group">
         <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="stripe_email" name="stripe_email" placeholder="">
+          <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}">
         </div>
       </div>
 
       <div class="form-group">
         <label for="meetup_email" class="col-sm-2 control-label">Meetup Email:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="meetup_email" name="meetup_email" placeholder="">
+          <input type="text" class="form-control" id="meetup_email" name="meetup_email" value="{{ member.meetup_email }}">
         </div>
       </div>
       <div class="form-group">
         <label for="mobile" class="col-sm-2 control-label">Cell #:</label>
         <div class="col-sm-10">
-          <input type="tel" class="form-control" id="mobile" name="mobile" placeholder="">
+          <input type="tel" class="form-control" id="mobile" name="mobile" value="{{ member.mobile }}">
         </div>
       </div>
 
       <div class="form-group">
         <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" placeholder="">
+          <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ member.emergency_contact_name }}">
         </div>
       </div>
       <div class="form-group">
         <label for="emergency_contact_mobile" class="col-sm-2 control-label">Emergency Contact #:</label>
         <div class="col-sm-10">
-          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" placeholder="">
+          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" value="{{ member.emergency_contact_mobile }}" placeholder="">
         </div>
       </div>
 
       <div class="form-group">
-        <label class="col-sm-2 control-label">Vetted Member Form:</label>
+        <label class="col-sm-2 control-label"><a href="/member/{{ member.badge_serial }}/files/vetted-membership-form.pdf">Vetted Member Form:</a></label>
         <div class="col-sm-10">
           <div class="fileinput fileinput-new input-group" data-provides="fileinput">
             <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
@@ -167,7 +167,7 @@
     </div>
 
     <div class="form-group">
-      <label class="col-sm-2 control-label">Liability Wavier:</label>
+      <label class="col-sm-2 control-label"><a href="/member/{{ member.badge_serial }}/files/liability-waiver.pdf">Liability Wavier:</a></label>
       <div class="col-sm-10">
         <div class="fileinput fileinput-new input-group" data-provides="fileinput">
           <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
@@ -180,7 +180,7 @@
 
       <div class="form-group">
         <div class="col-sm-offset-2 col-sm-10">
-          <button type="submit" class="btn btn-default">Create!</button>
+          <button type="submit" class="btn btn-default">Update!</button>
         </div>
       </div>
     </form>

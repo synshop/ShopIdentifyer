@@ -15,12 +15,17 @@ class SerialListener(Daemon):
         while 1:
 
             try:
-                time.sleep(1)
-                str1 = ser.readline()
+                time.sleep(.1)
+                data = ser.readline()
 
-                if len(str1) > 3:
-                    s = str1.lstrip('\x02').rstrip()
-                    payload = {"message":s}
+                #if len(str1) > 3:
+                #    s = data.lstrip('\x02').rstrip()
+
+                if len(data) > 0:
+                    # Read and discard the ETX byte
+                    ser.read(1)
+                    # The actual id consists of the 10 characters after the STX byte
+                    payload = {"message":data[1:11]}
                     r = requests.put(config.MESSAGE_QUEUE,data=payload)
 
             except:
