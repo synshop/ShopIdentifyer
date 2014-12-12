@@ -2,8 +2,6 @@ Introduction
 ===
 Over the past two years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where the management of validating membership when entering the shop is no longer a first-name basis and was in need of something more robust and automated.
 
-This system attempts to
-
 Setup (Development)
 ===
 
@@ -41,7 +39,7 @@ Setup (Development)
         MAIL_USE_SSL=False
         MAIL_DEBUG=True
 
-Please not that <span style="background-color:#FFD700">some of these properties are encrypted.  When the web server starts up, it will prompt you for a decryption password.</span>  This is the same password that you will use to encrypt the properties using the tool in ./identity/crypto/crypt.py.  The instructions for use are pretty straightforward:
+Please note that <em style="background-color:#FFD700">some of these properties are encrypted.  When the web server starts up, it will prompt you for a decryption password.</em>  This is the same password that you will use to encrypt the properties using the tool in ./identity/crypto/crypt.py.  The instructions for use are pretty straightforward:
 
     $ python crypt.py
 

@@ -2,6 +2,7 @@ from crypto import SettingsUtil, CryptoUtil
 
 from identity.stripe import get_stripe_cache
 from identity.stripe import get_payment_status
+from identity.stripe import DELINQUENT, IN_GOOD_STANDING
 
 import config
 import logging
@@ -14,6 +15,8 @@ from flask import Flask, request, g, flash
 from flask import redirect,  make_response
 from flask import render_template, jsonify
 
+from flask_mail import Mail, Message
+
 RUN_MODE = 'development'
 #logging.basicConfig()
 
@@ -23,9 +26,18 @@ app = Flask(__name__)
 
 app.config['DEBUG'] = True
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
-# app.config['DATBASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
+# app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
+
+app.config['MAIL_SERVER'] = config.MAIL_SERVER
+app.config['MAIL_PORT'] = config.MAIL_PORT
+app.config['MAIL_USE_TLS'] = config.MAIL_USE_TLS
+app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
+app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,ENCRYPTION_KEY)
+app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
+
+mail = Mail(app)
 
 # Start cron tasks
 # This helps with stripe information lookup performance
@@ -132,7 +144,7 @@ def new_member():
     db.commit()
     db.close()
 
-    return render_template('new-member.html')
+    return render_template('new_member.html')
 
 @app.route('/member/<badge_serial>/edit', methods=['GET','POST'])
 def edit_new_member(badge_serial):
@@ -165,7 +177,7 @@ def edit_new_member(badge_serial):
         db.commit()
         db.close()
 
-        return render_template('edit-member.html', member=user)
+        return render_template('edit_member.html', member=user)
 
     if request.method == "POST":
         db = connect_db()
@@ -272,7 +284,16 @@ def show_member(badge_serial):
     else:
         user["vetted_status"] = "Not Vetted Member"
 
-    user["payment_status"] = get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+
+    # send an email to folks if user is flagged as delinquent
+    if user["payment_status"] == DELINQUENT:
+        msg = Message()
+        msg.recipients = ["brian@synshop.org"]
+        msg.sender = "alarm@synshop.org"
+        msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
+        msg.body = "%s is swiping in and is delinquent" % (user["full_name"], )
+        mail.send(msg)
 
     return render_template('show_member.html', member=user)
 
@@ -390,3 +411,12 @@ def find_user():
         results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2],'badge_status':row[3]})
 
     return jsonify({'results':results})
+
+@app.route('/email')
+def email_user():
+
+       msg = Message("Hello",sender="alarm@synshop.org",recipients=["brian@synshop.org"])
+       msg.body = "testing"
+       mail.send(msg)
+
+       return jsonify({'status':'mailed successfully'})

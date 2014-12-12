@@ -1,5 +1,8 @@
 import stripe
 
+IN_GOOD_STANDING = "In Good Standing"
+DELINQUENT = "Delinquent"
+
 def get_stripe_cache(key=None):
 
     stripe.api_version = '2013-02-13'
@@ -35,6 +38,6 @@ def get_payment_status(key=None,member_id=None):
     count = stripe.Customer.retrieve(member_id).subscriptions.all()['count']
 
     if (count != 0):
-        return "In Good Standing"
+        return IN_GOOD_STANDING
     else:
-        return "Delinquent"
+        return DELINQUENT
