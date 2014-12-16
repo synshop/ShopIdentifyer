@@ -26,6 +26,9 @@ Setup (Development)
         ENCRYPTED_MAIL_USERNAME = 'encrypted-mail-username'
         ENCRYPTED_MAIL_PASSWORD = 'encrypted-mail-password'
 
+        ENCRYPTED_SESSION_KEY = 'session-key-salt'
+        ENCRYPTED_ADMIN_PASSPHRASE = "encrypted-admin-password"
+
         DATABASE_USER = 'root'
         DATABASE_HOST = 'localhost'
         DATABASE_PORT = 3306
