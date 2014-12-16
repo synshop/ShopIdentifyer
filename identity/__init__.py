@@ -1,10 +1,11 @@
 from crypto import SettingsUtil, CryptoUtil
 
+import config
+
 from identity.stripe import get_stripe_cache
 from identity.stripe import get_payment_status
-from identity.stripe import DELINQUENT, IN_GOOD_STANDING
+from identity.stripe import DELINQUENT, IN_GOOD_STANDING, D_EMAIL_TEMPLATE
 
-import config
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -14,6 +15,7 @@ import MySQLdb as mysql
 from flask import Flask, request, g, flash
 from flask import redirect,  make_response
 from flask import render_template, jsonify
+from flask import session, escape
 
 from flask_mail import Mail, Message
 
@@ -23,6 +25,8 @@ RUN_MODE = 'development'
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
 app = Flask(__name__)
+
+app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['DEBUG'] = True
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
@@ -36,6 +40,8 @@ app.config['MAIL_USE_TLS'] = config.MAIL_USE_TLS
 app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
 app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,ENCRYPTION_KEY)
 app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
+
+app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 
 mail = Mail(app)
 
@@ -108,7 +114,7 @@ def new_member():
 
     # Give me a new form, or if a POST then save the data
     if request.method == "GET":
-        return render_template('new-member.html')
+        return render_template('new_member.html')
 
     if request.files['liability_wavier_form'].filename != "":
         liability_wavier_form = request.files['liability_wavier_form'].read()
@@ -288,11 +294,21 @@ def show_member(badge_serial):
 
     # send an email to folks if user is flagged as delinquent
     if user["payment_status"] == DELINQUENT:
+
+        # This email is for shop management
         msg = Message()
-        msg.recipients = ["brian@synshop.org"]
-        msg.sender = "alarm@synshop.org"
+        msg.recipients = ["monitoring@synshop.org"]
+        msg.sender = "info@synshop.org"
         msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
-        msg.body = "%s is swiping in and is delinquent" % (user["full_name"], )
+        msg.body = "%s is swiping in and is delinquent in stripe\n\nMore info can be found here: https://dashboard.stripe.com/customers/%s" % (user["full_name"],stripe_id)
+        mail.send(msg)
+
+        # This is for the user
+        msg = Message()
+        msg.recipients = [user["primary_email"],]
+        msg.sender = "info@synshop.org"
+        msg.subject = "Your payments to SYN Shop are failing!"
+        msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
         mail.send(msg)
 
     return render_template('show_member.html', member=user)
@@ -412,11 +428,18 @@ def find_user():
 
     return jsonify({'results':results})
 
-@app.route('/email')
-def email_user():
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
+            session['logged_in'] = True
+            flash('You were logged in')
+            return redirect("/validate")
 
-       msg = Message("Hello",sender="alarm@synshop.org",recipients=["brian@synshop.org"])
-       msg.body = "testing"
-       mail.send(msg)
+    return render_template('login.html')
 
-       return jsonify({'status':'mailed successfully'})
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    flash('You were logged out')
+    return redirect("/validate")

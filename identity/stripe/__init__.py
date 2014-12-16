@@ -3,6 +3,27 @@ import stripe
 IN_GOOD_STANDING = "In Good Standing"
 DELINQUENT = "Delinquent"
 
+# Delinquent email template
+D_EMAIL_TEMPLATE = """
+
+<!DOCTYPE html>
+<html>
+
+<body>
+<img src="https://synshop.org/sites/default/files/logo290.png">
+<h2>Oops, it looks like your membership payments are failing.</h2>
+
+<p>We'll still let you in the door, but please correct this as soon as possible.</p>
+
+<p>You can modify / adjust your payment type by going here: <a href="#">https://synshop.org/user/%s/</a></p>
+
+<p>Also, if you have any questions, please reply back to this email and we will do our best to help you.</p>
+
+</body>
+</html>
+
+"""
+
 def get_stripe_cache(key=None):
 
     stripe.api_version = '2013-02-13'

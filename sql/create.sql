@@ -30,10 +30,12 @@ create table shopidentifyer.event_log (
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
   badge_id int NOT NULL,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  event_type ENUM('BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY') DEFAULT 'BADGE_SWIPE',
+  event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY') DEFAULT 'BADGE_SWIPE',
   event_message varchar(255)
 
 );
+
+-- ALTER TABLE shopidentifyer.event_log CHANGE event_type event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY');
 
 create table shopidentifyer.message_queue (
   message varchar(255)

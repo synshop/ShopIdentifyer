@@ -31,13 +31,15 @@
         <a class="navbar-brand" href="/">SYN Shop Identity Management System</a>
       </div>
       <div id="navbar" class="navbar-collapse collapse">
-        <ul class="nav navbar-nav">
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/validate">Validate A Different User</a></li>
+
+          {% if session.logged_in %}
+          <li><a href="/logout">Logout</a></li>
+          {% else %}
+          <li><a href="/login">Login</a></li>
+          {% endif %}
         </ul>
-        <!--
-        <ul class="nav navbar-form navbar-right">
-          <li>  <button type="button" class="btn btn-default" id='again'>Validate a different user</button> </li></li>
-        </ul>
-        -->
       </div><!--/.nav-collapse -->
     </div>
   </nav>
@@ -70,7 +72,15 @@
       <div class="form-group">
         <label for="badge_status" class="col-sm-2 control-label">Badge Status:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="badge_status" name="badge_status" placeholder="" value="{{ member.badge_status }}">
+          <select class="form-control" id="badge_status" name="badge_status">
+            {% for n in ['ACTIVE', 'INACTIVE','LOST','BROKEN'] %}
+              {% if n == member.badge_status %}
+                <option value="{{n}}" selected="selected">{{n}}</option>
+              {% else %}
+                <option value="{{n}}">{{n}}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
         </div>
       </div>
 

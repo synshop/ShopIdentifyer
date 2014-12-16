@@ -1,8 +1,7 @@
-import CryptoUtil
 import sys
-from CryptoUtil import KeyLengthError
 
-__author__ = 'bryce'
+import CryptoUtil
+from CryptoUtil import KeyLengthError
 
 def main(args):
     if len(args) != 4 or args[1] not in ['dec', 'enc']:

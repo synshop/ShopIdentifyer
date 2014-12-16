@@ -35,7 +35,14 @@
             $('#results').append('<tr><th style="width:200px;">Full Name</th><th style="width:200px">Primary Email Address</th><th>Badge Serial</th><th>Badge Status</th><th>Action(s)</th></tr>');
 
             for (x in data.results) {
-              $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td>' + data.results[x].badge_serial + '</td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a> | <a href="/member/' + data.results[x].badge_serial + '/edit">Edit Information</a></td></tr>');
+
+              {% if session.logged_in %}
+                var editable = ' | <a href="/member/' + data.results[x].badge_serial + '/edit">Edit Information</a>';
+                {% else %}
+                  var editable = '';
+                {% endif %}
+
+                $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td>' + data.results[x].badge_serial + '</td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a>' + editable + '</td></tr>');
             }
 
           }});
@@ -69,10 +76,14 @@
         <a class="navbar-brand" href="/">SYN Shop Identity Management System</a>
       </div>
       <div id="navbar" class="navbar-collapse collapse">
-        <ul class="nav navbar-nav">
-        </ul>
-        <ul class="nav navbar-form navbar-right">
-          <li><button type="button" class="btn btn-default" id='again'>Validate a different user</button> </li></li>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="/validate">Validate A Different User</a></li>
+
+          {% if session.logged_in %}
+            <li><a href="/logout">Logout</a></li>
+          {% else %}
+            <li><a href="/login">Login</a></li>
+          {% endif %}
         </ul>
       </div><!--/.nav-collapse -->
     </div>
