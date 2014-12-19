@@ -1,5 +1,3 @@
-# config.py
-
 SERIAL_DEVICE = '/dev/tty.usbserial-A800509r'
 SERIAL_BAUD_RATE = 9600
 
