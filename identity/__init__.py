@@ -443,3 +443,7 @@ def logout():
     session.pop('logged_in', None)
     flash('You were logged out')
     return redirect("/validate")
+
+@app.route('/test')
+def test():
+    return render_template('test.html')

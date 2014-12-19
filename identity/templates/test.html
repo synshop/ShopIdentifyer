@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<title>SYN Shop</title>
+
+<head>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+
+  <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/webcam.min.js') }}"></script>
+
+<div id="my_camera" style="width:200px; height:200px;"></div>
+<a href="javascript:void(take_snapshot())">Take Snapshot</a>
+
+<div id="my_result" style="width:200px; height:200px;"></div>
+
+<script language="JavaScript">
+
+Webcam.set({
+  width: 320,
+  height: 240,
+  dest_width: 320,
+  dest_height: 240,
+  image_format: 'jpeg',
+  jpeg_quality: 90,
+  force_flash: false
+});
+
+Webcam.attach( '#my_camera' );
+
+function take_snapshot() {
+  Webcam.snap( function(data_uri) {
+    document.getElementById('my_result').innerHTML = '<img src="' + data_uri + '"/>';
+
+  } );
+}
+</script>
+
+</body>
+</html>
