@@ -12,7 +12,7 @@ Setup (Development)
   * USB / Serial RFID Reader (see below)
 
 
-2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/), grab the source and pip install the requirements.txt file included:
+2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/) and [virtualenvwrapper](http://docs.python-guide.org/en/latest/dev/virtualenvs/#virtualenvwrapper), grab the source and pip install the requirements.txt file included:
 
         $ mkvirtualenv ShopIdentifyer
         $ workon ShopIdentifyer
