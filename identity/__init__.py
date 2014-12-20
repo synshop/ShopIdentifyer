@@ -36,6 +36,9 @@ app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, E
 # app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
+app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
+app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
+
 
 app.config['MAIL_SERVER'] = config.MAIL_SERVER
 app.config['MAIL_PORT'] = config.MAIL_PORT
@@ -447,6 +450,22 @@ def logout():
     flash('You were logged out')
     return redirect("/validate")
 
-@app.route('/test')
-def test():
+@app.route('/test_webcam')
+def test_webcam():
     return render_template('test.html')
+
+@app.route('/electric-badger/', methods=['GET', 'POST'])
+def electric_badger():
+
+    # http://www.accxproducts.com/content/?page_id=287
+    # Add the new badge to the access-controller
+
+    from paramiko.client import SSHClient
+
+    cmd_str = "screen -S access_control -X stuff 'echo \"m 1 254 123457890\"'$(echo -ne '\015')"
+
+    client = SSHClient()
+    client.load_system_host_keys()
+    client.connect(app.config['ACCESS_CONTROL_HOSTNAME'])
+    (stdin, stdout, stderr) = client.exec_command(cmd_str)
+    return jsonify({'results':'hello'})
