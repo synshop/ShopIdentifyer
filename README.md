@@ -36,11 +36,14 @@ Setup (Development)
 
         STRIPE_CACHE_REFRESH_MINUTES=60
 
-        MAIL_SERVER='localhost'
-        MAIL_PORT=22
-        MAIL_USE_TLS=True
-        MAIL_USE_SSL=False
-        MAIL_DEBUG=True
+        MAIL_SERVER = 'localhost'
+        MAIL_PORT = 22
+        MAIL_USE_TLS = True
+        MAIL_USE_SSL = False
+        MAIL_DEBUG = True
+        
+        ACCESS_CONTROL_HOSTNAME = 'localhost'
+        ACCESS_CONTROL_SSH_PORT = 22
 
 Please note that <em style="background-color:#FFD700">some of these properties are encrypted.  When the web server starts up, it will prompt you for a decryption password.</em>  This is the same password that you will use to encrypt the properties using the tool in ./identity/crypto/crypt.py.  The instructions for use are pretty straightforward:
 
