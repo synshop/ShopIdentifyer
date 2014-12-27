@@ -18,7 +18,7 @@ create table shopidentifyer.members (
   mobile varchar(25),
   emergency_contact_name varchar(255),
   emergency_contact_mobile varchar(25),
-  is_vetted tinyint(1) NOT NULL DEFAULT 0,
+  is_vetted ENUM('YES','NO') NOT NULL DEFAULT "NO",
   liability_waiver longblob,
   vetted_membership_form longblob,
   badge_photo longblob

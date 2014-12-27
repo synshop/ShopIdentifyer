@@ -107,7 +107,7 @@ def load_test_data():
     db = connect_db()
     cur = db.cursor()
 
-    insert_data = ("53006599FE51","ACTIVE","Aakin Patel","aakin@synshop.org","aakin@aakin.net",badge_photo, waiver_pdf,vetted_pdf,1,"702-123-1234","Aakins Mom","702-123-1235","aakin","aakin")
+    insert_data = ("53006599FE51","ACTIVE","Aakin Patel","aakin@synshop.org","aakin@aakin.net",badge_photo, waiver_pdf,vetted_pdf,"YES","702-123-1234","Aakins Mom","702-123-1235","aakin","aakin")
     cur.execute('insert into members (badge_serial, badge_status, full_name, primary_email, stripe_email,badge_photo, liability_waiver, vetted_membership_form,is_vetted,mobile,emergency_contact_name,emergency_contact_mobile,drupal_name,nick_name) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
 
     insert_data = ("450052BA9B36","ACTIVE","James Wynhoff","jimmypopali96@gmail.com","jimmypopali96@gmail.com",badge_photo, waiver_pdf,"702-123-1234","Jimmys Mom","702-123-1235","TheProgramGuy","JimmyPop")
@@ -144,7 +144,7 @@ def new_member():
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted',0),
+        request.form.get('is_vetted','NO'),
         liability_wavier_form,
         vetted_membership_form,
         badge_photo
@@ -222,7 +222,7 @@ def edit_new_member(badge_serial):
             request.form.get('mobile'),
             request.form.get('emergency_contact_name'),
             request.form.get('emergency_contact_mobile'),
-            request.form.get('is_vetted',0),
+            request.form.get('is_vetted','NO'),
             badge_serial
         )
 
@@ -292,7 +292,7 @@ def show_member(badge_serial):
     user["emergency_contact_name"] = member[12]
     user["emergency_contact_mobile"] = member[13]
 
-    if member[14] == 1:
+    if member[14] == 'YES':
         user['vetted_status'] = "Vetted Member"
     else:
         user["vetted_status"] = "Not Vetted Member"
