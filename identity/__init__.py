@@ -368,6 +368,26 @@ def member_vetted(badge_serial):
 
     return response
 
+@app.route('/member/search')
+def member_search():
+    return render_template('search_member.html')
+
+@app.route('/search',methods=['GET'])
+def find_user():
+    user = request.args.get('s')
+
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select badge_serial,full_name,primary_email,badge_status from members where full_name like %s', ("%" + user + '%',))
+    data = cur.fetchall()
+
+    results = []
+
+    for row in data:
+        results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2],'badge_status':row[3]})
+
+    return jsonify({'results':results})
+
 @app.route('/queue/message', methods=['PUT'])
 def add_message():
 
@@ -404,35 +424,11 @@ def remove_message():
 
 @app.route('/')
 def index():
-    return redirect("/validate/", code=302)
+    return redirect("/validate", code=302)
 
-@app.route('/admin')
-def admin_page():
-    return render_template('admin.html')
-
-@app.route('/validate/')
+@app.route('/validate')
 def validate():
     return render_template('validate.html')
-
-@app.route('/validate/manual')
-def validate_manual():
-    return render_template('validate_manual.html')
-
-@app.route('/search',methods=['GET'])
-def find_user():
-    user = request.args.get('s')
-
-    db = get_db()
-    cur = db.cursor()
-    cur.execute('select badge_serial,full_name,primary_email,badge_status from members where full_name like %s', ("%" + user + '%',))
-    data = cur.fetchall()
-
-    results = []
-
-    for row in data:
-        results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2],'badge_status':row[3]})
-
-    return jsonify({'results':results})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -450,9 +446,23 @@ def logout():
     flash('You were logged out')
     return redirect("/validate")
 
+@app.route('/admin')
+def admin():
+    try:
+        if session['logged_in']:
+            return render_template('admin.html')
+        else:
+            return render_template('login.html')
+    except:
+        return render_template('login.html')
+
 @app.route('/test_webcam')
 def test_webcam():
     return render_template('test.html')
+
+@app.route('/modal')
+def test_modal():
+    return render_template('test_modal.html')
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])
 def electric_badger():
