@@ -3,7 +3,7 @@ from crypto import SettingsUtil, CryptoUtil
 try:
     import config
 except:
-    print "You need to create/install a ./identity/config.py file and populate it with some values.\n\n Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
+    print "You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n\n Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
 
 from identity.stripe import get_stripe_cache
 from identity.stripe import get_payment_status
@@ -38,7 +38,6 @@ app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
-
 
 app.config['MAIL_SERVER'] = config.MAIL_SERVER
 app.config['MAIL_PORT'] = config.MAIL_PORT
@@ -455,14 +454,6 @@ def admin():
             return render_template('login.html')
     except:
         return render_template('login.html')
-
-@app.route('/test_webcam')
-def test_webcam():
-    return render_template('test.html')
-
-@app.route('/modal')
-def test_modal():
-    return render_template('test_modal.html')
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])
 def electric_badger():

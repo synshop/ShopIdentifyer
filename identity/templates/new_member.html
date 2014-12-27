@@ -29,10 +29,44 @@
       }, 1000
     );
 
+    Webcam.set({
+      width: 320,
+      height: 240,
+      crop_width: 320,
+      crop_height: 240,
+      image_format: 'jpeg',
+      jpeg_quality: 90,
+      force_flash: false
+    });
+
+    Webcam.attach( '#camera' );
+
+    $("#previewSnapshot").bind( "click", function() {
+      Webcam.freeze();
+      document.getElementById('pre_take_buttons').style.display = 'none';
+      document.getElementById('post_take_buttons').style.display = '';
+    });
+
+    $("#cancelPreview").bind( "click", function() {
+      Webcam.unfreeze();
+      document.getElementById('pre_take_buttons').style.display = '';
+      document.getElementById('post_take_buttons').style.display = 'none';
+    });
+
+    $("#saveSnapshot").bind( "click", function() {
+      Webcam.snap( function(data_uri) {
+        var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
+        document.getElementById('hid_photo').value = raw_image_data;
+        console.log(raw_image_data);
+        document.getElementById('pre_take_buttons').style.display = '';
+        document.getElementById('post_take_buttons').style.display = 'none';
+        $('#myModal').modal('hide')
+      });
+    });
+
   });
 
   </script>
-
 
   <style>
   body {
@@ -84,7 +118,10 @@
       <div class="form-group">
         <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
         <div class="col-sm-10">
-          <input type="checkbox" id="is_vetted" name="is_vetted" value="1">
+          <select class="form-control" id="badge_status" name="badge_status">
+            <option value="YES">YES</option>
+            <option value="NO" selected="selected">NO</option>
+          </select>
         </div>
       </div>
 
@@ -92,75 +129,36 @@
         <label class="col-sm-2 control-label">Photo:</label>
         <div class="col-sm-10">
 
+          <!-- Hidden data field for webcam photo -->
           <input id="hid_photo" type="hidden" name="hid_photo" value=""/>
 
-          <!-- Button trigger modal -->
+          <!-- Button to trigger modal dialog for webcam capture -->
           <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal">
             Take a photo via the webcam
           </button>
 
-          <!-- Modal -->
+          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal">
+            Upload a file
+          </button>
+
+          <!-- Modal Dialog for Webcam Capture -->
           <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
             <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
                   <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                  <h4 class="modal-title" id="myModalLabel">Take a Photo!</h4>
+                  <h4>Take a photo!</h4>
                 </div>
                 <div class="modal-body">
-
                   <div class="center-block" id="camera" style="width:320px; height:240px;"></div>
-
-                  <script language="JavaScript">
-
-                  Webcam.set({
-                    width: 320,
-                    height: 240,
-                    crop_width: 320,
-                    crop_height: 240,
-                    image_format: 'jpeg',
-                    jpeg_quality: 90,
-                    force_flash: false
-                  });
-
-                  Webcam.attach( '#camera' );
-
-                  function preview_snapshot() {
-                    Webcam.freeze();
-                    document.getElementById('pre_take_buttons').style.display = 'none';
-                    document.getElementById('post_take_buttons').style.display = '';
-                  }
-
-                  function cancel_preview() {
-                    Webcam.unfreeze();
-                    document.getElementById('pre_take_buttons').style.display = '';
-                    document.getElementById('post_take_buttons').style.display = 'none';
-                  }
-
-                  function save_photo() {
-                    Webcam.snap( function(data_uri) {
-                      // document.getElementById('results').innerHTML = '<img src="'+data_uri+'"/>';
-
-                      var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
-                      document.getElementById('hid_photo').value = raw_image_data;
-                      document.getElementById('pre_take_buttons').style.display = '';
-                      document.getElementById('post_take_buttons').style.display = 'none';
-
-                      $('#myModal').modal('hide')
-
-                    } );
-                  }
-                  </script>
-
-
                 </div>
                 <div class="modal-footer">
                   <div id="pre_take_buttons">
-                    <button type="button" class="btn btn-primary center-block" onClick="preview_snapshot()">Take Snapshot</button>
+                    <button type="button" class="btn btn-danger center-block" id="previewSnapshot">Take Snapshot</button>
                   </div>
-                  <div id="post_take_buttons" style="display:none">
-                    <button type="button" class="btn btn-default center-block" onClick="cancel_preview()">Retake</button>
-                    <button type="button" class="btn btn-primary center-block" onClick="save_photo()">Save Photo</button>
+                  <div id="post_take_buttons" style="display:none;text-align:center;">
+                    <button type="button" class="btn btn-default" id="cancelPreview">Retake</button>
+                    <button type="button" class="btn btn-primary" id="saveSnapshot">Save Photo</button>
                   </div>
                 </div>
               </div>
@@ -177,6 +175,8 @@
           -->
         </div>
       </div>
+
+      <hr/>
 
       <div class="form-group">
         <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
@@ -197,6 +197,8 @@
           <input type="text" class="form-control" id="drupal_name" name="drupal_name" placeholder="">
         </div>
       </div>
+
+      <hr/>
 
       <div class="form-group">
         <label for="primary_email" class="col-sm-2 control-label">Primary Email:</label>
@@ -224,6 +226,8 @@
         </div>
       </div>
 
+      <hr/>
+
       <div class="form-group">
         <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
         <div class="col-sm-10">
@@ -236,6 +240,8 @@
           <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" placeholder="">
         </div>
       </div>
+
+      <hr/>
 
       <div class="form-group">
         <label class="col-sm-2 control-label">Vetted Member Form:</label>
@@ -263,7 +269,7 @@
 
       <div class="form-group">
         <div class="col-sm-offset-2 col-sm-10">
-          <button type="submit" class="btn btn-default">Create!</button>
+          <button type="submit" class="btn btn-danger ">Create!</button>
         </div>
       </div>
     </form>
