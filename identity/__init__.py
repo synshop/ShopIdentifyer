@@ -3,7 +3,9 @@ from crypto import SettingsUtil, CryptoUtil
 try:
     import config
 except:
-    print "You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n\n Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
+    print "You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n"
+    print "Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
+    quit()
 
 from identity.stripe import get_stripe_cache
 from identity.stripe import get_payment_status
