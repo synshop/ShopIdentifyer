@@ -89,7 +89,7 @@
       <div class="form-group">
         <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
         <div class="col-sm-10">
-          <select class="form-control" id="badge_status" name="badge_status">
+          <select class="form-control" id="is_vetted" name="is_vetted">
             {% for n in ['YES','NO'] %}
             {% if n == member.is_vetted %}
             <option value="{{n}}" selected="selected">{{n}}</option>

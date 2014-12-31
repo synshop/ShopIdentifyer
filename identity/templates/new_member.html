@@ -56,10 +56,9 @@
       Webcam.snap( function(data_uri) {
         var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
         document.getElementById('base64_photo_data').value = raw_image_data;
-        console.log(raw_image_data);
+        $('#snapshot_modal').modal('hide')
         document.getElementById('pre_take_buttons').style.display = '';
         document.getElementById('post_take_buttons').style.display = 'none';
-        $('#snapshot_modal').modal('hide')
       });
     });
 

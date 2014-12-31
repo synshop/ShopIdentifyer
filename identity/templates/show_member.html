@@ -13,7 +13,6 @@
 
 <script type="text/javascript">
 
-
   $(document).ready (
 
     function() {
@@ -68,9 +67,13 @@ body {
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
-          <li><a href="/member/{{ member.badge_serial }}/edit">Edit User</a></li>
           <li><a href="/validate">Validate A Different User</a></li>
+          {% if session.logged_in %}
+          <li><a href="/member/{{ member.badge_serial }}/edit">Edit User</a></li>
           <li><a href="/logout">Logout</a></li>
+          {% else %}
+          <li><a href="/login?redirect_to=/member/{{ member.badge_serial }}">Login</a></li>
+          {% endif %}
         </ul>
       </div><!--/.nav-collapse -->
     </div>
@@ -83,7 +86,7 @@ body {
         <img src="/member/{{member.badge_serial}}/files/photo.jpg" class="img-rounded img-thumbnail" alt="">
       </td>
       <td>
-      <h1 style="font-size:72px;padding-bottom:0px;margin-bottom:0px;"><a href="https://www.synshop.org/user/{{ member.drupal_name }}">{{ member.full_name }}</a></h1>
+      <h1 style="font-size:48px;padding-bottom:0px;margin-bottom:0px;"><a href="https://www.synshop.org/user/{{ member.drupal_name }}">{{ member.full_name }}</a></h1>
       <h3 style="padding-top:0px;margin-top:0px;"> {{ member.primary_email }} </h3>
     </td></tr>
   </table>
