@@ -1,4 +1,5 @@
 from crypto import SettingsUtil, CryptoUtil
+import base64
 
 try:
     import config
@@ -93,28 +94,17 @@ def close_db(error):
     if hasattr(g, 'mysql_db'):
         g.mysql_db.close()
 
-def load_test_data():
+@app.route('/member/swipe',methods=['POST'])
+def swipe_member():
 
-    with open("/Users/bmunroe/mug.jpg", mode='rb') as file:
-        badge_photo = file.read()
+    badge_serial_type = request.form.get('badge_serial')
+    swipe ="DOOR_SWIPE"
 
-    with open("/Users/bmunroe/liability-waiver.pdf", mode='rb') as file:
-        waiver_pdf = file.read()
-
-    with open("/Users/bmunroe/vetted_membership_form.pdf", mode='rb') as file:
-        vetted_pdf = file.read()
-
-    db = connect_db()
+    db = get_db()
     cur = db.cursor()
 
-    insert_data = ("53006599FE51","ACTIVE","Aakin Patel","aakin@synshop.org","aakin@aakin.net",badge_photo, waiver_pdf,vetted_pdf,"YES","702-123-1234","Aakins Mom","702-123-1235","aakin","aakin")
-    cur.execute('insert into members (badge_serial, badge_status, full_name, primary_email, stripe_email,badge_photo, liability_waiver, vetted_membership_form,is_vetted,mobile,emergency_contact_name,emergency_contact_mobile,drupal_name,nick_name) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
-
-    insert_data = ("450052BA9B36","ACTIVE","James Wynhoff","jimmypopali96@gmail.com","jimmypopali96@gmail.com",badge_photo, waiver_pdf,"702-123-1234","Jimmys Mom","702-123-1235","TheProgramGuy","JimmyPop")
-    cur.execute('insert into members (badge_serial, badge_status, full_name,  primary_email, stripe_email,badge_photo, liability_waiver,mobile,emergency_contact_name,emergency_contact_mobile,drupal_name,nick_name) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
-
+    cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (badge_serial,swipe))
     db.commit()
-    db.close()
 
 @app.route('/member/new', methods=['GET','POST'])
 def new_member():
@@ -129,8 +119,13 @@ def new_member():
     if request.files['vetted_membership_form'].filename != "":
         vetted_membership_form = request.files['vetted_membership_form'].read()
 
-    if request.files['badge_photo'].filename != "":
-        badge_photo = request.files['badge_photo'].read()
+    # if request.files['badge_photo'].filename != "":
+    #    badge_photo = request.files['badge_photo'].read()
+
+    photo_base64 = request.form.get('base64_photo_data',default=None)
+
+    if photo_base64 != None:
+        badge_photo = base64.b64decode(photo_base64)
 
     insert_data = (
         request.form.get('badge_serial'),
@@ -226,14 +221,14 @@ def edit_new_member(badge_serial):
             badge_serial
         )
 
-        cur.execute('update members set badge_status=%s, full_name=%s, nick_name=%s,drupal_name=%s,primary_email=%s,stripe_email=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where badge_serial=%s', insert_data)
+        cur.execute('update members set badge_status=%s,full_name=%s,nick_name=%s,drupal_name=%s,primary_email=%s,stripe_email=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where badge_serial=%s', insert_data)
 
         print insert_data
 
         db.commit()
         db.close()
 
-        return render_template('validate.html')
+        return redirect('validate')
 
 @app.route('/member/<badge_serial>')
 def show_member(badge_serial):
@@ -374,7 +369,7 @@ def member_search():
     return render_template('search_member.html')
 
 @app.route('/search',methods=['GET'])
-def find_user():
+def search_user():
     user = request.args.get('s')
 
     db = get_db()
@@ -437,9 +432,9 @@ def login():
         if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
             session['logged_in'] = True
             flash('You were logged in')
-            return redirect("/validate")
+            return redirect(request.form.get('redirect_to'))
 
-    return render_template('login.html')
+    return render_template('login.html',redirect_to=request.args.get('redirect_to'))
 
 @app.route('/logout')
 def logout():
@@ -453,9 +448,10 @@ def admin():
         if session['logged_in']:
             return render_template('admin.html')
         else:
-            return render_template('login.html')
+            return redirect('/login?redirect_to=/admin')
     except:
-        return render_template('login.html')
+        return redirect('/login?redirect_to=/admin')
+
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])
 def electric_badger():

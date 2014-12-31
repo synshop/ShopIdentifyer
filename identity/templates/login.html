@@ -46,7 +46,9 @@
 
 <form class="form-horizontal" role="form" method="post" action="/login">
 
-<input type="hidden" name="redirect" value=""/>
+{% if redirect_to != None %}
+  <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
+{% endif %}
 
 <div class="form-group">
   <label for="meta_info" class="col-sm-2 control-label">Admin Passphrase:</label>

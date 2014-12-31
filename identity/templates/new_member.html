@@ -8,7 +8,6 @@
   <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/jasny-bootstrap.min.css') }}" rel="stylesheet">
 
-
   <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
@@ -56,11 +55,11 @@
     $("#saveSnapshot").bind( "click", function() {
       Webcam.snap( function(data_uri) {
         var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
-        document.getElementById('hid_photo').value = raw_image_data;
+        document.getElementById('base64_photo_data').value = raw_image_data;
         console.log(raw_image_data);
         document.getElementById('pre_take_buttons').style.display = '';
         document.getElementById('post_take_buttons').style.display = 'none';
-        $('#myModal').modal('hide')
+        $('#snapshot_modal').modal('hide')
       });
     });
 
@@ -130,19 +129,19 @@
         <div class="col-sm-10">
 
           <!-- Hidden data field for webcam photo -->
-          <input id="hid_photo" type="hidden" name="hid_photo" value=""/>
+          <input type="hidden" id="base64_photo_data" name="base64_photo_data" value=""/>
 
           <!-- Button to trigger modal dialog for webcam capture -->
-          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal">
+          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#snapshot_modal">
             Take a photo via the webcam
           </button>
 
-          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal">
+          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#snapshot_modal">
             Upload a file
           </button>
 
           <!-- Modal Dialog for Webcam Capture -->
-          <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+          <div class="modal fade" id="snapshot_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
             <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
