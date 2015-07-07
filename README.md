@@ -1,6 +1,3 @@
-* auto-gen TOC:
-{:toc}
-
 Introduction
 ===
 Over the past two years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where the management of validating membership when entering the shop is no longer a first-name basis and was in need of something more robust and automated.
