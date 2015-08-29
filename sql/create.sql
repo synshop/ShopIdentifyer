@@ -35,6 +35,18 @@ create table shopidentifyer.event_log (
 
 );
 
+create table shopidentifyer.event_types (
+  event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  event_type varchar(100)
+);
+
+insert into shopidentifyer.event_types values ('DOOR_SWIPE');
+insert into shopidentifyer.event_types values ('BADGE_SWIPE');
+insert into shopidentifyer.event_types values ('MANUAL_SWIPE');
+insert into shopidentifyer.event_types values ('ACCESS_ATTEMPT');
+insert into shopidentifyer.event_types values ('ACCESS_GRANT');
+insert into shopidentifyer.event_types values ('ACCESS_DENY');
+
 -- ALTER TABLE shopidentifyer.event_log CHANGE event_type event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY');
 
 create table shopidentifyer.message_queue (

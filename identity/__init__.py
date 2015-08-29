@@ -48,7 +48,6 @@ app.config['MAIL_USE_TLS'] = config.MAIL_USE_TLS
 app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
 app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,ENCRYPTION_KEY)
 app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
-
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 
 mail = Mail(app)
@@ -94,17 +93,69 @@ def close_db(error):
     if hasattr(g, 'mysql_db'):
         g.mysql_db.close()
 
-@app.route('/member/swipe',methods=['POST'])
-def swipe_member():
+@app.route('/swipe/', methods=['POST'])
+def swipe_badge():
 
-    badge_serial_type = request.form.get('badge_serial')
-    swipe ="DOOR_SWIPE"
+  badge_serial = request.form['tag']
+  swipe = "BADGE_SWIPE"
 
-    db = get_db()
-    cur = db.cursor()
+  db = get_db()
+  cur = db.cursor()
 
-    cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (badge_serial,swipe))
-    db.commit()
+  cur.execute('select badge_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
+  entries = cur.fetchall()
+  member = entries[0]
+
+  cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
+  db.commit()
+
+  cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
+  entries = cur.fetchall()
+  stripe_id = entries[0][0]
+
+  user = {}
+
+  user["badge_serial"] = member[1]
+  user["badge_status"] = member[2]
+  user["created_on"] = member[3]
+  user["changed_on"] = member[4]
+  user["full_name"] = member[5]
+  user["nick_name"] = member[6]
+  user["drupal_name"] = member[7]
+  user["primary_email"] = member[8]
+  user["meetup_email"] = member[10]
+  user["mobile"] = member[11]
+  user["emergency_contact_name"] = member[12]
+  user["emergency_contact_mobile"] = member[13]
+
+  if member[14] == 'YES':
+      user['vetted_status'] = "Vetted Member"
+  else:
+      user["vetted_status"] = "Not Vetted Member"
+
+  user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+
+  # send an email to folks if user is flagged as delinquent
+  if user["payment_status"] == DELINQUENT:
+
+      # This email is for shop management
+      msg = Message()
+      msg.recipients = ["monitoring@synshop.org"]
+      msg.sender = 'SYN Shop Electric Badger <info@synshop.org>'
+      msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
+      msg.body = "%s is swiping in and is delinquent in stripe\n\nMore info can be found here: https://dashboard.stripe.com/customers/%s" % (user["full_name"],stripe_id)
+      mail.send(msg)
+
+      # This is for the user
+      msg = Message()
+      msg.recipients = [user["primary_email"],]
+      msg.sender = "SYN Shop Electric Badger <info@synshop.org>"
+      msg.subject = "Your payments to SYN Shop are failing!"
+      msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
+      mail.send(msg)
+
+  message = {'message':"SWIPE OK"}
+  return jsonify(message)
 
 @app.route('/member/new', methods=['GET','POST'])
 def new_member():
@@ -293,7 +344,7 @@ def show_member(badge_serial):
         user["vetted_status"] = "Not Vetted Member"
 
     user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
-
+"""
     # send an email to folks if user is flagged as delinquent
     if user["payment_status"] == DELINQUENT:
 
@@ -312,7 +363,7 @@ def show_member(badge_serial):
         msg.subject = "Your payments to SYN Shop are failing!"
         msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
         mail.send(msg)
-
+"""
     return render_template('show_member.html', member=user)
 
 @app.route('/member/<badge_serial>/files/photo.jpg')
@@ -451,7 +502,6 @@ def admin():
             return redirect('/login?redirect_to=/admin')
     except:
         return redirect('/login?redirect_to=/admin')
-
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])
 def electric_badger():
