@@ -301,9 +301,12 @@ def show_member(badge_serial):
     cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
     db.commit()
 
-    cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
-    entries = cur.fetchall()
-    stripe_id = entries[0][0]
+    try:
+        cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
+        entries = cur.fetchall()
+        stripe_id = entries[0][0]
+    except IndexError:
+        stripe_id = "DEADBEEF"
 
     swipe_freq_sql = """
         select
@@ -344,26 +347,7 @@ def show_member(badge_serial):
         user["vetted_status"] = "Not Vetted Member"
 
     user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
-"""
-    # send an email to folks if user is flagged as delinquent
-    if user["payment_status"] == DELINQUENT:
 
-        # This email is for shop management
-        msg = Message()
-        msg.recipients = ["monitoring@synshop.org"]
-        msg.sender = "info@synshop.org"
-        msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
-        msg.body = "%s is swiping in and is delinquent in stripe\n\nMore info can be found here: https://dashboard.stripe.com/customers/%s" % (user["full_name"],stripe_id)
-        mail.send(msg)
-
-        # This is for the user
-        msg = Message()
-        msg.recipients = [user["primary_email"],]
-        msg.sender = "info@synshop.org"
-        msg.subject = "Your payments to SYN Shop are failing!"
-        msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
-        mail.send(msg)
-"""
     return render_template('show_member.html', member=user)
 
 @app.route('/member/<badge_serial>/files/photo.jpg')
