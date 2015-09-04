@@ -36,8 +36,8 @@ app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['DEBUG'] = True
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
-app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
-# app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
+# app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
+app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
@@ -102,16 +102,35 @@ def swipe_badge():
   db = get_db()
   cur = db.cursor()
 
-  cur.execute('select badge_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
-  entries = cur.fetchall()
-  member = entries[0]
+  try:
+      cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
+      entries = cur.fetchall()
+      member = entries[0]
+  except IndexError:
+      swipe = "MISSING_BADGE"
+      member_id = 0
+      log_message = "%s not in system" % (badge_serial,)
+      cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe,log_message))
+      db.commit()
 
-  cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
+      message = {'message':"SWIPE MEH"}
+      return jsonify(message)
+
+  cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
   db.commit()
 
-  cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
-  entries = cur.fetchall()
-  stripe_id = entries[0][0]
+  try:
+      cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
+      print member[9]
+      entries = cur.fetchall()
+      stripe_id = entries[0][0]
+  except IndexError:
+      swipe = "MISSING_STRIPE"
+      cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
+      db.commit()
+
+      message = {'message':"SWIPE MEH"}
+      return jsonify(message)
 
   user = {}
 
@@ -294,11 +313,11 @@ def show_member(badge_serial):
     db = get_db()
     cur = db.cursor()
 
-    cur.execute('select badge_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
+    cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
     entries = cur.fetchall()
     member = entries[0]
 
-    cur.execute("insert into event_log (event_id,badge_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
+    cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
     db.commit()
 
     try:
@@ -314,7 +333,7 @@ def show_member(badge_serial):
         from
             shopidentifyer.members as m
             inner join shopidentifyer.event_log as el
-            on (m.badge_id = el.badge_id)
+            on (m.member_id = el.member_id)
         where
             el.created_on >= date_add(date(now()), interval -14 day)
             and el.event_type in ("BADGE_SWIPE","MANUAL_SWIPE")
