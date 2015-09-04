@@ -36,8 +36,7 @@ app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['DEBUG'] = True
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
-# app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
-app.config['DATABASE_PASSWORD'] = config.ENCRYPTED_DATABASE_PASSWORD
+app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
@@ -88,6 +87,15 @@ def get_db():
         g.mysql_db = connect_db()
     return g.mysql_db
 
+def log_event(member_id=None,swipe_event=NONE,log_message=None):
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe,log_message))
+    db.commit()
+
+    return "1"
+
 @app.teardown_appcontext
 def close_db(error):
     if hasattr(g, 'mysql_db'):
@@ -96,85 +104,85 @@ def close_db(error):
 @app.route('/swipe/', methods=['POST'])
 def swipe_badge():
 
-  badge_serial = request.form['tag']
-  swipe = "BADGE_SWIPE"
+    badge_serial = request.form['tag']
+    swipe = "BADGE_SWIPE"
 
-  db = get_db()
-  cur = db.cursor()
+    db = get_db()
+    cur = db.cursor()
 
-  try:
-      cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
-      entries = cur.fetchall()
-      member = entries[0]
-  except IndexError:
-      swipe = "MISSING_BADGE"
-      member_id = 0
-      log_message = "%s not in system" % (badge_serial,)
-      cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe,log_message))
-      db.commit()
+    try:
+        cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
+        entries = cur.fetchall()
+        member = entries[0]
+    except IndexError:
+        # The user's badge is not in the system
+        swipe = "MISSING_BADGE"
+        member_id = 0
+        log_message = "%s not in system" % (badge_serial,)
+        log_event(member_id,swipe,log_message)
 
-      message = {'message':"SWIPE MEH"}
-      return jsonify(message)
+        message = {'message':swipe}
+        return jsonify(message)
 
-  cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
-  db.commit()
+    # Log the swipe event (if the badge is found in the system)
+    log_event(member[0],swipe)
 
-  try:
-      cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
-      print member[9]
-      entries = cur.fetchall()
-      stripe_id = entries[0][0]
-  except IndexError:
-      swipe = "MISSING_STRIPE"
-      cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
-      db.commit()
+    try:
+        cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
+        print member[9]
+        entries = cur.fetchall()
+        stripe_id = entries[0][0]
+    except IndexError:
+        # The user's defined stripe email does not match with with Stripe
+        swipe = "MISSING_STRIPE"
+        log_event(member[0],swipe)
 
-      message = {'message':"SWIPE MEH"}
-      return jsonify(message)
+        message = {'message':swipe}
+        return jsonify(message)
 
-  user = {}
+    user = {}
 
-  user["badge_serial"] = member[1]
-  user["badge_status"] = member[2]
-  user["created_on"] = member[3]
-  user["changed_on"] = member[4]
-  user["full_name"] = member[5]
-  user["nick_name"] = member[6]
-  user["drupal_name"] = member[7]
-  user["primary_email"] = member[8]
-  user["meetup_email"] = member[10]
-  user["mobile"] = member[11]
-  user["emergency_contact_name"] = member[12]
-  user["emergency_contact_mobile"] = member[13]
+    user["badge_serial"] = member[1]
+    user["badge_status"] = member[2]
+    user["created_on"] = member[3]
+    user["changed_on"] = member[4]
+    user["full_name"] = member[5]
+    user["nick_name"] = member[6]
+    user["drupal_name"] = member[7]
+    user["primary_email"] = member[8]
+    user["meetup_email"] = member[10]
+    user["mobile"] = member[11]
+    user["emergency_contact_name"] = member[12]
+    user["emergency_contact_mobile"] = member[13]
 
-  if member[14] == 'YES':
-      user['vetted_status'] = "Vetted Member"
-  else:
-      user["vetted_status"] = "Not Vetted Member"
+    if member[14] == 'YES':
+        user['vetted_status'] = "Vetted Member"
+    else:
+        user["vetted_status"] = "Not Vetted Member"
 
-  user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
 
-  # send an email to folks if user is flagged as delinquent
-  if user["payment_status"] == DELINQUENT:
+    # send an email to folks if user is flagged as delinquent
+    if user["payment_status"] == DELINQUENT:
 
-      # This email is for shop management
-      msg = Message()
-      msg.recipients = ["monitoring@synshop.org"]
-      msg.sender = 'SYN Shop Electric Badger <info@synshop.org>'
-      msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
-      msg.body = "%s is swiping in and is delinquent in stripe\n\nMore info can be found here: https://dashboard.stripe.com/customers/%s" % (user["full_name"],stripe_id)
-      mail.send(msg)
+        # This email is for shop management
+        msg = Message()
+        msg.recipients = ["monitoring@synshop.org"]
+        msg.sender = 'SYN Shop Electric Badger <info@synshop.org>'
+        msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
+        msg.body = "%s is swiping in and is delinquent in stripe\n\nMore info can be found here: https://dashboard.stripe.com/customers/%s" % (user["full_name"],stripe_id)
+        mail.send(msg)
 
-      # This is for the user
-      msg = Message()
-      msg.recipients = [user["primary_email"],]
-      msg.sender = "SYN Shop Electric Badger <info@synshop.org>"
-      msg.subject = "Your payments to SYN Shop are failing!"
-      msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
-      mail.send(msg)
+        # This is for the user
+        msg = Message()
+        msg.recipients = [user["primary_email"],]
+        msg.sender = "SYN Shop Electric Badger <info@synshop.org>"
+        msg.subject = "Your payments to SYN Shop are failing!"
+        msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
+        mail.send(msg)
 
-  message = {'message':"SWIPE OK"}
-  return jsonify(message)
+    message = {'message':"SWIPE_OK"}
+    return jsonify(message)
 
 @app.route('/member/new', methods=['GET','POST'])
 def new_member():
