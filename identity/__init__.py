@@ -91,7 +91,7 @@ def log_event(member_id=None,swipe_event=None,log_message=None):
     db = get_db()
     cur = db.cursor()
 
-    cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe,log_message))
+    cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe_event,log_message))
     db.commit()
 
     return "1"
