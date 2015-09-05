@@ -494,7 +494,10 @@ def login():
         if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
             session['logged_in'] = True
             flash('You were logged in')
-            return redirect(request.form.get('redirect_to'))
+            if request.form.get('redirect_to'):
+                return redirect(request.form.get('redirect_to'))
+            else:
+                return redirect("/member/search", code=302)
 
     return render_template('login.html',redirect_to=request.args.get('redirect_to'))
 
