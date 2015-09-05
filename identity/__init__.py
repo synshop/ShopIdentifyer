@@ -87,7 +87,7 @@ def get_db():
         g.mysql_db = connect_db()
     return g.mysql_db
 
-def log_event(member_id=None,swipe_event=NONE,log_message=None):
+def log_event(member_id=None,swipe_event=None,log_message=None):
     db = get_db()
     cur = db.cursor()
 
