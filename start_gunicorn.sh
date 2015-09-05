@@ -6,7 +6,7 @@ read key;
 stty echo
 
 export ENCRYPTION_KEY=${key};
-gunicorn --bind 0.0.0.0:8000 -D --log-file /tmp/gunicorn.log runserver:app
+gunicorn --bind 127.0.0.1:8000 -D --log-file /tmp/gunicorn.log runserver:app
 export ENCRYPTION_KEY=;
 
 echo "Showing application status: ";
