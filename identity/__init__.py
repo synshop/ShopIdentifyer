@@ -21,7 +21,7 @@ import MySQLdb as mysql
 from flask import Flask, request, g, flash
 from flask import redirect,  make_response
 from flask import render_template, jsonify
-from flask import session, escape
+from flask import session, escape, url_for
 
 from flask_mail import Mail, Message
 
@@ -35,6 +35,7 @@ app = Flask(__name__)
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['DEBUG'] = True
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
@@ -317,22 +318,12 @@ def edit_new_member(badge_serial):
 @app.route('/member/<badge_serial>')
 def show_member(badge_serial):
 
-    swipe_type = request.args.get('s')
-
-    if swipe_type != None:
-        swipe = "MANUAL_SWIPE"
-    else:
-        swipe = "BADGE_SWIPE"
-
     db = get_db()
     cur = db.cursor()
 
     cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
     entries = cur.fetchall()
     member = entries[0]
-
-    # cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
-    # db.commit()
 
     try:
         cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
@@ -378,6 +369,9 @@ def show_member(badge_serial):
         user['vetted_status'] = "Vetted Member"
     else:
         user["vetted_status"] = "Not Vetted Member"
+
+    # Sometimes the stripe email supplied is incorrect and will cause the stripe
+    # call to fail.  For this case, don't make the call.
     if stripe_id != "DEADBEEF":
         user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
     else:
@@ -490,7 +484,7 @@ def remove_message():
 
 @app.route('/')
 def index():
-    return redirect("/validate", code=302)
+    return redirect(url_for("member_search",scheme='https'))
 
 @app.route('/validate')
 def validate():
