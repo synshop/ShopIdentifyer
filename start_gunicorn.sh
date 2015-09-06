@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Start the Python Virtual Enviornment, if it hasn't been started already:
-workon ShopIdentifyer
-
 echo -n "Please enter the startup password and press [enter]: ";
 stty -echo
 read key;

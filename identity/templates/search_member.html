@@ -42,7 +42,7 @@
                 var editable = ' | Edit Information';
               {% endif %}
 
-              $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td>' + data.results[x].badge_serial + '</td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a>' + editable + '</td></tr>');
+              $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td><a href="/member/' + data.results[x].badge_serial + '">' + data.results[x].badge_serial + '</a></td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a>' + editable + '</td></tr>');
             }
 
           }});
