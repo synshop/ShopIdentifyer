@@ -107,7 +107,12 @@ def close_db(error):
 def swipe_badge():
 
     badge_serial = request.form['tag']
-    badge_reader = request.form['reader']
+
+    if request.form.has_key('reader') != False:
+        badge_reader = request.form['reader']
+    else:
+        badge_reader = None
+
     swipe = "BADGE_SWIPE"
 
     db = get_db()
@@ -137,8 +142,8 @@ def swipe_badge():
         # The user's defined stripe email does not match with the stripe cache
         swipe = "MISSING_STRIPE"
         member_id = member[0]
-        stripe_email = [member[9]
-        log_message = "%s (member %s) was not found in stripe cache, please fix" % (stripe_email,member_id)
+        stripe_email = member[9]
+        log_message = "%s (member %s) was not found in the stripe cache, please fix" % (stripe_email,member_id)
         log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
 
         message = {'message':swipe}
