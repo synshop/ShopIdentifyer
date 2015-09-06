@@ -331,8 +331,8 @@ def show_member(badge_serial):
     entries = cur.fetchall()
     member = entries[0]
 
-    cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
-    db.commit()
+    # cur.execute("insert into event_log (event_id,member_id,event_type) values (NULL,%s, %s)", (member[0],swipe))
+    # db.commit()
 
     try:
         cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
@@ -378,8 +378,10 @@ def show_member(badge_serial):
         user['vetted_status'] = "Vetted Member"
     else:
         user["vetted_status"] = "Not Vetted Member"
-
-    user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    if stripe_id != "DEADBEEF":
+        user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    else:
+        user["payment_status"] = "INDETERMINATE DUE TO INVALID STRIPE EMAIL"
 
     return render_template('show_member.html', member=user)
 
