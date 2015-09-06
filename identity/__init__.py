@@ -56,7 +56,7 @@ mail = Mail(app)
 s1 = BackgroundScheduler()
 
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
-def stripe_cache():
+def refresh_stripe_cache():
 
     member_array = get_stripe_cache(key=app.config['STRIPE_TOKEN'])
 
@@ -193,12 +193,18 @@ def new_member():
 
     if request.files['liability_wavier_form'].filename != "":
         liability_wavier_form = request.files['liability_wavier_form'].read()
+    else:
+        liability_wavier_form = None
 
     if request.files['vetted_membership_form'].filename != "":
         vetted_membership_form = request.files['vetted_membership_form'].read()
+    else:
+        vetted_membership_form = None
 
     # if request.files['badge_photo'].filename != "":
     #    badge_photo = request.files['badge_photo'].read()
+    #    photo_base64 = None
+    #else:
 
     photo_base64 = request.form.get('base64_photo_data',default=None)
 
