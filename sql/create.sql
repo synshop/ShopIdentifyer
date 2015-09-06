@@ -1,4 +1,4 @@
-DROP DATABASE shopidentifyer;
+DROP DATABASE IF EXISTS shopidentifyer;
 
 create database shopidentifyer;
 
@@ -25,9 +25,6 @@ create table shopidentifyer.members (
 
 );
 
--- ALTER TABLE shopidentifyer.members CHANGE badge_id member_id INT;
-
-
 create table shopidentifyer.event_log (
 
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -38,8 +35,7 @@ create table shopidentifyer.event_log (
 
 );
 
--- ALTER TABLE shopidentifyer.event_log CHANGE badge_id member_id INT NOT NULL;
--- ALTER TABLE shopidentifyer.event_log CHANGE badge_id badge_id varchar(255) NOT NULL;
+-- ALTER TABLE shopidentifyer.event_log CHANGE event_type event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_STRIPE');
 
 create table shopidentifyer.event_types (
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -52,8 +48,6 @@ insert into shopidentifyer.event_types values ('MANUAL_SWIPE');
 insert into shopidentifyer.event_types values ('ACCESS_ATTEMPT');
 insert into shopidentifyer.event_types values ('ACCESS_GRANT');
 insert into shopidentifyer.event_types values ('ACCESS_DENY');
-
--- ALTER TABLE shopidentifyer.event_log CHANGE event_type event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_STRIPE');
 
 create table shopidentifyer.message_queue (
   message varchar(255)
