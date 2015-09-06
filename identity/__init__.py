@@ -35,7 +35,7 @@ app = Flask(__name__)
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['DEBUG'] = True
-app.config['PREFERRED_URL_SCHEME'] = 'https'
+# app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
@@ -50,12 +50,13 @@ app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,
 app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 
+# Set up the mail sender object
 mail = Mail(app)
 
 # Start cron tasks
-# This helps with stripe information lookup performance
 s1 = BackgroundScheduler()
 
+# This helps with stripe information lookup performance
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
 
@@ -106,6 +107,7 @@ def close_db(error):
 def swipe_badge():
 
     badge_serial = request.form['tag']
+    badge_reader = request.form['reader']
     swipe = "BADGE_SWIPE"
 
     db = get_db()
@@ -115,18 +117,16 @@ def swipe_badge():
         cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
         entries = cur.fetchall()
         member = entries[0]
+        log_event(member_id=member[0],swipe_event=swipe)
     except IndexError:
         # The user's badge is not in the system
         swipe = "MISSING_BADGE"
         member_id = 0
         log_message = "%s not in system" % (badge_serial,)
-        log_event(member_id,swipe,log_message)
+        log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
 
         message = {'message':swipe}
         return jsonify(message)
-
-    # Log the swipe event (if the badge is found in the system)
-    log_event(member[0],swipe)
 
     try:
         cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
@@ -134,9 +134,12 @@ def swipe_badge():
         entries = cur.fetchall()
         stripe_id = entries[0][0]
     except IndexError:
-        # The user's defined stripe email does not match with with Stripe
+        # The user's defined stripe email does not match with the stripe cache
         swipe = "MISSING_STRIPE"
-        log_event(member[0],swipe)
+        member_id = member[0]
+        stripe_email = [member[9]
+        log_message = "%s (member %s) was not found in stripe cache, please fix" % (stripe_email,member_id)
+        log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
 
         message = {'message':swipe}
         return jsonify(message)
@@ -484,7 +487,7 @@ def remove_message():
 
 @app.route('/')
 def index():
-    return redirect(url_for("member_search",scheme='https'))
+    return redirect(url_for("member_search",_scheme='https',_external=True))
 
 @app.route('/validate')
 def validate():
