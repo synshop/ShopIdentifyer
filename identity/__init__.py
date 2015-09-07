@@ -200,6 +200,7 @@ def new_member():
     if request.method == "GET":
         return render_template('new_member.html')
 
+    # The rest of the code that follows is for the POST
     if request.files['liability_wavier_form'].filename != "":
         liability_wavier_form = request.files['liability_wavier_form'].read()
     else:
@@ -210,15 +211,12 @@ def new_member():
     else:
         vetted_membership_form = None
 
-    # if request.files['badge_photo'].filename != "":
-    #    badge_photo = request.files['badge_photo'].read()
-    #    photo_base64 = None
-    #else:
-
     photo_base64 = request.form.get('base64_photo_data',default=None)
 
     if photo_base64 != None:
         badge_photo = base64.b64decode(photo_base64)
+    else:
+        badge_photo = None
 
     insert_data = (
         request.form.get('badge_serial'),
@@ -410,12 +408,20 @@ def member_wavier(badge_serial):
     cur.execute("select liability_waiver from members where badge_serial = %s", (badge_serial,))
     wavier = cur.fetchone()
 
-    response = make_response(wavier)
-    response.headers['Content-Description'] = 'Liability Wavier'
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['Content-Type'] = 'application/pdf'
-    # response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
-    response.headers['Content-Disposition'] = 'inline'
+    if wavier[0] == None:
+        response = make_response("No Waiver on file, please fix this!")
+        response.headers['Content-Description'] = 'Liability Wavier'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/plain'
+        # response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
+        response.headers['Content-Disposition'] = 'inline'
+    else:
+        response = make_response(wavier)
+        response.headers['Content-Description'] = 'Liability Wavier'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/pdf'
+        # response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
+        response.headers['Content-Disposition'] = 'inline'
 
     return response
 
