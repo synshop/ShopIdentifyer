@@ -169,7 +169,7 @@ def swipe_badge():
     else:
         user["vetted_status"] = "Not Vetted Member"
 
-    user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    user["payment_status"] = get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
 
     # send an email to folks if user is flagged as delinquent
     if user["payment_status"] == DELINQUENT:
