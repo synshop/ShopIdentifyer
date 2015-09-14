@@ -81,3 +81,15 @@ SparkFun RFID USB Reader
 
 RFID Reader ID-12LA (125 kHz)
   * https://www.sparkfun.com/products/11827
+
+
+Ubuntu Quick Setup
+===
+	* apt-get install python-virtualenv
+	* apt-get install virtualenvwrapper
+	* apt-get install git
+	* apt-get install mysql-server-5.6
+	* apt-get autoremove
+	* apt-get install libmysqlclient-dev
+	* apt-get install python-dev
+	* apt-get install nginx
