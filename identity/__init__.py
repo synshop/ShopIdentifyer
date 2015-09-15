@@ -470,6 +470,7 @@ def show_badge(badge_serial):
 def member_search():
     return render_template('search_member.html')
 
+# AJAX service for search_member.html
 @app.route('/search',methods=['GET'])
 def search_user():
     user = request.args.get('s')

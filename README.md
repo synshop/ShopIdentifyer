@@ -41,7 +41,7 @@ Setup (Development)
         MAIL_USE_TLS = True
         MAIL_USE_SSL = False
         MAIL_DEBUG = True
-        
+
         ACCESS_CONTROL_HOSTNAME = 'localhost'
         ACCESS_CONTROL_SSH_PORT = 22
 
@@ -85,11 +85,5 @@ RFID Reader ID-12LA (125 kHz)
 
 Ubuntu Quick Setup
 ===
-	* apt-get install python-virtualenv
-	* apt-get install virtualenvwrapper
-	* apt-get install git
-	* apt-get install mysql-server-5.6
-	* apt-get autoremove
-	* apt-get install libmysqlclient-dev
-	* apt-get install python-dev
-	* apt-get install nginx
+	$ apt-get install python-dev python-virtualenv virtualenvwrapper \
+                      git mysql-server-5.6 libmysqlclient-dev nginx
