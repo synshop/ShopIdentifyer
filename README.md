@@ -41,7 +41,7 @@ Setup (Development)
         MAIL_USE_TLS = True
         MAIL_USE_SSL = False
         MAIL_DEBUG = True
-        
+
         ACCESS_CONTROL_HOSTNAME = 'localhost'
         ACCESS_CONTROL_SSH_PORT = 22
 
@@ -81,3 +81,9 @@ SparkFun RFID USB Reader
 
 RFID Reader ID-12LA (125 kHz)
   * https://www.sparkfun.com/products/11827
+
+
+Ubuntu Quick Setup
+===
+	$ apt-get install python-dev python-virtualenv virtualenvwrapper \
+                      git mysql-server-5.6 libmysqlclient-dev nginx

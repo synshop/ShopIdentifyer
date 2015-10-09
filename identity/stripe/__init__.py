@@ -1,4 +1,5 @@
 import stripe
+from identity import app
 
 IN_GOOD_STANDING = "In Good Standing"
 DELINQUENT = "Delinquent"
@@ -24,10 +25,10 @@ D_EMAIL_TEMPLATE = """
 
 """
 
-def get_stripe_cache(key=None):
+def get_stripe_cache():
 
     stripe.api_version = '2013-02-13'
-    stripe.api_key = key
+    stripe.api_key = app.config['STRIPE_TOKEN']
 
     m = 0
     c = 50
@@ -51,10 +52,10 @@ def get_stripe_cache(key=None):
 
     return member_array
 
-def get_payment_status(key=None,member_id=None):
+def get_payment_status(member_id=None):
 
     stripe.api_version = '2013-02-13'
-    stripe.api_key = key
+    stripe.api_key = app.config['STRIPE_TOKEN']
 
     count = stripe.Customer.retrieve(member_id).subscriptions.all()['count']
 

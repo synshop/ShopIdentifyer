@@ -8,14 +8,12 @@ except:
     print "Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
     quit()
 
-from identity.stripe import get_stripe_cache
-from identity.stripe import get_payment_status
-from identity.stripe import DELINQUENT, IN_GOOD_STANDING, D_EMAIL_TEMPLATE
-
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
+import svgwrite
+from svgwrite.image import Image
 import MySQLdb as mysql
 
 from flask import Flask, request, g, flash
@@ -31,11 +29,8 @@ RUN_MODE = 'development'
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
 app = Flask(__name__)
-
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
-app.config['DEBUG'] = True
-# app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
@@ -50,6 +45,20 @@ app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,
 app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 
+# Imports down here so that they can see the app.config elements
+from identity.stripe import get_stripe_cache
+from identity.stripe import get_payment_status
+from identity.stripe import DELINQUENT, IN_GOOD_STANDING, D_EMAIL_TEMPLATE
+from identity.models import Member
+
+def connect_db():
+    return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
+
+def get_db():
+    if not hasattr(g, 'mysql_db'):
+        g.mysql_db = connect_db()
+    return g.mysql_db
+
 # Set up the mail sender object
 mail = Mail(app)
 
@@ -60,7 +69,7 @@ s1 = BackgroundScheduler()
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
 
-    member_array = get_stripe_cache(key=app.config['STRIPE_TOKEN'])
+    member_array = get_stripe_cache()
 
     with app.app_context():
         db = get_db()
@@ -77,17 +86,6 @@ def refresh_stripe_cache():
 s1.start()
 
 # End cron tasks
-
-def connect_db():
-    return mysql.connect(host=config.DATABASE_HOST,
-                         user=config.DATABASE_USER,
-                         passwd=app.config["DATABASE_PASSWORD"],
-                         db=config.DATABASE_SCHEMA)
-
-def get_db():
-    if not hasattr(g, 'mysql_db'):
-        g.mysql_db = connect_db()
-    return g.mysql_db
 
 def log_event(member_id=None,swipe_event=None,log_message=None):
     db = get_db()
@@ -169,7 +167,7 @@ def swipe_badge():
     else:
         user["vetted_status"] = "Not Vetted Member"
 
-    user["payment_status"] = get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+    user["payment_status"] = get_payment_status(member_id=stripe_id)
 
     # send an email to folks if user is flagged as delinquent
     if user["payment_status"] == DELINQUENT:
@@ -379,7 +377,7 @@ def show_member(badge_serial):
     # Sometimes the stripe email supplied is incorrect and will cause the stripe
     # call to fail.  For this case, don't make the call.
     if stripe_id != "DEADBEEF":
-        user["payment_status"] = stripe.get_payment_status(key=app.config['STRIPE_TOKEN'],member_id=stripe_id)
+        user["payment_status"] = get_payment_status(member_id=stripe_id)
     else:
         user["payment_status"] = "INDETERMINATE DUE TO INVALID STRIPE EMAIL"
 
@@ -431,13 +429,42 @@ def member_vetted(badge_serial):
     db = get_db()
     cur = db.cursor()
     cur.execute("select vetted_membership_form from members where badge_serial = %s", (badge_serial,))
-    wavier = cur.fetchone()
+    vetted = cur.fetchone()
 
-    response = make_response(wavier)
-    response.headers['Content-Description'] = 'Vetted Membership Form'
+    if vetted[0] == None:
+        response = make_response("No signed vetted membership form on file, please fix this!")
+        response.headers['Content-Description'] = 'Vetted Membership Form'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/plain'
+        response.headers['Content-Disposition'] = 'inline'
+
+    else:
+        response = make_response(vetted)
+        response.headers['Content-Description'] = 'Vetted Membership Form'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = 'inline'
+
+    return response
+
+@app.route('/member/<badge_serial>/files/badge.svg',methods=['GET'])
+def show_badge(badge_serial):
+
+    svg_document = svgwrite.Drawing(size = ("3.375in", "2.125in"))
+
+    logo = Image(href="/static/images/syn_shop_badge_logo.png", insert=("0.5in",'0.5in'), size=("1in","1in"))
+    svg_document.add(logo)
+
+    photo_url = "/member/%s/files/photo.jpg" % (badge_serial,)
+    photo = Image(href=photo_url,insert=("1.5in",'1.5in'),size=("1in","1in"))
+    svg_document.add(photo)
+
+    #svg_document.add(svg_document.text("Hello World",insert = ("1in","1in")))
+
+    response = make_response(svg_document.tostring())
+    response.headers['Content-Description'] = 'Badge'
     response.headers['Cache-Control'] = 'no-cache'
-    response.headers['Content-Type'] = 'application/pdf'
-    # response.headers['Content-Disposition'] = 'attachment; filename=vetted-membership-form.pdf'
+    response.headers['Content-Type'] = 'image/svg+xml'
     response.headers['Content-Disposition'] = 'inline'
 
     return response
@@ -446,6 +473,7 @@ def member_vetted(badge_serial):
 def member_search():
     return render_template('search_member.html')
 
+# AJAX service for search_member.html
 @app.route('/search',methods=['GET'])
 def search_user():
     user = request.args.get('s')
