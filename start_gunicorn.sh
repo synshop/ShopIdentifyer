@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Ubuntu 14.04.01
-if [ -e /etc/bash_completion.d/virtualenvwrapper ];
+if [ -e "/etc/bash_completion.d/virtualenvwrapper" ];
 then
 	source /etc/bash_completion.d/virtualenvwrapper;
 	workon ShopIdentifyer;
 fi
 
 # OS X
-if [ -e /usr/local/bin/virtualenvwrapper.sh ];
+if [ -e "/usr/local/bin/virtualenvwrapper.sh" ];
 then
 	source /usr/local/bin/virtualenvwrapper.sh
     workon ShopIndentifyer;

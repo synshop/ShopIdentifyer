@@ -4,6 +4,7 @@ import requests
 import json
 
 SWIPE_URL = "https://localhost/swipe/"
+MEMBER_URL = "https://localhost/member/"
 
 class IdentityTests(unittest.TestCase):
 
@@ -44,6 +45,16 @@ class IdentityTests(unittest.TestCase):
         response = json.loads(r.text)
         swipe_message = "MISSING_STRIPE"
         assert swipe_message == response["message"]
+
+    def test_missing_liability_wavier(self):
+        # The user's liability waiver is missing
+        r = requests.get(MEMBER_URL + "/3BE0092/files/liability-waiver.pdf", verify=False)
+        assert "No Waiver on file, please fix this!" == r.text
+
+    def test_missing_vetted_membership_form(self):
+        # The user's vetted membership form is missing
+        r = requests.get(MEMBER_URL + "/3BE0092/files/vetted-membership-form.pdf", verify=False)
+        assert "No signed vetted membership form on file, please fix this!" == r.text
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(IdentityTests)

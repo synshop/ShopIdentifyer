@@ -24,16 +24,13 @@ from flask import session, escape, url_for
 from flask_mail import Mail, Message
 
 RUN_MODE = 'development'
-logging.basicConfig()
+#logging.basicConfig()
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
 app = Flask(__name__)
-
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
-app.config['DEBUG'] = True
-# app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
@@ -53,7 +50,6 @@ from identity.stripe import get_stripe_cache
 from identity.stripe import get_payment_status
 from identity.stripe import DELINQUENT, IN_GOOD_STANDING, D_EMAIL_TEMPLATE
 from identity.models import Member
-
 
 def connect_db():
     return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
@@ -433,14 +429,21 @@ def member_vetted(badge_serial):
     db = get_db()
     cur = db.cursor()
     cur.execute("select vetted_membership_form from members where badge_serial = %s", (badge_serial,))
-    wavier = cur.fetchone()
+    vetted = cur.fetchone()
 
-    response = make_response(wavier)
-    response.headers['Content-Description'] = 'Vetted Membership Form'
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['Content-Type'] = 'application/pdf'
-    # response.headers['Content-Disposition'] = 'attachment; filename=vetted-membership-form.pdf'
-    response.headers['Content-Disposition'] = 'inline'
+    if vetted[0] == None:
+        response = make_response("No signed vetted membership form on file, please fix this!")
+        response.headers['Content-Description'] = 'Vetted Membership Form'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/plain'
+        response.headers['Content-Disposition'] = 'inline'
+
+    else:
+        response = make_response(vetted)
+        response.headers['Content-Description'] = 'Vetted Membership Form'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = 'inline'
 
     return response
 
