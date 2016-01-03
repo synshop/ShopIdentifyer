@@ -555,10 +555,15 @@ def logout():
 def admin():
     try:
         if session['logged_in']:
-            return render_template('admin.html')
+            db = get_db()
+            cur = db.cursor()
+            cur.execute('select * from stripe_cache where subscription != "No Subscription Plan"')
+            entries = cur.fetchall()
+            return render_template('admin.html',entries=entries)
         else:
             return redirect('/login?redirect_to=/admin')
-    except:
+    except Exception, e:
+        print str(e)
         return redirect('/login?redirect_to=/admin')
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])

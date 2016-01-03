@@ -47,6 +47,18 @@
   <a href="/member/search" class="list-group-item">Edit an Existing User</a>
 </div>
 
+<div class="list-group">
+<h3>Members with Active Subscriptions</h3>
+<table class="table table-hover table-bordered" id="results">
+    <tr><th>Email</th><th>Subscription</th></tr>
+{% for entry in entries %}
+  <tr><td>{{ entry[1] }}</td><td>{{ entry[2] }}</td></tr>
+{% else %}
+  <li><em>Unbelievable.  No entries here so far</em>
+{% endfor %}
+</table>
+</div>
+
 </div>
 
 </body>
