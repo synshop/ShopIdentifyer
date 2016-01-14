@@ -11,7 +11,6 @@ Setup (Development)
   * MySQL 5.6.x
   * USB / Serial RFID Reader (see below)
 
-
 2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/) and [virtualenvwrapper](http://docs.python-guide.org/en/latest/dev/virtualenvs/#virtualenvwrapper), grab the source and pip install the requirements.txt file included:
 
         $ mkvirtualenv ShopIdentifyer
@@ -51,7 +50,6 @@ Please note that <em style="background-color:#FFD700">some of these properties a
 
     Usage: crypt.py enc <plaintext> <passphrase>
     crypt.py dec <encrypted> <passphrase>
-
 
 
 The Serial Remote
