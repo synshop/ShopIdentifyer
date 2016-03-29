@@ -46,10 +46,11 @@ app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 
 # Imports down here so that they can see the app.config elements
-from identity.stripe import get_stripe_cache
+from identity.stripe import get_full_stripe_cache, get_refresh_stripe_cache
 from identity.stripe import get_payment_status
 from identity.stripe import DELINQUENT, IN_GOOD_STANDING, D_EMAIL_TEMPLATE
 from identity.models import Member
+import time
 
 def connect_db():
     return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
@@ -58,6 +59,11 @@ def get_db():
     if not hasattr(g, 'mysql_db'):
         g.mysql_db = connect_db()
     return g.mysql_db
+
+@app.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'mysql_db'):
+        g.mysql_db.close()
 
 # Set up the mail sender object
 mail = Mail(app)
@@ -69,37 +75,53 @@ s1 = BackgroundScheduler()
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
 
-    member_array = get_stripe_cache()
+    member_array = get_refresh_stripe_cache(int(time.time()) - 172800000)
 
     with app.app_context():
         db = get_db()
 
-        cur = db.cursor()
-        cur.execute('delete from stripe_cache')
-        db.commit()
-
         for member in member_array:
             cur = db.cursor()
-            cur.execute("insert into stripe_cache values (%s, %s, %s)",(member['stripe_id'],member['stripe_email'], member["member_sub_plan"]))
-            db.commit()
+
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s)",\
+            (member['stripe_id'], member['created'], member['description'], \
+             member['stripe_email'], member["member_sub_plan"]))
+
+        db.commit()
 
 s1.start()
 
 # End cron tasks
 
+def prime_stripe_cache():
+
+    member_array = get_full_stripe_cache()
+
+    with app.app_context():
+        db = get_db()
+
+        cur = db.cursor()
+        cur.execute("delete from stripe_cache")
+        db.commit()
+
+        for member in member_array:
+            cur = db.cursor()
+
+            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s)",\
+            (member['stripe_id'], member['created'], member['description'], \
+             member['stripe_email'], member["member_sub_plan"]))
+
+        db.commit()
+
 def log_event(member_id=None,swipe_event=None,log_message=None):
     db = get_db()
     cur = db.cursor()
-
     cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe_event,log_message))
     db.commit()
 
-    return "1"
-
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(g, 'mysql_db'):
-        g.mysql_db.close()
+@app.route('/hello',methods=['GET'])
+def hello():
+    return jsonify({'results':get_cache_time()})
 
 @app.route('/swipe/', methods=['POST'])
 def swipe_badge():

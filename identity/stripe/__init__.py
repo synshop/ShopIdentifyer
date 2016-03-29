@@ -25,7 +25,26 @@ D_EMAIL_TEMPLATE = """
 
 """
 
-def get_stripe_cache():
+def get_refresh_stripe_cache(t=None):
+
+    stripe.api_version = '2013-02-13'
+    stripe.api_key = app.config['STRIPE_TOKEN']
+    member_array = []
+
+    members = stripe.Customer.all(created={'gte':t})
+
+    for member in members['data']:
+
+        if (member.subscription):
+            plan = member.subscription.plan.name
+        else:
+            plan = "No Subscription Plan"
+
+        member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan,"description":member.description,"created":member.created})
+
+    return member_array
+
+def get_full_stripe_cache():
 
     stripe.api_version = '2013-02-13'
     stripe.api_key = app.config['STRIPE_TOKEN']
@@ -46,7 +65,7 @@ def get_stripe_cache():
             else:
                 plan = "No Subscription Plan"
 
-            member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan})
+            member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan,"description":member.description,"created":member.created})
 
         m = m + c
 

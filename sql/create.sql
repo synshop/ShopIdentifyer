@@ -4,16 +4,17 @@ create database shopidentifyer;
 
 create table shopidentifyer.members (
 
-  member_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  badge_serial varchar(255) NOT NULL UNIQUE,
-  badge_status ENUM('ACTIVE', 'INACTIVE','LOST','BROKEN') NOT NULL DEFAULT "ACTIVE",
+  stripe_id varchar(255) NOT NULL PRIMARY KEY UNIQUE,
+  badge_serial varchar(255) default "N/A",
+  member_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  full_name varchar(255),
-  nick_name varchar(255),
+  drupal_id varchar(255),
   drupal_name varchar(255),
-  primary_email varchar(255),
+  drupal_display_name varchar(255),
+  drupal_legal_name varchar(255),
   stripe_email varchar(255),
+  stripe_created_on varchar(255),
   meetup_email varchar(255),
   mobile varchar(25),
   emergency_contact_name varchar(255),
@@ -55,6 +56,10 @@ create table shopidentifyer.message_queue (
 
 create table shopidentifyer.stripe_cache (
   stripe_id varchar(255),
+  stripe_created_on varchar(255),
+  stripe_description text,
   stripe_email varchar(255),
   subscription varchar(255)
 );
+
+ALTER TABLE shopidentifyer.stripe_cache ADD UNIQUE (stripe_id)
