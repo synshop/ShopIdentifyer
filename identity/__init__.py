@@ -12,7 +12,7 @@ import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-import svgwrite
+import svgwrite, json
 from svgwrite.image import Image
 import MySQLdb as mysql
 
@@ -118,10 +118,6 @@ def log_event(member_id=None,swipe_event=None,log_message=None):
     cur = db.cursor()
     cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe_event,log_message))
     db.commit()
-
-@app.route('/hello',methods=['GET'])
-def hello():
-    return jsonify({'results':get_cache_time()})
 
 @app.route('/swipe/', methods=['POST'])
 def swipe_badge():
@@ -265,8 +261,91 @@ def new_member():
 
     return render_template('new_member.html')
 
-@app.route('/member/<badge_serial>/edit', methods=['GET','POST'])
-def edit_new_member(badge_serial):
+# This attempts to pre-populate some fields when setting up a new user.
+@app.route('/member/new/<stripe_id>', methods=['GET','POST'])
+def new_member_stripe(stripe_id):
+
+    # Give me a new form, or if a POST then save the data
+    if request.method == "GET":
+        db = connect_db()
+        cur = db.cursor()
+        cur.execute('select stripe_email, stripe_description from stripe_cache where stripe_id = %s', (stripe_id,))
+        rows = cur.fetchall()
+        member = rows[0]
+
+        x = json.loads(member[1])
+
+        if 'drupal_id' in x:
+            drupal_id = x['drupal_id']
+        else:
+            drupal_id = "-1"
+
+        if 'drupal_legal_name' in x:
+            drupal_legal_name = x['drupal_legal_name']
+        else:
+            drupal_legal_name = "No Legal Name Provided"
+
+        if 'drupal_name' in x:
+            drupal_name = x['drupal_name']
+        else:
+            drupal_name = "Not Provided"
+
+        user = {}
+
+        user["full_name"] = drupal_legal_name
+        user["drupal_name"] = drupal_name
+        user["drupal_id"] = drupal_id
+        user["stripe_email"] = member[0]
+
+        return render_template('new_member.html', member=user)
+
+    # The rest of the code that follows is for the POST
+    if request.files['liability_wavier_form'].filename != "":
+        liability_wavier_form = request.files['liability_wavier_form'].read()
+    else:
+        liability_wavier_form = None
+
+    if request.files['vetted_membership_form'].filename != "":
+        vetted_membership_form = request.files['vetted_membership_form'].read()
+    else:
+        vetted_membership_form = None
+
+    photo_base64 = request.form.get('base64_photo_data',default=None)
+
+    if photo_base64 != None:
+        badge_photo = base64.b64decode(photo_base64)
+    else:
+        badge_photo = None
+
+    insert_data = (
+        request.form.get('badge_serial'),
+        'ACTIVE',
+        request.form.get('full_name'),
+        request.form.get('nick_name'),
+        request.form.get('drupal_name'),
+        request.form.get('primary_email'),
+        request.form.get('stripe_email'),
+        request.form.get('meetup_email'),
+        request.form.get('mobile'),
+        request.form.get('emergency_contact_name'),
+        request.form.get('emergency_contact_mobile'),
+        request.form.get('is_vetted','NO'),
+        liability_wavier_form,
+        vetted_membership_form,
+        badge_photo
+    )
+
+    db = connect_db()
+    cur = db.cursor()
+    cur.execute('insert into members (badge_serial,badge_status,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+
+    db.commit()
+    db.close()
+
+    return render_template('new_member.html')
+
+@app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
+def edit_new_member(stripe_id):
 
     if request.method == "GET":
         db = connect_db()
@@ -341,8 +420,8 @@ def edit_new_member(badge_serial):
 
         return redirect('validate')
 
-@app.route('/member/<badge_serial>')
-def show_member(badge_serial):
+@app.route('/member/<stripe_id>')
+def show_member(stripe_id):
 
     db = get_db()
     cur = db.cursor()
@@ -405,7 +484,7 @@ def show_member(badge_serial):
 
     return render_template('show_member.html', member=user)
 
-@app.route('/member/<badge_serial>/files/photo.jpg')
+@app.route('/member/<stripe_id>/files/photo.jpg')
 def member_photo(badge_serial):
 
     db = get_db()
@@ -420,7 +499,7 @@ def member_photo(badge_serial):
 
     return response
 
-@app.route("/member/<badge_serial>/files/liability-waiver.pdf")
+@app.route("/member/<stripe_id>/files/liability-waiver.pdf")
 def member_wavier(badge_serial):
 
     db = get_db()
@@ -445,7 +524,7 @@ def member_wavier(badge_serial):
 
     return response
 
-@app.route('/member/<badge_serial>/files/vetted-membership-form.pdf')
+@app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
 def member_vetted(badge_serial):
 
     db = get_db()
@@ -469,7 +548,7 @@ def member_vetted(badge_serial):
 
     return response
 
-@app.route('/member/<badge_serial>/files/badge.svg',methods=['GET'])
+@app.route('/member/<stripe_id>/files/badge.svg',methods=['GET'])
 def show_badge(badge_serial):
 
     svg_document = svgwrite.Drawing(size = ("3.375in", "2.125in"))
@@ -587,6 +666,35 @@ def admin():
     except Exception, e:
         print str(e)
         return redirect('/login?redirect_to=/admin')
+
+@app.route('/admin/onboard')
+def admin_onboard():
+    try:
+        if session['logged_in']:
+
+            entries_x = []
+
+            db = get_db()
+            cur = db.cursor()
+            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description from stripe_cache where subscription != "No Subscription Plan" and stripe_id not in (select stripe_id from members)')
+            rows = cur.fetchall()
+
+            for row in rows:
+
+                x = json.loads(row[3])
+                if 'drupal_legal_name' in x:
+                    drupal_legal_name = x['drupal_legal_name']
+                else:
+                    drupal_legal_name = "No Legal Name Provided"
+
+                entries_x.append(dict(stripe_id=row[0],stripe_email=row[2],drupal_legal_name=drupal_legal_name))
+
+            return render_template('onboard.html',entries=entries_x)
+        else:
+            return redirect('/login?redirect_to=/admin/onboard')
+    except Exception, e:
+        print str(e)
+        return redirect('/login?redirect_to=/admin/onboard')
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])
 def electric_badger():

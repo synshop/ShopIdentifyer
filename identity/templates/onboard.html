@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 
-<title>SYN Shop Admin Interface</title>
+<title>SYN Shop Onboarding Interface</title>
 
 <head>
   <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
@@ -42,20 +42,18 @@
 <div class="container">
 
 <div class="list-group">
-  <h3>What do you want to do?</h3>
-  <a href="/member/new" class="list-group-item">Add A New User</a>
-  <a href="/member/search" class="list-group-item">Edit an Existing User</a>
-</div>
-
-<div class="list-group">
-<h3>Members with Active Subscriptions</h3>
+<h3>Members Who Need Onboarding</h3>
 <table class="table table-hover table-bordered" id="results">
-    <tr><th>Email</th><th>Subscription</th><th>Description</th></tr>
+    <thead>
+    <tr><th>Stripe Id</th><th>Drupal Legal Name</th><th>Stripe Email</th></tr>
+    </thead>
+    <tbody>
 {% for entry in entries %}
-  <tr><td>{{ entry[3] }}</td><td>{{ entry[4] }}</td><td>{{ entry[2] }}</td></tr>
+  <tr><td><a href="/member/new/{{ entry['stripe_id'] }}">{{ entry['stripe_id'] }}</a></td><td>{{ entry['drupal_legal_name'] }}</td><td>{{ entry['stripe_email'] }}</td></tr>
 {% else %}
   <li><em>Unbelievable.  No entries here so far</em>
 {% endfor %}
+</tbody>
 </table>
 </div>
 
