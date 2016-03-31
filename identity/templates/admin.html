@@ -43,19 +43,24 @@
 
 <div class="list-group">
   <h3>What do you want to do?</h3>
-  <a href="/member/new" class="list-group-item">Add A New User</a>
-  <a href="/member/search" class="list-group-item">Edit an Existing User</a>
+  <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
+  <a href="/member/new" class="list-group-item">Manually Add New Member</a>
+  <a href="/member/search" class="list-group-item">Search for an Existing Member</a>
 </div>
 
 <div class="list-group">
-<h3>Members with Active Subscriptions</h3>
+<h3>Onboarded Members with Active Subscriptions</h3>
 <table class="table table-hover table-bordered" id="results">
-    <tr><th>Email</th><th>Subscription</th><th>Description</th></tr>
+    <thead>
+    <tr><th>Email</th><th>Subscription</th></tr>
+    </thead>
+    <tbody>
 {% for entry in entries %}
-  <tr><td>{{ entry[3] }}</td><td>{{ entry[4] }}</td><td>{{ entry[2] }}</td></tr>
+  <tr><td><a href="/member/edit/{{ entry[0] }}">{{ entry[3] }}</a></td><td>{{ entry[4] }}</td></tr>
 {% else %}
-  <li><em>Unbelievable.  No entries here so far</em>
+  <tr><td>No entries here so far</td><td></td></tr>
 {% endfor %}
+</tbody>
 </table>
 </div>
 

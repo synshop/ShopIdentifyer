@@ -658,7 +658,7 @@ def admin():
         if session['logged_in']:
             db = get_db()
             cur = db.cursor()
-            cur.execute('select * from stripe_cache where subscription != "No Subscription Plan"')
+            cur.execute('select stripe_id, stripe_email, subscription from stripe_cache where subscription != "No Subscription Plan" and stripe_id in (select stripe_id from members)')
             entries = cur.fetchall()
             return render_template('admin.html',entries=entries)
         else:
