@@ -82,7 +82,7 @@
   <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
     <div class="container">
       <div class="navbar-header">
-        <a class="navbar-brand" href="/">SYN Shop Identity Management System</a>
+        <a class="navbar-brand" href="/admin/onboard">SYN Shop Identity Management System</a>
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav">
@@ -186,16 +186,23 @@
       <div class="form-group">
         <label for="drupal_name" class="col-sm-2 control-label">Drupal Id:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}">
+          <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}" readonly>
         </div>
       </div>
 
       <hr/>
 
       <div class="form-group">
+        <label for="stripe_email" class="col-sm-2 control-label">Stripe Id:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="stripe_id" name="stripe_id" value="{{ member.stripe_id }}" readonly>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}">
+          <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" readonly>
         </div>
       </div>
 

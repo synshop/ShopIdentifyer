@@ -292,6 +292,7 @@ def new_member_stripe(stripe_id):
 
         user = {}
 
+        user["stripe_id"] = stripe_id
         user["full_name"] = drupal_legal_name
         user["drupal_name"] = drupal_name
         user["drupal_id"] = drupal_id
@@ -318,12 +319,11 @@ def new_member_stripe(stripe_id):
         badge_photo = None
 
     insert_data = (
+        request.form.get('stripe_id'),
         request.form.get('badge_serial'),
         'ACTIVE',
         request.form.get('full_name'),
         request.form.get('nick_name'),
-        request.form.get('drupal_name'),
-        request.form.get('primary_email'),
         request.form.get('stripe_email'),
         request.form.get('meetup_email'),
         request.form.get('mobile'),
@@ -332,17 +332,16 @@ def new_member_stripe(stripe_id):
         request.form.get('is_vetted','NO'),
         liability_wavier_form,
         vetted_membership_form,
-        badge_photo
+        badge_photo,
     )
 
     db = connect_db()
     cur = db.cursor()
-    cur.execute('insert into members (badge_serial,badge_status,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
-
+    cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
     db.commit()
     db.close()
 
-    return render_template('new_member.html')
+    return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
 @app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
 def edit_new_member(stripe_id):
@@ -426,16 +425,9 @@ def show_member(stripe_id):
     db = get_db()
     cur = db.cursor()
 
-    cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
+    cur.execute('select stripe_id,member_status,badge_serial,created_on,changed_on,full_name,nick_name,drupal_id,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where stripe_id = %s', (stripe_id,))
     entries = cur.fetchall()
     member = entries[0]
-
-    try:
-        cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
-        entries = cur.fetchall()
-        stripe_id = entries[0][0]
-    except IndexError:
-        stripe_id = "DEADBEEF"
 
     swipe_freq_sql = """
         select
@@ -457,39 +449,35 @@ def show_member(stripe_id):
 
     user = {}
 
-    user["badge_serial"] = member[1]
-    user["badge_status"] = member[2]
+    user["stripe_id"] = stripe_id
+    user["badge_serial"] = member[2]
+    user["member_status"] = member[1]
     user["created_on"] = member[3]
     user["changed_on"] = member[4]
     user["full_name"] = member[5]
     user["nick_name"] = member[6]
-    user["drupal_name"] = member[7]
-    user["primary_email"] = member[8]
+    user["drupal_id"] = member[7]
+    user["stripe_email"] = member[8]
     user["meetup_email"] = member[10]
     user["mobile"] = member[11]
     user["emergency_contact_name"] = member[12]
     user["emergency_contact_mobile"] = member[13]
 
-    if member[14] == 'YES':
+    if member[13] == 'YES':
         user['vetted_status'] = "Vetted Member"
     else:
         user["vetted_status"] = "Not Vetted Member"
 
-    # Sometimes the stripe email supplied is incorrect and will cause the stripe
-    # call to fail.  For this case, don't make the call.
-    if stripe_id != "DEADBEEF":
-        user["payment_status"] = get_payment_status(member_id=stripe_id)
-    else:
-        user["payment_status"] = "INDETERMINATE DUE TO INVALID STRIPE EMAIL"
+    user["payment_status"] = get_payment_status(member_id=stripe_id)
 
     return render_template('show_member.html', member=user)
 
 @app.route('/member/<stripe_id>/files/photo.jpg')
-def member_photo(badge_serial):
+def member_photo(stripe_id):
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("select badge_photo from members where badge_serial = %s", (badge_serial,))
+    cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
     photo = cur.fetchone()
 
     response = make_response(photo)
@@ -500,11 +488,11 @@ def member_photo(badge_serial):
     return response
 
 @app.route("/member/<stripe_id>/files/liability-waiver.pdf")
-def member_wavier(badge_serial):
+def member_wavier(stripe_id):
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("select liability_waiver from members where badge_serial = %s", (badge_serial,))
+    cur.execute("select liability_waiver from members where stripe_id = %s", (stripe_id,))
     wavier = cur.fetchone()
 
     if wavier[0] == None:
@@ -525,11 +513,11 @@ def member_wavier(badge_serial):
     return response
 
 @app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
-def member_vetted(badge_serial):
+def member_vetted(stripe_id):
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("select vetted_membership_form from members where badge_serial = %s", (badge_serial,))
+    cur.execute("select vetted_membership_form from members where stripe_id = %s", (stripe_id,))
     vetted = cur.fetchone()
 
     if vetted[0] == None:
@@ -549,7 +537,7 @@ def member_vetted(badge_serial):
     return response
 
 @app.route('/member/<stripe_id>/files/badge.svg',methods=['GET'])
-def show_badge(badge_serial):
+def show_badge(stripe_id):
 
     svg_document = svgwrite.Drawing(size = ("3.375in", "2.125in"))
 
@@ -638,11 +626,10 @@ def login():
     if request.method == 'POST':
         if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
             session['logged_in'] = True
-            flash('You were logged in')
             if request.form.get('redirect_to'):
-                return redirect(request.form.get('redirect_to'))
+                return redirect(url_for(request.form.get('redirect_to'),_scheme='https',_external=True))
             else:
-                return redirect("/member/search", code=302)
+                return redirect(url_for('member_search',_scheme='https',_external=True))
 
     return render_template('login.html',redirect_to=request.args.get('redirect_to'))
 
@@ -662,10 +649,10 @@ def admin():
             entries = cur.fetchall()
             return render_template('admin.html',entries=entries)
         else:
-            return redirect('/login?redirect_to=/admin')
+            return redirect(url_for("login",redirect_to="admin",_scheme='https',_external=True))
     except Exception, e:
         print str(e)
-        return redirect('/login?redirect_to=/admin')
+        return redirect(url_for("login",redirect_to="admin",_scheme='https',_external=True))
 
 @app.route('/admin/onboard')
 def admin_onboard():
@@ -676,7 +663,7 @@ def admin_onboard():
 
             db = get_db()
             cur = db.cursor()
-            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description from stripe_cache where subscription != "No Subscription Plan" and stripe_id not in (select stripe_id from members)')
+            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description from stripe_cache where subscription != "No Subscription Plan" and stripe_id not in (select stripe_id from members) order by stripe_created_on')
             rows = cur.fetchall()
 
             for row in rows:
@@ -691,10 +678,10 @@ def admin_onboard():
 
             return render_template('onboard.html',entries=entries_x)
         else:
-            return redirect('/login?redirect_to=/admin/onboard')
+            return redirect('/login?redirect_to=admin_onboard')
     except Exception, e:
         print str(e)
-        return redirect('/login?redirect_to=/admin/onboard')
+        return redirect('/login?redirect_to=admin_onboard')
 
 @app.route('/electric-badger/', methods=['GET', 'POST'])
 def electric_badger():

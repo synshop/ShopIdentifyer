@@ -5,24 +5,22 @@ create database shopidentifyer;
 create table shopidentifyer.members (
 
   stripe_id varchar(255) NOT NULL PRIMARY KEY UNIQUE,
+  drupal_id varchar(255),
   badge_serial varchar(255) default "N/A",
   member_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
-  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  drupal_id varchar(255),
-  drupal_name varchar(255),
-  drupal_display_name varchar(255),
-  drupal_legal_name varchar(255),
+  is_vetted ENUM('YES','NO') NOT NULL DEFAULT "NO",
+  full_name varchar(255),
+  nick_name varchar(255),
   stripe_email varchar(255),
-  stripe_created_on varchar(255),
   meetup_email varchar(255),
   mobile varchar(25),
   emergency_contact_name varchar(255),
   emergency_contact_mobile varchar(25),
-  is_vetted ENUM('YES','NO') NOT NULL DEFAULT "NO",
   liability_waiver longblob,
   vetted_membership_form longblob,
-  badge_photo longblob
+  badge_photo longblob,
+  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 
 );
 
