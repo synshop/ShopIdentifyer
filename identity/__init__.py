@@ -82,9 +82,13 @@ s1 = BackgroundScheduler()
 # the last 15 minutes of data
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
-    logging.info("refreshing stripe cache")
 
-    member_array = get_refresh_stripe_cache(int(time.time()) - 900000)
+    print "refreshing stripe cache"
+
+    # Convert to milliseconds
+    i = app.config['STRIPE_CACHE_REFRESH_BACKREACH_MIN'] * 60000
+
+    member_array = get_refresh_stripe_cache(int(time.time()) - i)
 
     with app.app_context():
         db = get_db()
@@ -100,6 +104,8 @@ def refresh_stripe_cache():
 
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REBUILD_MINUTES'])
 def rebuild_stripe_cache():
+
+    print "rebuilding stripe cache"
 
     member_array = get_rebuild_stripe_cache()
 
