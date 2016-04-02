@@ -14,12 +14,15 @@
   <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/jasny-bootstrap.min.js') }}"></script>
 
-  <style>
-  body {
-    min-height: 1000px;
-    padding-top: 70px;
-  }
+<style>
+    body {
+        min-height: 1000px;
+        padding-top: 70px;
+    }
 
+    th {
+        background-color:#eee;
+    }
   </style>
 
 </head>
@@ -44,24 +47,24 @@
 <div class="list-group">
   <h3>What do you want to do?</h3>
   <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
-  <a href="/member/new" class="list-group-item">Manually Add New Member</a>
   <a href="/member/search" class="list-group-item">Search for an Existing Member</a>
 </div>
 
 <div class="list-group">
-<h3>There are {{entries|length}} Onboarded Members with Active Subscriptions</h3>
+<h3>There are currently {{entries|length}} Active Members at SYN Shop</h3>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Email</th><th>Subscription</th></tr>
+    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted</th></tr>
     </thead>
     <tbody>
 {% for entry in entries %}
-  <tr><td><a href="/member/edit/{{ entry[0] }}">{{ entry[1] }}</a></td><td>{{ entry[2] }}</td></tr>
+  <tr><td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td><td>{{ entry[1] }}</td><td>{{ entry[3] }}</td></tr>
 {% else %}
-  <tr><td>No entries here so far</td><td></td></tr>
+  <tr><td>No entries here so far</td><td></td><td></td></tr>
 {% endfor %}
 </tbody>
 </table>
+
 </div>
 
 </div>

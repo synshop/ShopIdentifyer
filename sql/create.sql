@@ -8,7 +8,7 @@ create table shopidentifyer.members (
   drupal_id varchar(255),
   badge_serial varchar(255) default "N/A",
   member_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
-  is_vetted ENUM('YES','NO') NOT NULL DEFAULT "NO",
+  is_vetted ENUM('VETTED','NOT VETTED') NOT NULL DEFAULT "NOT VETTED",
   full_name varchar(255),
   nick_name varchar(255),
   stripe_email varchar(255),
@@ -53,11 +53,10 @@ create table shopidentifyer.message_queue (
 );
 
 create table shopidentifyer.stripe_cache (
-  stripe_id varchar(255),
+  stripe_id varchar(255) unique,
   stripe_created_on varchar(255),
   stripe_description text,
   stripe_email varchar(255),
-  subscription varchar(255)
+  subscription varchar(255),
+  stripe_status varchar(255)
 );
-
-ALTER TABLE shopidentifyer.stripe_cache ADD UNIQUE (stripe_id)

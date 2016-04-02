@@ -2,7 +2,10 @@ import stripe
 from identity import app
 
 IN_GOOD_STANDING = "In Good Standing"
+PAST_DUE = "Past Due"
 DELINQUENT = "Delinquent"
+NOT_ACTIVE = "Not Active"
+NO_SUBSCRIPTION_PLAN = "No Subscription Plan"
 
 # Delinquent email template
 D_EMAIL_TEMPLATE = """
@@ -37,14 +40,16 @@ def get_refresh_stripe_cache(t=None):
 
         if (member.subscription):
             plan = member.subscription.plan.name
+            status = member.subscription.status
         else:
-            plan = "No Subscription Plan"
+            plan = NO_SUBSCRIPTION_PLAN
+            status = NOT_ACTIVE
 
-        member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan,"description":member.description,"created":member.created})
+        member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan,"description":member.description,"created":member.created,"status":status})
 
     return member_array
 
-def get_full_stripe_cache():
+def get_rebuild_stripe_cache():
 
     stripe.api_version = '2013-02-13'
     stripe.api_key = app.config['STRIPE_TOKEN']
@@ -61,24 +66,29 @@ def get_full_stripe_cache():
         for member in members['data']:
 
             if (member.subscription):
+                status = member.subscription.status
                 plan = member.subscription.plan.name
             else:
-                plan = "No Subscription Plan"
+                status = NOT_ACTIVE
+                plan = NO_SUBSCRIPTION_PLAN
 
-            member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan,"description":member.description,"created":member.created})
+            member_array.append({"stripe_email":member.email,"stripe_id":member.id,"member_sub_plan":plan,"description":member.description,"created":member.created,"status":status})
 
         m = m + c
 
     return member_array
 
-def get_payment_status(member_id=None):
+def get_realtime_stripe_info(stripe_id=None):
+
+    stripe_info = {'status':None,'plan':None}
 
     stripe.api_version = '2013-02-13'
     stripe.api_key = app.config['STRIPE_TOKEN']
 
-    count = stripe.Customer.retrieve(member_id).subscriptions.all()['count']
+    member = stripe.Customer.retrieve(stripe_id)
 
-    if (count != 0):
-        return IN_GOOD_STANDING
-    else:
-        return DELINQUENT
+    if member.subscription != None:
+        stripe_info['status'] = member.subscription.status
+        stripe_info['plan'] = member.subscription.plan.name
+
+    return stripe_info

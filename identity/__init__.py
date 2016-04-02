@@ -29,11 +29,17 @@ RUN_MODE = 'development'
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
 app = Flask(__name__)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+app.logger.addHandler(stream_handler)
+
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
+app.config['STRIPE_CACHE_REBUILD_MINUTES'] = config.STRIPE_CACHE_REBUILD_MINUTES
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
 
@@ -46,9 +52,9 @@ app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 
 # Imports down here so that they can see the app.config elements
-from identity.stripe import get_full_stripe_cache, get_refresh_stripe_cache
-from identity.stripe import get_payment_status
-from identity.stripe import DELINQUENT, IN_GOOD_STANDING, D_EMAIL_TEMPLATE
+from identity.stripe import get_rebuild_stripe_cache, get_refresh_stripe_cache
+from identity.stripe import get_realtime_stripe_info
+from identity.stripe import DELINQUENT, IN_GOOD_STANDING,PAST_DUE, D_EMAIL_TEMPLATE
 from identity.models import Member
 import time
 
@@ -72,10 +78,13 @@ mail = Mail(app)
 s1 = BackgroundScheduler()
 
 # This helps with stripe information lookup performance
+# Currently it runs every 10 minutes and grabs
+# the last 15 minutes of data
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
+    logging.info("refreshing stripe cache")
 
-    member_array = get_refresh_stripe_cache(int(time.time()) - 172800000)
+    member_array = get_refresh_stripe_cache(int(time.time()) - 900000)
 
     with app.app_context():
         db = get_db()
@@ -83,19 +92,16 @@ def refresh_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s)",\
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s)",\
             (member['stripe_id'], member['created'], member['description'], \
-             member['stripe_email'], member["member_sub_plan"]))
+             member['stripe_email'], member["member_sub_plan"],member['status']))
 
         db.commit()
 
-s1.start()
+@s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REBUILD_MINUTES'])
+def rebuild_stripe_cache():
 
-# End cron tasks
-
-def prime_stripe_cache():
-
-    member_array = get_full_stripe_cache()
+    member_array = get_rebuild_stripe_cache()
 
     with app.app_context():
         db = get_db()
@@ -107,161 +113,119 @@ def prime_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s)",\
+            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s)",\
             (member['stripe_id'], member['created'], member['description'], \
-             member['stripe_email'], member["member_sub_plan"]))
+             member['stripe_email'], member["member_sub_plan"],member['status']))
 
         db.commit()
 
-def log_event(member_id=None,swipe_event=None,log_message=None):
+s1.start()
+# End cron tasks
+
+def log_event(stripe_id=None,swipe_event=None,log_message=None):
     db = get_db()
     cur = db.cursor()
-    cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (member_id,swipe_event,log_message))
+    cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (stripe_id,swipe_event,log_message))
     db.commit()
 
-@app.route('/swipe/', methods=['POST'])
-def swipe_badge():
+# Fetch a member 'object'
+def get_member(stripe_id):
 
-    badge_serial = request.form['tag']
+    app.logger.info(stripe_id)
 
-    if request.form.has_key('reader') != False:
-        badge_reader = request.form['reader']
-    else:
-        badge_reader = None
+    member = {}
 
-    swipe = "BADGE_SWIPE"
+    stripe_info = get_realtime_stripe_info(stripe_id)
+    member["stripe_status"] = stripe_info['status'].upper()
+    member['stripe_plan'] = stripe_info['plan'].upper()
 
     db = get_db()
     cur = db.cursor()
 
-    try:
-        cur.execute('select member_id,badge_serial,badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s', (badge_serial,))
-        entries = cur.fetchall()
-        member = entries[0]
-        log_event(member_id=member[0],swipe_event=swipe)
-    except IndexError:
-        # The user's badge is not in the system
-        swipe = "MISSING_BADGE"
-        member_id = 0
-        log_message = "%s not in system" % (badge_serial,)
-        log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
+    cur.execute("update stripe_cache set subscription = %s, stripe_status = %s where stripe_id = %s", (member['stripe_plan'],member['stripe_status'],stripe_id))
 
-        message = {'message':swipe}
-        return jsonify(message)
+    sql_stmt = '''select
+         stripe_id,
+         member_status,
+         badge_serial,
+         created_on,
+         changed_on,
+         full_name,
+         nick_name,
+         drupal_id,
+         stripe_email,
+         meetup_email,
+         mobile,
+         emergency_contact_name,
+         emergency_contact_mobile,
+         is_vetted
+      from members where stripe_id = %s'''
 
-    try:
-        cur.execute("select stripe_id from stripe_cache where stripe_email = %s", [member[9]])
-        print member[9]
-        entries = cur.fetchall()
-        stripe_id = entries[0][0]
-    except IndexError:
-        # The user's defined stripe email does not match with the stripe cache
-        swipe = "MISSING_STRIPE"
-        member_id = member[0]
-        stripe_email = member[9]
-        log_message = "%s (member %s) was not found in the stripe cache, please fix" % (stripe_email,member_id)
-        log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
+    cur.execute(sql_stmt, (stripe_id,))
+    entries = cur.fetchall()
+    entry = entries[0]
 
-        message = {'message':swipe}
-        return jsonify(message)
+    member["stripe_id"] = stripe_id
+    member["member_status"] = entry[1]
+    member["badge_serial"] = entry[2]
+    member["created_on"] = entry[3]
+    member["changed_on"] = entry[4]
+    member["full_name"] = entry[5]
+    member["nick_name"] = entry[6]
+    member["drupal_id"] = entry[7]
+    member["stripe_email"] = entry[8]
+    member["meetup_email"] = entry[9]
+    member["mobile"] = entry[10]
+    member["emergency_contact_name"] = entry[11]
+    member["emergency_contact_mobile"] = entry[12]
+    member["vetted_status"] = entry[13]
 
-    user = {}
+    return member
 
-    user["badge_serial"] = member[1]
-    user["badge_status"] = member[2]
-    user["created_on"] = member[3]
-    user["changed_on"] = member[4]
-    user["full_name"] = member[5]
-    user["nick_name"] = member[6]
-    user["drupal_name"] = member[7]
-    user["primary_email"] = member[8]
-    user["meetup_email"] = member[10]
-    user["mobile"] = member[11]
-    user["emergency_contact_name"] = member[12]
-    user["emergency_contact_mobile"] = member[13]
+# Update an existing member 'object'
+def update_member(request):
 
-    if member[14] == 'YES':
-        user['vetted_status'] = "Vetted Member"
-    else:
-        user["vetted_status"] = "Not Vetted Member"
+    db = connect_db()
+    cur = db.cursor()
 
-    user["payment_status"] = get_payment_status(member_id=stripe_id)
+    stripe_id = request.form.get('stripe_id')
 
-    # send an email to folks if user is flagged as delinquent
-    if user["payment_status"] == DELINQUENT:
-
-        # This email is for shop management
-        msg = Message()
-        msg.recipients = ["monitoring@synshop.org"]
-        msg.sender = 'SYN Shop Electric Badger <info@synshop.org>'
-        msg.subject = "Member %s (%s) is delinquent according to stripe" % (user["full_name"],user["primary_email"])
-        msg.body = "%s is swiping in and is delinquent in stripe\n\nMore info can be found here: https://dashboard.stripe.com/customers/%s" % (user["full_name"],stripe_id)
-        mail.send(msg)
-
-        # This is for the user
-        msg = Message()
-        msg.recipients = [user["primary_email"],]
-        msg.sender = "SYN Shop Electric Badger <info@synshop.org>"
-        msg.subject = "Your payments to SYN Shop are failing!"
-        msg.html = D_EMAIL_TEMPLATE % (user["drupal_name"],)
-        mail.send(msg)
-
-    message = {'message':"SWIPE_OK"}
-    return jsonify(message)
-
-@app.route('/member/new', methods=['GET','POST'])
-def new_member():
-
-    # Give me a new form, or if a POST then save the data
-    if request.method == "GET":
-        return render_template('new_member.html')
-
-    # The rest of the code that follows is for the POST
     if request.files['liability_wavier_form'].filename != "":
         liability_wavier_form = request.files['liability_wavier_form'].read()
-    else:
-        liability_wavier_form = None
+        cur.execute('update members set liability_waiver=%s where stripe_id=%s', (liability_wavier_form,stripe_id))
+        db.commit()
 
     if request.files['vetted_membership_form'].filename != "":
         vetted_membership_form = request.files['vetted_membership_form'].read()
-    else:
-        vetted_membership_form = None
+        cur.execute('update members set vetted_membership_form=%s where stripe_id=%s', (vetted_membership_form,stripe_id))
+        db.commit()
 
-    photo_base64 = request.form.get('base64_photo_data',default=None)
-
-    if photo_base64 != None:
-        badge_photo = base64.b64decode(photo_base64)
-    else:
-        badge_photo = None
+    if request.files['badge_photo'].filename != "":
+        badge_photo = request.files['badge_photo'].read()
+        cur.execute('update members set badge_photo=%s where stripe_id=%s', (badge_photo,stripe_id))
+        db.commit()
 
     insert_data = (
-        request.form.get('badge_serial'),
+        request.form.get('drupal_id'),
         'ACTIVE',
         request.form.get('full_name'),
         request.form.get('nick_name'),
-        request.form.get('drupal_name'),
-        request.form.get('primary_email'),
         request.form.get('stripe_email'),
         request.form.get('meetup_email'),
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
         request.form.get('is_vetted','NO'),
-        liability_wavier_form,
-        vetted_membership_form,
-        badge_photo
+        request.form.get('stripe_id'),
     )
 
-    db = connect_db()
-    cur = db.cursor()
-    cur.execute('insert into members (badge_serial,badge_status,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+    cur.execute('update members set drupal_id=%s,member_status=%s,full_name=%s,nick_name=%s,stripe_email=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where stripe_id=%s', insert_data)
 
     db.commit()
     db.close()
 
-    return render_template('new_member.html')
-
-# This attempts to pre-populate some fields when setting up a new user.
+# Onboarding process - this attempts to pre-populate some
+# fields when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
 def new_member_stripe(stripe_id):
 
@@ -320,7 +284,7 @@ def new_member_stripe(stripe_id):
 
     insert_data = (
         request.form.get('stripe_id'),
-        request.form.get('badge_serial'),
+        request.form.get('drupal_id'),
         'ACTIVE',
         request.form.get('full_name'),
         request.form.get('nick_name'),
@@ -329,7 +293,7 @@ def new_member_stripe(stripe_id):
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted','NO'),
+        request.form.get('is_vetted','NOT VETTED'),
         liability_wavier_form,
         vetted_membership_form,
         badge_photo,
@@ -343,147 +307,43 @@ def new_member_stripe(stripe_id):
 
     return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
+# Show member details
+@app.route('/member/<stripe_id>')
+def show_member(stripe_id):
+    user = get_member(stripe_id)
+    return render_template('show_member.html', member=user)
+
+# Edit member details
 @app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
-def edit_new_member(stripe_id):
+def edit_member(stripe_id):
 
     if request.method == "GET":
-        db = connect_db()
-        cur = db.cursor()
-
-        cur.execute("select badge_status,created_on,changed_on,full_name,nick_name,drupal_name,primary_email,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where badge_serial = %s", (badge_serial,))
-        entries = cur.fetchall()
-        member = entries[0]
-
-        user = {}
-
-        user["badge_serial"] = badge_serial
-        user["badge_status"] = member[0]
-        user["created_on"] = member[1]
-        user["changed_on"] = member[2]
-        user["full_name"] = member[3]
-        user["nick_name"] = member[4]
-        user["drupal_name"] = member[5]
-        user["primary_email"] = member[6]
-        user["stripe_email"] = member[7]
-        user["meetup_email"] = member[8]
-        user["mobile"] = member[9]
-        user["emergency_contact_name"] = member[10]
-        user["emergency_contact_mobile"] = member[11]
-        user["is_vetted"] = member[12]
-
-        db.commit()
-        db.close()
-
+        user = get_member(stripe_id)
         return render_template('edit_member.html', member=user)
 
     if request.method == "POST":
-        db = connect_db()
-        cur = db.cursor()
-
-        if request.files['liability_wavier_form'].filename != "":
-            liability_wavier_form = request.files['liability_wavier_form'].read()
-            cur.execute('update members set liability_waiver=%s where badge_serial=%s', (liability_wavier_form,badge_serial))
-            db.commit()
-
-        if request.files['vetted_membership_form'].filename != "":
-            vetted_membership_form = request.files['vetted_membership_form'].read()
-            cur.execute('update members set vetted_membership_form=%s where badge_serial=%s', (vetted_membership_form,badge_serial))
-            db.commit()
-
-        if request.files['badge_photo'].filename != "":
-            badge_photo = request.files['badge_photo'].read()
-            cur.execute('update members set badge_photo=%s where badge_serial=%s', (badge_photo,badge_serial))
-            db.commit()
-
-        insert_data = (
-            request.form.get('badge_status'),
-            request.form.get('full_name'),
-            request.form.get('nick_name'),
-            request.form.get('drupal_name'),
-            request.form.get('primary_email'),
-            request.form.get('stripe_email'),
-            request.form.get('meetup_email'),
-            request.form.get('mobile'),
-            request.form.get('emergency_contact_name'),
-            request.form.get('emergency_contact_mobile'),
-            request.form.get('is_vetted','NO'),
-            badge_serial
-        )
-
-        cur.execute('update members set badge_status=%s,full_name=%s,nick_name=%s,drupal_name=%s,primary_email=%s,stripe_email=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where badge_serial=%s', insert_data)
-
-        print insert_data
-
-        db.commit()
-        db.close()
-
-        return redirect('validate')
-
-@app.route('/member/<stripe_id>')
-def show_member(stripe_id):
-
-    db = get_db()
-    cur = db.cursor()
-
-    cur.execute('select stripe_id,member_status,badge_serial,created_on,changed_on,full_name,nick_name,drupal_id,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted from members where stripe_id = %s', (stripe_id,))
-    entries = cur.fetchall()
-    member = entries[0]
-
-    swipe_freq_sql = """
-        select
-            date(el.created_on) as day, count(1)
-        from
-            shopidentifyer.members as m
-            inner join shopidentifyer.event_log as el
-            on (m.member_id = el.member_id)
-        where
-            el.created_on >= date_add(date(now()), interval -14 day)
-            and el.event_type in ("BADGE_SWIPE","MANUAL_SWIPE")
-            and m.badge_serial = %s
-        group by
-            date(el.created_on)
-        order by 1 desc
-    """
-
-    # cur.execute(swipe_freq_sql, [badge_serial,])
-
-    user = {}
-
-    user["stripe_id"] = stripe_id
-    user["badge_serial"] = member[2]
-    user["member_status"] = member[1]
-    user["created_on"] = member[3]
-    user["changed_on"] = member[4]
-    user["full_name"] = member[5]
-    user["nick_name"] = member[6]
-    user["drupal_id"] = member[7]
-    user["stripe_email"] = member[8]
-    user["meetup_email"] = member[10]
-    user["mobile"] = member[11]
-    user["emergency_contact_name"] = member[12]
-    user["emergency_contact_mobile"] = member[13]
-
-    if member[13] == 'YES':
-        user['vetted_status'] = "Vetted Member"
-    else:
-        user["vetted_status"] = "Not Vetted Member"
-
-    user["payment_status"] = get_payment_status(member_id=stripe_id)
-
-    return render_template('show_member.html', member=user)
+        update_member(request)
+        return redirect(url_for("index",_scheme='https',_external=True))
 
 @app.route('/member/<stripe_id>/files/photo.jpg')
 def member_photo(stripe_id):
 
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
-    photo = cur.fetchone()
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
+        photo = cur.fetchone()
 
-    response = make_response(photo)
-    response.headers['Content-Description'] = 'Badge Photo'
-    response.headers['Content-Type'] = 'image/jpeg'
-    response.headers['Content-Disposition'] = 'inline'
+        response = make_response(photo)
+        response.headers['Content-Description'] = 'Badge Photo'
+        response.headers['Content-Type'] = 'image/jpeg'
+        response.headers['Content-Disposition'] = 'inline'
+    except:
+        response = make_response("No photo on file, please fix this!")
+        response.headers['Content-Description'] = 'Stock Photo'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/plain'
+        response.headers['Content-Disposition'] = 'inline'
 
     return response
 
@@ -564,21 +424,22 @@ def member_search():
 
 # AJAX service for search_member.html
 @app.route('/search',methods=['GET'])
-def search_user():
+def search_users():
     user = request.args.get('s')
 
     db = get_db()
     cur = db.cursor()
-    cur.execute('select badge_serial,full_name,primary_email,badge_status from members where full_name like %s', ("%" + user + '%',))
+    cur.execute('select stripe_id,full_name,stripe_email,member_status,is_vetted from members where full_name like %s', ("%" + user + '%',))
     data = cur.fetchall()
 
     results = []
 
     for row in data:
-        results.append({'badge_serial':row[0],'full_name':row[1],'primary_email':row[2],'badge_status':row[3]})
+        results.append({'stripe_id':row[0],'full_name':row[1],'stripe_email':row[2],'member_status':row[3],'is_vetted':row[4]})
 
     return jsonify({'results':results})
 
+# RFID queuing services
 @app.route('/queue/message', methods=['PUT'])
 def add_message():
 
@@ -613,13 +474,10 @@ def remove_message():
 
     return jsonify(message)
 
+# Landing Page Routes
 @app.route('/')
 def index():
-    return redirect(url_for("member_search",_scheme='https',_external=True))
-
-@app.route('/validate')
-def validate():
-    return render_template('validate.html')
+    return redirect(url_for("admin",_scheme='https',_external=True))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -645,7 +503,7 @@ def admin():
         if session['logged_in']:
             db = get_db()
             cur = db.cursor()
-            cur.execute('select stripe_id, stripe_email, subscription from stripe_cache where subscription != "No Subscription Plan" and stripe_id in (select stripe_id from members)')
+            cur.execute('select stripe_id, stripe_email, full_name, is_vetted from members where member_status = "ACTIVE"')
             entries = cur.fetchall()
             return render_template('admin.html',entries=entries)
         else:
@@ -683,18 +541,33 @@ def admin_onboard():
         print str(e)
         return redirect('/login?redirect_to=admin_onboard')
 
-@app.route('/electric-badger/', methods=['GET', 'POST'])
-def electric_badger():
+# Badge Swipe API Endpoint
+@app.route('/swipe/', methods=['POST'])
+def swipe_badge():
 
-    # http://www.accxproducts.com/content/?page_id=287
-    # Add the new badge to the access-controller
+    badge_serial = request.form['tag']
 
-    from paramiko.client import SSHClient
+    if request.form.has_key('reader') != False:
+        badge_reader = request.form['reader']
+    else:
+        badge_reader = None
 
-    cmd_str = "screen -S access_control -X stuff 'echo \"m 1 254 123457890\"'$(echo -ne '\015')"
+    swipe = "BADGE_SWIPE"
 
-    client = SSHClient()
-    client.load_system_host_keys()
-    client.connect(app.config['ACCESS_CONTROL_HOSTNAME'])
-    (stdin, stdout, stderr) = client.exec_command(cmd_str)
-    return jsonify({'results':'hello'})
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        cur.execute('select stripe_id from members where badge_serial = %s', (badge_serial,))
+        entries = cur.fetchall()
+        member = entries[0]
+        log_event(stripe_id=member[0],swipe_event=swipe)
+    except IndexError:
+        # The user's badge is not in the system
+        swipe = "MISSING_BADGE"
+        member_id = 0
+        log_message = "%s not in system" % (badge_serial,)
+        log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
+
+        message = {'message':swipe}
+        return jsonify(message)

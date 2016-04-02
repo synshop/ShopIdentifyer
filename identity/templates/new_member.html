@@ -99,23 +99,86 @@
   <div class="container">
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
+        <div class="alert alert-info" role="alert">
+            Please fill out as much information as possible.  Attached forms should be in PDF and photos should be in jpeg.
+        </div>
+
+        <hr/>
+
+        <div class="form-group">
+          <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="badge_serial" name="badge_serial" placeholder="Swipe Badge on RFID Reader to Begin">
+          </div>
+        </div>
+
+        <hr/>
+
+        <div class="form-group">
+          <label for="drupal_name" class="col-sm-2 control-label">Drupal Id:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="stripe_email" class="col-sm-2 control-label">Stripe Id:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="stripe_id" name="stripe_id" value="{{ member.stripe_id }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" readonly>
+          </div>
+        </div>
+
+        <hr/>
 
       <div class="form-group">
-        <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
+        <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="badge_serial" name="badge_serial" placeholder="Swipe Badge on RFID Reader to Begin">
+          <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
         </div>
       </div>
 
       <div class="form-group">
-        <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
+        <label for="nick_name" class="col-sm-2 control-label">Nickname:</label>
         <div class="col-sm-10">
-          <select class="form-control" id="badge_status" name="badge_status">
-            <option value="YES">YES</option>
-            <option value="NO" selected="selected">NO</option>
-          </select>
+          <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.drupal_name }}">
         </div>
       </div>
+
+      <div class="form-group">
+        <label for="meetup_email" class="col-sm-2 control-label">Meetup Email:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="meetup_email" name="meetup_email" placeholder="">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="mobile" class="col-sm-2 control-label">Cell #:</label>
+        <div class="col-sm-10">
+          <input type="tel" class="form-control" id="mobile" name="mobile" data-mask="999-999-9999" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="emergency_contact_mobile" class="col-sm-2 control-label">Emergency Contact #:</label>
+        <div class="col-sm-10">
+          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" data-mask="999-999-9999" placeholder="">
+        </div>
+      </div>
+
+      <hr/>
 
       <div class="form-group">
         <label class="col-sm-2 control-label">Photo:</label>
@@ -128,11 +191,11 @@
           <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#snapshot_modal">
             Take a photo via the webcam
           </button>
-
+<!--
           <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#snapshot_modal">
             Upload a file
           </button>
-
+-->
           <!-- Modal Dialog for Webcam Capture -->
           <div class="modal fade" id="snapshot_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -170,74 +233,31 @@
 
       <hr/>
 
-      <div class="form-group">
-        <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="nick_name" class="col-sm-2 control-label">Nickname:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.drupal_name }}">
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="drupal_name" class="col-sm-2 control-label">Drupal Id:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}" readonly>
-        </div>
-      </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label">Liability Wavier:</label>
+            <div class="col-sm-10">
+              <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+                <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
+                <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
+                <input type="file" name="liability_wavier_form"></span>
+                <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+              </div>
+            </div>
+          </div>
 
       <hr/>
 
-      <div class="form-group">
-        <label for="stripe_email" class="col-sm-2 control-label">Stripe Id:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="stripe_id" name="stripe_id" value="{{ member.stripe_id }}" readonly>
+        <div class="form-group">
+          <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
+          <div class="col-sm-10">
+            <select class="form-control" id="badge_status" name="badge_status">
+              <option value="YES">VETTED</option>
+              <option value="NO" selected="selected">NOT VETTED</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" readonly>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="meetup_email" class="col-sm-2 control-label">Meetup Email:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="meetup_email" name="meetup_email" placeholder="">
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="mobile" class="col-sm-2 control-label">Cell #:</label>
-        <div class="col-sm-10">
-          <input type="tel" class="form-control" id="mobile" name="mobile" placeholder="">
-        </div>
-      </div>
-
-      <hr/>
-
-      <div class="form-group">
-        <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" placeholder="">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="emergency_contact_mobile" class="col-sm-2 control-label">Emergency Contact #:</label>
-        <div class="col-sm-10">
-          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" placeholder="">
-        </div>
-      </div>
-
-      <hr/>
-
-      <div class="form-group">
+      <div class="form-group" id="vmfu">
         <label class="col-sm-2 control-label">Vetted Member Form:</label>
         <div class="col-sm-10">
           <div class="fileinput fileinput-new input-group" data-provides="fileinput">
@@ -249,21 +269,9 @@
         </div>
     </div>
 
-    <div class="form-group">
-      <label class="col-sm-2 control-label">Liability Wavier:</label>
-      <div class="col-sm-10">
-        <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-          <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
-          <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
-          <input type="file" name="liability_wavier_form"></span>
-          <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-        </div>
-      </div>
-    </div>
-
       <div class="form-group">
         <div class="col-sm-offset-2 col-sm-10">
-          <button type="submit" class="btn btn-danger ">Create!</button>
+          <button type="submit" class="btn btn-success">Create!</button>
         </div>
       </div>
     </form>
