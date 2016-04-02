@@ -48,9 +48,8 @@ Please note that <em style="background-color:#FFD700">some of these properties a
 
     $ python crypt.py
 
-    Usage: crypt.py enc <plaintext> <passphrase>
-    crypt.py dec <encrypted> <passphrase>
-
+    Usage: crypt.py encrypt
+           crypt.py decrypt
 
 The Serial Remote
 ===
