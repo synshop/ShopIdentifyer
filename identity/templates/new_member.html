@@ -19,7 +19,6 @@
   $(document).ready (
     function() {
 
-    /* Turn polling off for now
       setInterval(function(){
         $.ajax({ url: "/queue/message", type: "DELETE", success: function(data) {
           if (data.message != "NULL") {
@@ -28,7 +27,7 @@
         }, dataType: "json"});
       }, 1000
     );
-*/
+
     Webcam.set({
       width: 320,
       height: 240,

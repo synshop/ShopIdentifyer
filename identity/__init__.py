@@ -565,6 +565,9 @@ def swipe_badge():
     cur = db.cursor()
 
     try:
+        cur.execute("insert into message_queue (message) values (%s)", (badge_serial,))
+        db.commit()
+
         cur.execute('select stripe_id from members where badge_serial = %s', (badge_serial,))
         entries = cur.fetchall()
         member = entries[0]
