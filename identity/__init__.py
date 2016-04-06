@@ -1,5 +1,5 @@
 from crypto import SettingsUtil, CryptoUtil
-import base64
+import base64, logging, time
 
 try:
     import config
@@ -7,8 +7,6 @@ except:
     print "You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n"
     print "Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
     quit()
-
-import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -24,15 +22,10 @@ from flask import session, escape, url_for
 from flask_mail import Mail, Message
 
 RUN_MODE = 'development'
-#logging.basicConfig()
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
 app = Flask(__name__)
-
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-app.logger.addHandler(stream_handler)
 
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
@@ -51,13 +44,24 @@ app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
 app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,ENCRYPTION_KEY)
 app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
+app.config['LOG_FILE'] = config.LOG_FILE
+
+# Logging
+file_handler = logging.FileHandler(app.config['LOG_FILE'])
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
+file_handler.setLevel(logging.INFO)
+app.logger.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+
+app.logger.info("------------------------------")
+app.logger.info("SYN Shop Identifyer Started...")
+app.logger.info("------------------------------")
 
 # Imports down here so that they can see the app.config elements
 from identity.stripe import get_rebuild_stripe_cache, get_refresh_stripe_cache
 from identity.stripe import get_realtime_stripe_info
 from identity.stripe import DELINQUENT, IN_GOOD_STANDING,PAST_DUE, D_EMAIL_TEMPLATE
 from identity.models import Member
-import time
 
 def connect_db():
     return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
@@ -84,7 +88,7 @@ s1 = BackgroundScheduler()
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
 
-    print "refreshing stripe cache"
+    app.logger.info("refreshing stripe cache")
 
     # Convert to milliseconds
     i = app.config['STRIPE_CACHE_REFRESH_BACKREACH_MIN'] * 60000
@@ -103,10 +107,12 @@ def refresh_stripe_cache():
 
         db.commit()
 
+    app.logger.info("finished refreshing stripe cache")
+
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REBUILD_MINUTES'])
 def rebuild_stripe_cache():
 
-    print "rebuilding stripe cache"
+    app.logger.info("rebuilding stripe cache")
 
     member_array = get_rebuild_stripe_cache()
 
@@ -126,6 +132,8 @@ def rebuild_stripe_cache():
 
         db.commit()
 
+    app.logger.info("finished rebuilding stripe cache")
+
 s1.start()
 # End cron tasks
 
@@ -139,18 +147,17 @@ def log_swipe_event(stripe_id=None, swipe_event=None):
 # Fetch a member 'object'
 def get_member(stripe_id):
 
-    # app.logger.info(stripe_id)
-
     member = {}
 
+    app.logger.info("grabbing real-time stripe information for %s" %(stripe_id,))
     stripe_info = get_realtime_stripe_info(stripe_id)
     member["stripe_status"] = stripe_info['status'].upper()
     member['stripe_plan'] = stripe_info['plan'].upper()
 
     db = get_db()
     cur = db.cursor()
-
     cur.execute("update stripe_cache set subscription = %s, stripe_status = %s where stripe_id = %s", (member['stripe_plan'],member['stripe_status'],stripe_id))
+    db.commit()
 
     sql_stmt = '''select
          stripe_id,
@@ -405,14 +412,14 @@ def member_vetted(stripe_id):
     return response
 
 @app.route('/member/<stripe_id>/files/badge.svg',methods=['GET'])
-def show_badge(stripe_id):
+def member_badge(stripe_id):
 
     svg_document = svgwrite.Drawing(size = ("3.375in", "2.125in"))
 
     logo = Image(href="/static/images/syn_shop_badge_logo.png", insert=("0.5in",'0.5in'), size=("1in","1in"))
     svg_document.add(logo)
 
-    photo_url = "/member/%s/files/photo.jpg" % (badge_serial,)
+    photo_url = "/member/%s/files/photo.jpg" % (stripe_id,)
     photo = Image(href=photo_url,insert=("1.5in",'1.5in'),size=("1in","1in"))
     svg_document.add(photo)
 
@@ -490,7 +497,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
-    if request.method == 'POST':        
+    if request.method == 'POST':
         if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
             session['logged_in'] = True
             url = request.form['r_to']
