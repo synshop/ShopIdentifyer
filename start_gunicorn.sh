@@ -1,22 +1,5 @@
 #!/bin/bash
 
-# Ubuntu 14.04.01
-if [ -e "/etc/bash_completion.d/virtualenvwrapper" ];
-then
-	source /etc/bash_completion.d/virtualenvwrapper;
-	workon ShopIdentifyer;
-    exit;
-fi
-
-# OS X
-if [ -e "/usr/local/bin/virtualenvwrapper.sh" ];
-then
-	source /usr/local/bin/virtualenvwrapper.sh
-    workon ShopIndentifyer;
-    echo "yep";
-    exit;
-fi
-
 echo -n "Please enter the startup password and press [enter]: ";
 stty -echo
 read key;
