@@ -80,7 +80,7 @@ def get_rebuild_stripe_cache():
 
 def get_realtime_stripe_info(stripe_id=None):
 
-    stripe_info = {'status':None,'plan':None}
+    stripe_info = {'status':DELINQUENT,'plan':NO_SUBSCRIPTION_PLAN}
 
     stripe.api_version = '2013-02-13'
     stripe.api_key = app.config['STRIPE_TOKEN']

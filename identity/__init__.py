@@ -40,6 +40,7 @@ app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, E
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
 app.config['STRIPE_CACHE_REBUILD_MINUTES'] = config.STRIPE_CACHE_REBUILD_MINUTES
+app.config['STRIPE_CACHE_REFRESH_BACKREACH_MIN'] = config.STRIPE_CACHE_REFRESH_BACKREACH_MIN
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
 
@@ -128,16 +129,17 @@ def rebuild_stripe_cache():
 s1.start()
 # End cron tasks
 
-def log_event(stripe_id=None,swipe_event=None,log_message=None):
+def log_swipe_event(stripe_id=None, swipe_event=None):
     db = get_db()
     cur = db.cursor()
-    cur.execute("insert into event_log (event_id,member_id,event_type,event_message) values (NULL,%s,%s,%s)", (stripe_id,swipe_event,log_message))
+
+    cur.execute('insert into event_log values (NULL, %s, NULL, %s)', (stripe_id,swipe_event))
     db.commit()
 
 # Fetch a member 'object'
 def get_member(stripe_id):
 
-    app.logger.info(stripe_id)
+    # app.logger.info(stripe_id)
 
     member = {}
 
@@ -213,7 +215,7 @@ def update_member(request):
 
     insert_data = (
         request.form.get('drupal_id'),
-        'ACTIVE',
+        request.form.get('member_status'    ),
         request.form.get('full_name'),
         request.form.get('nick_name'),
         request.form.get('stripe_email'),
@@ -221,7 +223,7 @@ def update_member(request):
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted','NO'),
+        request.form.get('is_vetted','NOT VETTED'),
         request.form.get('stripe_id'),
     )
 
@@ -487,36 +489,28 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
+
+    if request.method == 'POST':        
         if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
             session['logged_in'] = True
-            if request.form.get('redirect_to'):
-                return redirect(url_for(request.form.get('redirect_to'),_scheme='https',_external=True))
-            else:
-                return redirect(url_for('member_search',_scheme='https',_external=True))
+            url = request.form['r_to']
+            return redirect(url)
 
-    return render_template('login.html',redirect_to=request.args.get('redirect_to'))
+    return render_template('login.html',r_to=request.referrer)
 
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
     flash('You were logged out')
-    return redirect("/validate")
+    return redirect(url_for('index',_scheme='https',_external=True))
 
 @app.route('/admin')
 def admin():
-    try:
-        if session['logged_in']:
-            db = get_db()
-            cur = db.cursor()
-            cur.execute('select stripe_id, stripe_email, full_name, is_vetted from members where member_status = "ACTIVE"')
-            entries = cur.fetchall()
-            return render_template('admin.html',entries=entries)
-        else:
-            return redirect(url_for("login",redirect_to="admin",_scheme='https',_external=True))
-    except Exception, e:
-        print str(e)
-        return redirect(url_for("login",redirect_to="admin",_scheme='https',_external=True))
+    db = get_db()
+    cur = db.cursor()
+    cur.execute('select stripe_id, stripe_email, full_name, is_vetted from members where member_status = "ACTIVE"')
+    entries = cur.fetchall()
+    return render_template('admin.html',entries=entries)
 
 @app.route('/admin/onboard')
 def admin_onboard():
@@ -567,13 +561,11 @@ def swipe_badge():
         cur.execute('select stripe_id from members where badge_serial = %s', (badge_serial,))
         entries = cur.fetchall()
         member = entries[0]
-        log_event(stripe_id=member[0],swipe_event=swipe)
+        log_swipe_event(stripe_id=member[0],swipe_event=swipe)
     except IndexError:
         # The user's badge is not in the system
-        swipe = "MISSING_BADGE"
-        member_id = 0
-        log_message = "%s not in system" % (badge_serial,)
-        log_event(member_id=member_id,swipe_event=swipe,log_message=log_message)
+        swipe = "MISSING_ACCOUNT"
+        log_swipe_event(stripe_id=badge_serial,swipe_event=swipe)
 
-        message = {'message':swipe}
-        return jsonify(message)
+    message = {'message':swipe}
+    return jsonify(message)

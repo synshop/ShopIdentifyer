@@ -27,10 +27,9 @@ create table shopidentifyer.members (
 create table shopidentifyer.event_log (
 
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  member_id int NOT NULL,
+  stripe_id varchar(255) NOT NULL,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_STRIPE') DEFAULT 'BADGE_SWIPE',
-  event_message varchar(255)
+  event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_STRIPE') DEFAULT 'BADGE_SWIPE'
 
 );
 

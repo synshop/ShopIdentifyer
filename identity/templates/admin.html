@@ -36,7 +36,11 @@
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
-        <li><a href="/logout">Logout</a></li>
+            {% if session.logged_in %}
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
         </ul>
       </div><!--/.nav-collapse -->
     </div>
@@ -46,7 +50,9 @@
 
 <div class="list-group">
   <h3>What do you want to do?</h3>
+  {% if session.logged_in %}
   <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
+  {% endif %}
   <a href="/member/search" class="list-group-item">Search for an Existing Member</a>
 </div>
 
