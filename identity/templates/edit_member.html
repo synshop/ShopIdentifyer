@@ -21,6 +21,12 @@
 
   </style>
 
+  <script>
+  $(document).ready(function(){
+      $('[data-toggle="tooltip"]').tooltip();
+  });
+  </script>
+
 </head>
 <body>
 
@@ -32,8 +38,6 @@
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
-          <li><a href="/validate">Validate A Different User</a></li>
-
           {% if session.logged_in %}
           <li><a href="/logout">Logout</a></li>
           {% else %}
@@ -48,33 +52,46 @@
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
 
-<!--
-      <div class="alert alert-warning alert-dismissible" role="alert">
-        <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <strong>How to use:</strong> Fields
-      </div>
--->
+    <div class="alert alert-info" role="alert">
+      If you need to update information that is read-only, please email <strong>brian@synshop.org</strong>.
+    </div>
 
       <div class="form-group">
-        <label for="meta_info" class="col-sm-2 control-label">Badge Info:</label>
+        <label for="meta_info" class="col-sm-2 control-label">Member Info:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="meta_info" name="meta_info" disabled value="Created On: {{ member.created_on }}, Last Updated: {{ member.changed_on }}">
+          <input type="text" class="form-control" id="meta_info" name="meta_info" value="Created On: {{ member.created_on }}, Last Updated: {{ member.changed_on }}" readonly>
         </div>
       </div>
 
       <div class="form-group">
         <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="badge_serial" name="badge_serial" disabled value="{{ member.badge_serial }}">
+          <input type="text" class="form-control" id="badge_serial" name="badge_serial" disabled value="{{ member.badge_serial }}" readonly>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="badge_status" class="col-sm-2 control-label">Badge Status:</label>
+        <label for="full_name" class="col-sm-2 control-label">Drupal Id:</label>
         <div class="col-sm-10">
-          <select class="form-control" id="badge_status" name="badge_status">
-            {% for n in ['ACTIVE', 'INACTIVE','LOST','BROKEN'] %}
-              {% if n == member.badge_status %}
+          <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}" readonly>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="full_name" class="col-sm-2 control-label">Stripe Id:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="drupal_id" name="stripe_id" value="{{ member.stripe_id }}" readonly>
+        </div>
+      </div>
+
+      <hr/>
+
+      <div class="form-group">
+        <label for="badge_status" class="col-sm-2 control-label">Member Status:</label>
+        <div class="col-sm-10">
+          <select class="form-control" id="member_status" name="member_status">
+            {% for n in ['ACTIVE', 'INACTIVE'] %}
+              {% if n == member.member_status %}
                 <option value="{{n}}" selected="selected">{{n}}</option>
               {% else %}
                 <option value="{{n}}">{{n}}</option>
@@ -84,14 +101,12 @@
         </div>
       </div>
 
-      <hr/>
-
       <div class="form-group">
         <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
         <div class="col-sm-10">
           <select class="form-control" id="is_vetted" name="is_vetted">
-            {% for n in ['YES','NO'] %}
-            {% if n == member.is_vetted %}
+            {% for n in ['VETTED','NOT VETTED'] %}
+            {% if n == member.vetted_status %}
             <option value="{{n}}" selected="selected">{{n}}</option>
             {% else %}
             <option value="{{n}}">{{n}}</option>
@@ -101,17 +116,7 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="col-sm-2 control-label"><a href="/member/{{ member.badge_serial }}/files/photo.jpg">Photo:</a></label>
-        <div class="col-sm-10">
-          <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-            <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
-            <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
-            <input type="file" name="badge_photo"></span>
-            <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-          </div>
-        </div>
-      </div>
+      <hr/>
 
       <div class="form-group">
         <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
@@ -126,21 +131,9 @@
           <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.nick_name }}">
         </div>
       </div>
-      <div class="form-group">
-        <label for="drupal_name" class="col-sm-2 control-label">Drupal Name:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="drupal_name" name="drupal_name" value="{{ member.drupal_name }}">
-        </div>
-      </div>
 
       <div class="form-group">
-        <label for="primary_email" class="col-sm-2 control-label">Primary Email:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="primary_email" name="primary_email" value="{{ member.primary_email }}">
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
+        <label for="primary_email" class="col-sm-2 control-label">Stripe Email:</label>
         <div class="col-sm-10">
           <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}">
         </div>
@@ -155,9 +148,11 @@
       <div class="form-group">
         <label for="mobile" class="col-sm-2 control-label">Cell #:</label>
         <div class="col-sm-10">
-          <input type="tel" class="form-control" id="mobile" name="mobile" value="{{ member.mobile }}">
+          <input type="tel" class="form-control" id="mobile" name="mobile" data-mask="999-999-9999" value="{{ member.mobile }}">
         </div>
       </div>
+
+      <hr/>
 
       <div class="form-group">
         <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
@@ -168,12 +163,24 @@
       <div class="form-group">
         <label for="emergency_contact_mobile" class="col-sm-2 control-label">Emergency Contact #:</label>
         <div class="col-sm-10">
-          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" value="{{ member.emergency_contact_mobile }}" placeholder="">
+          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" data-mask="999-999-9999" value="{{ member.emergency_contact_mobile }}" placeholder="">
         </div>
       </div>
 
       <div class="form-group">
-        <label class="col-sm-2 control-label"><a href="/member/{{ member.badge_serial }}/files/vetted-membership-form.pdf">Vetted Member Form:</a></label>
+        <label class="col-sm-2 control-label"><a href="/member/{{ member.stripe_id }}/files/photo.jpg" data-toggle="tooltip" title="Right-click to open in a new tab.">Photo:</a></label>
+        <div class="col-sm-10">
+          <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+            <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
+            <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
+            <input type="file" name="badge_photo"></span>
+            <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="col-sm-2 control-label"><a href="/member/{{ member.stripe_id }}/files/vetted-membership-form.pdf" data-toggle="tooltip" title="Right-click to open in a new tab.">Vetted Member Form:</a></label>
         <div class="col-sm-10">
           <div class="fileinput fileinput-new input-group" data-provides="fileinput">
             <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
@@ -185,7 +192,7 @@
     </div>
 
     <div class="form-group">
-      <label class="col-sm-2 control-label"><a href="/member/{{ member.badge_serial }}/files/liability-waiver.pdf">Liability Wavier:</a></label>
+      <label class="col-sm-2 control-label"><a href="/member/{{ member.stripe_id }}/files/liability-waiver.pdf" data-toggle="tooltip" title="Right-click to open in a new tab.">Liability Wavier:</a></label>
       <div class="col-sm-10">
         <div class="fileinput fileinput-new input-group" data-provides="fileinput">
           <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
@@ -198,7 +205,7 @@
 
       <div class="form-group">
         <div class="col-sm-offset-2 col-sm-10">
-          <button type="submit" class="btn btn-default">Update!</button>
+          <button type="submit" class="btn btn-success">Update!</button>
         </div>
       </div>
     </form>

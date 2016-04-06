@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 
-<title>SYN Shop Admin Interface</title>
+<title>SYN Shop Onboarding Interface</title>
 
 <head>
   <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
@@ -14,15 +14,16 @@
   <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/jasny-bootstrap.min.js') }}"></script>
 
-<style>
+  <style>
     body {
-        min-height: 1000px;
-        padding-top: 70px;
+      min-height: 1000px;
+      padding-top: 70px;
     }
 
     th {
-        background-color:#eee;
+      background-color:#eee;
     }
+
   </style>
 
 </head>
@@ -32,15 +33,11 @@
   <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
     <div class="container">
       <div class="navbar-header">
-        <a class="navbar-brand" href="/admin">SYN Shop Identity Management System</a>
+        <a class="navbar-brand" href="/">SYN Shop Identity Management System</a>
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
-            {% if session.logged_in %}
-            <li><a href="/logout">Logout</a></li>
-            {% else %}
-            <li><a href="/login">Login</a></li>
-            {% endif %}
+        <li><a href="/logout">Logout</a></li>
         </ul>
       </div><!--/.nav-collapse -->
     </div>
@@ -48,29 +45,27 @@
 
 <div class="container">
 
-<div class="list-group">
-  <h3>What do you want to do?</h3>
-  {% if session.logged_in %}
-  <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
-  {% endif %}
-  <a href="/member/search" class="list-group-item">Search for an Existing Member</a>
+<div class="alert alert-success" role="alert">
+    New members that need to be onboarded are automatically pulled in every 10 minutes from our payment processor.
+    If you can't find the person you're trying to onboard and they just created their account,
+    give it a few minutes and check back.  Otherwise please sent an email to
+    <a href="#" class="alert-link">brian@synshop.org</a> and he will look into it.
 </div>
 
 <div class="list-group">
-<h3>There are currently {{entries|length}} Active Members at SYN Shop</h3>
+<h3>{{entries|length}} Members Need Onboarding</h3>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted</th></tr>
+    <tr><th>Stripe Id</th><th>Drupal Legal Name</th><th>Stripe Email</th></tr>
     </thead>
     <tbody>
 {% for entry in entries %}
-  <tr><td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td><td>{{ entry[1] }}</td><td>{{ entry[3] }}</td></tr>
+  <tr><td><a href="/member/new/{{ entry['stripe_id'] }}">{{ entry['stripe_id'] }}</a></td><td>{{ entry['drupal_legal_name'] }}</td><td>{{ entry['stripe_email'] }}</td></tr>
 {% else %}
-  <tr><td>No entries here so far</td><td></td><td></td></tr>
+  <li><em>Unbelievable.  No entries here so far</em>
 {% endfor %}
 </tbody>
 </table>
-
 </div>
 
 </div>

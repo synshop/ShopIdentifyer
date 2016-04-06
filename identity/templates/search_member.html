@@ -32,17 +32,11 @@
           success: function(data) {
 
             $('#results').html("");
-            $('#results').append('<tr><th style="width:200px;">Full Name</th><th style="width:200px">Primary Email Address</th><th>Badge Serial</th><th>Badge Status</th><th>Action(s)</th></tr>');
+            $('#results').append('<tr><th style="width:200px">Full Name</th><th>Stripe Email</th><th>Membership Status</th><th>Is Vetted</th></tr>');
 
             for (x in data.results) {
 
-              {% if session.logged_in %}
-                var editable = ' | <a href="/member/' + data.results[x].badge_serial + '/edit">Edit Information</a>';
-              {% else %}
-                var editable = ' | Edit Information';
-              {% endif %}
-
-              $('#results').append('<tr><td>' + data.results[x].full_name + '</td><td>' + data.results[x].primary_email + '</td><td><a href="/member/' + data.results[x].badge_serial + '">' + data.results[x].badge_serial + '</a></td><td>' + data.results[x].badge_status + '</td><td><a href="/member/'+ data.results[x].badge_serial +'?s=manual">Manually Validate</a>' + editable + '</td></tr>');
+              $('#results').append('<tr><td><a href="/member/' + data.results[x].stripe_id + '">' + data.results[x].full_name + '</a></td><td>' + data.results[x].stripe_email + '</td><td>' + data.results[x].member_status + '</td><td>' + data.results[x].is_vetted + '</td></tr>');
             }
 
           }});
@@ -77,8 +71,7 @@
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
-          <li><a href="/validate">Validate A Different User</a></li>
-
+            
           {% if session.logged_in %}
             <li><a href="/logout">Logout</a></li>
           {% else %}
