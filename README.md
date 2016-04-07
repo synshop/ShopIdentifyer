@@ -34,7 +34,11 @@ Setup (Development)
         DATABASE_PORT = 3306
         DATABASE_SCHEMA = "shopidentifyer"
 
-        STRIPE_CACHE_REFRESH_MINUTES=60
+        STRIPE_CACHE_REFRESH_MINUTES = 60
+        STRIPE_CACHE_REFRESH_MINUTES = 60
+        STRIPE_CACHE_REFRESH_MINUTES = 13
+        STRIPE_CACHE_REBUILD_MINUTES = 1440
+        STRIPE_CACHE_REFRESH_BACKREACH_MIN = 15
 
         MAIL_SERVER = 'localhost'
         MAIL_PORT = 22
@@ -57,8 +61,8 @@ Please note that <em style="background-color:#FFD700">all of the properties star
 In order for the decryption to work, you need to use the same password to encrypt all of the 6 values. Here's an example of encrypting the string "foo"
 
     $ python identity/crypto/crypt.py encrypt
-    Please enter the encryption key: 
-    Please enter the plaintext you wish to encrypt: 
+    Please enter the encryption key:
+    Please enter the plaintext you wish to encrypt:
     Encrypted Value: +uBiga/44gMDfr6UXFllIA==
 
 So, if you wanted `foo` to be the value for the `ENCRYPTED_DATABASE_PASSWORD` you would define it like this in `config.py`:
@@ -76,8 +80,8 @@ In a dev or production environment, you'll need to run this to start the app:
 When you run this command, you'll some output similar to this:
 
     ./start_gunicorn.sh  
-    Please enter the startup password and press [enter]: 
-    Showing application status: 
+    Please enter the startup password and press [enter]:
+    Showing application status:
     mrjones   9389  0.2  0.0  17352  2280 pts/9    S+   22:07   0:00 /bin/bash ./start_gunicorn.sh
     mrjones   9411  0.0  0.1  50584 11848 ?        R    22:07   0:00 /home/mrjones/Envs/ShopIdentifyer/bin/python /home/mrjones/Envs/ShopIdentifyer/bin/gunicorn --bind 127.0.0.1:8000 -D --log-file /tmp/gunicorn.log runserver:app
     mrjones   9413  0.0  0.0  15936   936 pts/9    S+   22:07   0:00 grep -i gunicorn
@@ -85,10 +89,10 @@ When you run this command, you'll some output similar to this:
 
 If there were no errors, you should then be able to see the app in a browser at http://localhost:8000.  
 
-If you need to stop it, us kill 
-    
+If you need to stop it, us kill
+
     $ kill $(ps aux | grep 'gunicorn' | awk '{print $2}')
-    
+
 And if you need to look at the log to see why something isn't working, the logs are in `/tmp/gunicorn.log`
 
 
