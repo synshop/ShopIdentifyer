@@ -195,7 +195,9 @@ def get_member(stripe_id):
          mobile,
          emergency_contact_name,
          emergency_contact_mobile,
-         is_vetted
+         is_vetted,
+         liability_waiver,
+         vetted_membership_form
       from members where stripe_id = %s'''
 
     cur.execute(sql_stmt, (stripe_id,))
@@ -216,6 +218,16 @@ def get_member(stripe_id):
     member["emergency_contact_name"] = entry[11]
     member["emergency_contact_mobile"] = entry[12]
     member["vetted_status"] = entry[13]
+
+    if entry[14] == None:
+        member['has_wavier'] = False
+    else:
+        member['has_wavier'] = True
+
+    if entry[15] == None:
+        member['has_vetted'] = False
+    else:
+        member['has_vetted'] = True
 
     return member
 

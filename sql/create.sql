@@ -66,4 +66,4 @@ create table shopidentifyer.admin_users (
     password varchar(2048)
 )
 
-insert into shopidentifyer.admin_users values (NULL,'brian','$2b$12$hOucr8SGLsC1jRz.L2JrFepK1BnfhYVAIOxOH3sT8kyIWFMKItO8q')
+insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','brian','$2b$12$hOucr8SGLsC1jRz.L2JrFepK1BnfhYVAIOxOH3sT8kyIWFMKItO8q')
