@@ -6,7 +6,7 @@ import requests
 import config
 from daemon import Daemon
 
-class SerialListener(Daemon):
+class SerialListener(object):
 
     def run(self):
 
@@ -26,12 +26,15 @@ class SerialListener(Daemon):
                     ser.read(1)
                     # The actual id consists of the 10 characters after the STX byte
                     payload = {"message":data[1:11]}
-                    r = requests.put(config.MESSAGE_QUEUE,data=payload)
+                    print payload
+                    #r = requests.put(config.MESSAGE_QUEUE,data=payload)
 
             except:
                 pass
 
 if __name__ == '__main__':
+
+    SerialListener().run()
 
     daemon = SerialListener('/tmp/serial_listener.pid')
 
