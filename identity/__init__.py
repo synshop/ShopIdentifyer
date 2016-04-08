@@ -134,8 +134,10 @@ def rebuild_stripe_cache():
 
     app.logger.info("finished rebuilding stripe cache")
 
-s1.start()
 # End cron tasks
+
+if config.SCHEDULER_ENABLED == True:
+    s1.start()
 
 def log_swipe_event(stripe_id=None, swipe_event=None):
     db = get_db()
@@ -143,6 +145,10 @@ def log_swipe_event(stripe_id=None, swipe_event=None):
 
     cur.execute('insert into event_log values (NULL, %s, NULL, %s)', (stripe_id,swipe_event))
     db.commit()
+
+# Check to see if a user is able to login and make changes to the system
+def member_is_admin(stripe_id=None):
+    return True
 
 # Check the password for the admin page
 def check_password(username=None, password=None):
@@ -152,7 +158,10 @@ def check_password(username=None, password=None):
         try:
             db = get_db()
             cur = db.cursor()
-            cur.execute("select password from admin_users where username = %s", (username,))
+
+            stmt = "select a.password from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
+
+            cur.execute(stmt, (username,))
             entries = cur.fetchall()
             hashed_password = entries[0][0]
 
@@ -171,7 +180,8 @@ def get_member(stripe_id):
 
     member = {}
 
-    app.logger.info("grabbing real-time stripe information for %s" %(stripe_id,))
+    # Check and update the stripe cache everytime you view member details
+    app.logger.info("grabbing real-time stripe information for %s" % (stripe_id,))
     stripe_info = get_realtime_stripe_info(stripe_id)
     member["stripe_status"] = stripe_info['status'].upper()
     member['stripe_plan'] = stripe_info['plan'].upper()
@@ -219,6 +229,9 @@ def get_member(stripe_id):
     member["emergency_contact_mobile"] = entry[12]
     member["vetted_status"] = entry[13]
 
+    # Flags set to determine if a member has
+    # a waiver / vetted membership form on file,
+    # or if they are an admin in the system.
     if entry[14] == None:
         member['has_wavier'] = False
     else:
@@ -228,6 +241,11 @@ def get_member(stripe_id):
         member['has_vetted'] = False
     else:
         member['has_vetted'] = True
+
+    if member_is_admin(stripe_id):
+        member['is_admin'] = True
+    else:
+        member['is_admin'] = False
 
     return member
 
@@ -369,6 +387,9 @@ def show_member(stripe_id):
 # Edit member details
 @app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
 def edit_member(stripe_id):
+
+    if session.logged_in = False:
+        redirect(url_for("login",_scheme='https',_external=True))
 
     if request.method == "GET":
         user = get_member(stripe_id)
@@ -563,6 +584,21 @@ def logout():
     session.pop('username', None)
     flash('You were logged out')
     return redirect(url_for('index',_scheme='https',_external=True))
+
+@app.route('/admin/changepassword/<stripe_id>' methods=['GET','POST'])
+def changepassword(stripe_id):
+
+    if session['logged_in']:
+
+        if request.method == "GET":
+            pass
+
+        if request.method == "POST":
+            pass
+
+    else:
+
+
 
 @app.route('/admin')
 def admin():

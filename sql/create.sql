@@ -62,7 +62,6 @@ create table shopidentifyer.stripe_cache (
 
 create table shopidentifyer.admin_users (
     stripe_id PRIMARY KEY,
-    username varchar(255),
     password varchar(2048)
 )
 
