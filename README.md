@@ -127,6 +127,7 @@ RFID Reader ID-12LA (125 kHz)
 Ubuntu Quick Setup
 ==================
 	$ apt-get install python-dev python-virtualenv virtualenvwrapper \
-                      git mysql-server-5.6 libmysqlclient-dev nginx
+                      git mysql-server-5.6 libmysqlclient-dev nginx \
+                      libffi-dev
     $ git clone git@github.com:synshop/ShopIdentifyer.git
     $ ./start_gunicorn.sh
