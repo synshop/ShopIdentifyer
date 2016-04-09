@@ -59,3 +59,10 @@ create table shopidentifyer.stripe_cache (
   subscription varchar(255),
   stripe_status varchar(255)
 );
+
+create table shopidentifyer.admin_users (
+    stripe_id PRIMARY KEY,
+    password varchar(2048)
+)
+
+insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','brian','$2b$12$hOucr8SGLsC1jRz.L2JrFepK1BnfhYVAIOxOH3sT8kyIWFMKItO8q')

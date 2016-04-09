@@ -1,5 +1,5 @@
 from crypto import SettingsUtil, CryptoUtil
-import base64, logging, time
+import base64, logging, time, bcrypt
 
 try:
     import config
@@ -134,8 +134,10 @@ def rebuild_stripe_cache():
 
     app.logger.info("finished rebuilding stripe cache")
 
-s1.start()
 # End cron tasks
+
+if config.SCHEDULER_ENABLED == True:
+    s1.start()
 
 def log_swipe_event(stripe_id=None, swipe_event=None):
     db = get_db()
@@ -144,12 +146,67 @@ def log_swipe_event(stripe_id=None, swipe_event=None):
     cur.execute('insert into event_log values (NULL, %s, NULL, %s)', (stripe_id,swipe_event))
     db.commit()
 
+# Check to see if a user is able to login and make changes to the system
+def member_is_admin(stripe_id=None):
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+        stmt = "select count(*) from admin_users where stripe_id = %s"
+        cur.execute(stmt, (stripe_id,))
+        entry = cur.fetchone()
+        if entry[0] > 0:
+            return True
+    except:
+        return False
+
+def member_change_password(stripe_id=None,password=None):
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
+
+        stmt = "update admin_users set password = %s where stripe_id = %s"
+        cur.execute(stmt, (hashed_password, stripe_id,))
+        db.commit()
+        return True
+    except:
+        return False
+
+# Check the password for the user login
+def check_password(username=None, password=None):
+
+    with app.app_context():
+
+        try:
+            db = get_db()
+            cur = db.cursor()
+
+            stmt = "select a.password from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
+
+            cur.execute(stmt, (username,))
+            entries = cur.fetchall()
+            hashed_password = entries[0][0]
+
+            if bcrypt.hashpw(password.encode('utf-8'), hashed_password) == hashed_password:
+                passwords_match = True
+            else:
+                passwords_match = False
+
+        except:
+            passwords_match = False
+
+        return passwords_match
+
 # Fetch a member 'object'
 def get_member(stripe_id):
 
     member = {}
 
-    app.logger.info("grabbing real-time stripe information for %s" %(stripe_id,))
+    # Check and update the stripe cache everytime you view member details
+    app.logger.info("grabbing real-time stripe information for %s" % (stripe_id,))
     stripe_info = get_realtime_stripe_info(stripe_id)
     member["stripe_status"] = stripe_info['status'].upper()
     member['stripe_plan'] = stripe_info['plan'].upper()
@@ -173,7 +230,9 @@ def get_member(stripe_id):
          mobile,
          emergency_contact_name,
          emergency_contact_mobile,
-         is_vetted
+         is_vetted,
+         liability_waiver,
+         vetted_membership_form
       from members where stripe_id = %s'''
 
     cur.execute(sql_stmt, (stripe_id,))
@@ -194,6 +253,24 @@ def get_member(stripe_id):
     member["emergency_contact_name"] = entry[11]
     member["emergency_contact_mobile"] = entry[12]
     member["vetted_status"] = entry[13]
+
+    # Flags set to determine if a member has
+    # a waiver / vetted membership form on file,
+    # or if they are an admin in the system.
+    if entry[14] == None:
+        member['has_wavier'] = False
+    else:
+        member['has_wavier'] = True
+
+    if entry[15] == None:
+        member['has_vetted'] = False
+    else:
+        member['has_vetted'] = True
+
+    if member_is_admin(stripe_id):
+        member['is_admin'] = True
+    else:
+        member['is_admin'] = False
 
     return member
 
@@ -244,8 +321,13 @@ def update_member(request):
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
 def new_member_stripe(stripe_id):
 
+    if session.get('logged_in') == None:
+        return redirect(url_for("login",_scheme='https',_external=True))
+
     # Give me a new form, or if a POST then save the data
     if request.method == "GET":
+        app.logger.info("User %s is onboarding member %s" % (session['username'],stripe_id))
+
         db = connect_db()
         cur = db.cursor()
         cur.execute('select stripe_email, stripe_description from stripe_cache where stripe_id = %s', (stripe_id,))
@@ -279,48 +361,50 @@ def new_member_stripe(stripe_id):
 
         return render_template('new_member.html', member=user)
 
-    # The rest of the code that follows is for the POST
-    if request.files['liability_wavier_form'].filename != "":
-        liability_wavier_form = request.files['liability_wavier_form'].read()
-    else:
-        liability_wavier_form = None
+    if request.method == "POST":
+        app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
 
-    if request.files['vetted_membership_form'].filename != "":
-        vetted_membership_form = request.files['vetted_membership_form'].read()
-    else:
-        vetted_membership_form = None
+        if request.files['liability_wavier_form'].filename != "":
+            liability_wavier_form = request.files['liability_wavier_form'].read()
+        else:
+            liability_wavier_form = None
 
-    photo_base64 = request.form.get('base64_photo_data',default=None)
+        if request.files['vetted_membership_form'].filename != "":
+            vetted_membership_form = request.files['vetted_membership_form'].read()
+        else:
+            vetted_membership_form = None
 
-    if photo_base64 != None:
-        badge_photo = base64.b64decode(photo_base64)
-    else:
-        badge_photo = None
+        photo_base64 = request.form.get('base64_photo_data',default=None)
 
-    insert_data = (
-        request.form.get('stripe_id'),
-        request.form.get('drupal_id'),
-        'ACTIVE',
-        request.form.get('full_name'),
-        request.form.get('nick_name'),
-        request.form.get('stripe_email'),
-        request.form.get('meetup_email'),
-        request.form.get('mobile'),
-        request.form.get('emergency_contact_name'),
-        request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted','NOT VETTED'),
-        liability_wavier_form,
-        vetted_membership_form,
-        badge_photo,
-    )
+        if photo_base64 != None:
+            badge_photo = base64.b64decode(photo_base64)
+        else:
+            badge_photo = None
 
-    db = connect_db()
-    cur = db.cursor()
-    cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
-    db.commit()
-    db.close()
+        insert_data = (
+            request.form.get('stripe_id'),
+            request.form.get('drupal_id'),
+            'ACTIVE',
+            request.form.get('full_name'),
+            request.form.get('nick_name'),
+            request.form.get('stripe_email'),
+            request.form.get('meetup_email'),
+            request.form.get('mobile'),
+            request.form.get('emergency_contact_name'),
+            request.form.get('emergency_contact_mobile'),
+            request.form.get('is_vetted','NOT VETTED'),
+            liability_wavier_form,
+            vetted_membership_form,
+            badge_photo,
+        )
 
-    return redirect(url_for("admin_onboard",_scheme='https',_external=True))
+        db = connect_db()
+        cur = db.cursor()
+        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        db.commit()
+        db.close()
+
+        return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
 # Show member details
 @app.route('/member/<stripe_id>')
@@ -332,12 +416,17 @@ def show_member(stripe_id):
 @app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
 def edit_member(stripe_id):
 
+    if session.get('logged_in') == None:
+        return redirect(url_for("login",_scheme='https',_external=True))
+
     if request.method == "GET":
         user = get_member(stripe_id)
+        app.logger.info("User %s is editing member %s " % (session['username'],stripe_id))
         return render_template('edit_member.html', member=user)
 
     if request.method == "POST":
         update_member(request)
+        app.logger.info("User %s updated member %s" % (session['username'],stripe_id))
         return redirect(url_for("index",_scheme='https',_external=True))
 
 @app.route('/member/<stripe_id>/files/photo.jpg')
@@ -444,13 +533,26 @@ def search_users():
 
     db = get_db()
     cur = db.cursor()
-    cur.execute('select stripe_id,full_name,stripe_email,member_status,is_vetted from members where full_name like %s', ("%" + user + '%',))
+    cur.execute('select stripe_id,full_name,stripe_email,member_status,is_vetted,liability_waiver, vetted_membership_form from members where full_name like %s', ("%" + user + '%',))
     data = cur.fetchall()
 
     results = []
+    wavier = ""
+    vetted_form = ""
 
     for row in data:
-        results.append({'stripe_id':row[0],'full_name':row[1],'stripe_email':row[2],'member_status':row[3],'is_vetted':row[4]})
+
+        if row[5] == None:
+            wavier = "false"
+        else:
+            wavier = "true"
+
+        if row[6] == None:
+            vetted_form = "false"
+        else:
+            vetted_form = "true"
+
+        results.append({'stripe_id':row[0],'full_name':row[1],'stripe_email':row[2],'member_status':row[3],'is_vetted':row[4],'wavier':wavier,'vetted_form':vetted_form})
 
     return jsonify({'results':results})
 
@@ -497,25 +599,55 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
-    if request.method == 'POST':
-        if request.form['passphrase'] == app.config['ADMIN_PASSPHRASE']:
-            session['logged_in'] = True
-            url = request.form['r_to']
-            return redirect(url)
+    error = ""
+    r_to = request.referrer
 
-    return render_template('login.html',r_to=request.referrer)
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        url = request.form['r_to']
+
+        if check_password(username,password):
+            session['logged_in'] = True
+            session['username'] = username
+            app.logger.info("User %s logged in successfully" % (username))
+            return redirect(url)
+        else:
+            error = 'Invalid credentials'
+            app.logger.info("User %s failed login attempt" % (username))
+            r_to=url
+
+    return render_template('login.html',r_to=r_to,errors=error)
 
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
+    session.pop('username', None)
     flash('You were logged out')
     return redirect(url_for('index',_scheme='https',_external=True))
+
+@app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
+def changepassword(stripe_id):
+
+    if session.get('logged_in') != None:
+        app.logger.info("User %s is changing their password" % (session['username'],))
+
+        if request.method == "GET":
+            return render_template('changepassword.html',stripe_id=stripe_id)
+
+        if request.method == "POST":
+            x = member_change_password(stripe_id,request.form.get('password1'),)
+            return redirect(url_for('index',_scheme='https',_external=True))
+
+    else:
+        app.logger.info("Someone tried to hit the change password page without authenticating")
+        return render_template('login.html',r_to=request.referrer)
 
 @app.route('/admin')
 def admin():
     db = get_db()
     cur = db.cursor()
-    cur.execute('select stripe_id, stripe_email, full_name, is_vetted from members where member_status = "ACTIVE"')
+    cur.execute('select stripe_id, stripe_email, full_name, is_vetted, liability_waiver, vetted_membership_form from members where member_status = "ACTIVE"')
     entries = cur.fetchall()
     return render_template('admin.html',entries=entries)
 

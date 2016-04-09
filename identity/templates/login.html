@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 
-<title>SYN Shop Member - Edit member</title>
+<title>SYN Shop Member - Login</title>
 
 <head>
   <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
@@ -44,26 +44,38 @@
 
 <div class="container">
 
+    {% if errors %}
+    <div class="alert alert-warning alert-dismissible" role="alert">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      <strong>Warning!</strong> Incorrect username / password, please try again.
+    </div>
+    {% endif %}
+
 <form class="form-horizontal" role="form" method="post" action="/login">
 
 {% if r_to != None %}
   <input type="hidden" name="r_to" value="{{ r_to }}">
 {% endif %}
 
-<div class="form-group">
-  <label for="meta_info" class="col-sm-2 control-label">Admin Passphrase:</label>
-  <div class="col-sm-2">
-    <input type="password" class="form-control" id="passphrase" name="passphrase" value="">
+  <div class="form-group">
+    <label for="username" class="col-sm-2 control-label">Username:</label>
+    <div class="col-sm-5">
+      <input type="username" class="form-control" name="username" id="username" placeholder="Username">
+    </div>
   </div>
-</div>
-
-<div class="form-group">
-  <div class="col-sm-offset-2 col-sm-10">
-    <button type="submit" class="btn btn-success">Login</button>
+  <div class="form-group">
+    <label for="password" class="col-sm-2 control-label">Password</label>
+    <div class="col-sm-5">
+      <input type="password" class="form-control" name="password" id="password" placeholder="Password">
+    </div>
   </div>
-</div>
-
+  <div class="form-group">
+    <div class="col-sm-offset-2 col-sm-10">
+      <button type="submit" class="btn btn-success">Sign in</button>
+    </div>
+  </div>
 </form>
+
 </div>
 
 </body>

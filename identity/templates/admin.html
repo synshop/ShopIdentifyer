@@ -60,14 +60,36 @@
 <h3>There are currently {{entries|length}} Active Members at SYN Shop</h3>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted</th></tr>
+    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th><th>Waiver On File?</th></tr>
     </thead>
     <tbody>
-{% for entry in entries %}
-  <tr><td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td><td>{{ entry[1] }}</td><td>{{ entry[3] }}</td></tr>
-{% else %}
-  <tr><td>No entries here so far</td><td></td><td></td></tr>
-{% endfor %}
+    {% for entry in entries %}
+    <tr>
+        <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td>
+        <td>{{ entry[1] }}</td>
+
+
+        {% if entry[3] == "NOT VETTED" %}
+            <td>{{ entry[3] }}</td>
+        {% else %}
+            {% if entry[5] == None %}
+                <td>NOT VETTED</td>
+            {% else %}
+                <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
+            {% endif %}
+        {% endif %}
+
+        {% if entry[4] == None %}
+            <td>No</td>
+        {% else %}
+        <td><a href="/member/{{ entry[0] }}/files/liability-waiver.pdf">Yes</a></td>
+        {% endif %}
+
+    </tr>
+    {% else %}
+      <tr><td>No entries here so far</td><td></td><td></td><td></td></tr>
+    {% endfor %}
+
 </tbody>
 </table>
 
