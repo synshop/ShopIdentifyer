@@ -52,6 +52,22 @@
       If you need to update information that is read-only, please email <strong>brian@synshop.org</strong>.
     </div>
 
+    {% if member.is_admin == True %}
+
+    <hr/>
+
+    <div class="well">
+        <a href="/admin/changepassword/{{member.stripe_id}}">Click here to change your login password</a>
+    </div>
+
+    {% endif %}
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Edit Member</h3>
+      </div>
+      <div class="panel-body">
+
       <div class="form-group">
         <label for="meta_info" class="col-sm-2 control-label">Member Info:</label>
         <div class="col-sm-10">
@@ -207,18 +223,7 @@
       </div>
     </div>
 
-    {% if member.is_admin == True %}
-
     <hr/>
-
-    <div class="form-group">
-      <label for="admin_change_password" class="col-sm-2 control-label">Change Password?</label>
-      <div class="col-sm-10">
-          <a href="">Click here to change your admin password</a>
-      </div>
-    </div>
-
-    {% endif %}
 
       <div class="form-group">
         <div class="col-sm-offset-2 col-sm-10">
@@ -226,6 +231,9 @@
         </div>
       </div>
     </form>
+
+</div>
+</div>
 
   </div>
 

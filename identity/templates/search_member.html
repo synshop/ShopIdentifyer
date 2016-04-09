@@ -32,11 +32,34 @@
           success: function(data) {
 
             $('#results').html("");
-            $('#results').append('<tr><th style="width:200px">Full Name</th><th>Stripe Email</th><th>Membership Status</th><th>Is Vetted</th></tr>');
+            $('#results').append('<tr><th style="width:200px">Full Name</th><th>Stripe Email</th><th>Membership Status</th><th>Is Vetted?</th><th>Waiver on File?</th></tr>');
 
             for (x in data.results) {
 
-              $('#results').append('<tr><td><a href="/member/' + data.results[x].stripe_id + '">' + data.results[x].full_name + '</a></td><td>' + data.results[x].stripe_email + '</td><td>' + data.results[x].member_status + '</td><td>' + data.results[x].is_vetted + '</td></tr>');
+                row = '<tr>' +
+                '<td><a href="/member/' + data.results[x].stripe_id + '">' + data.results[x].full_name + '</a></td>' +
+                '<td>' + data.results[x].stripe_email + '</td>' +
+                '<td>' + data.results[x].member_status + '</td>'
+
+                if (data.results[x].is_vetted == "VETTED") {
+                    if (data.results[x].vetted_form == "true") {
+                        row = row + '<td><a href="/member/' + data.results[x].stripe_id + '/files/vetted-membership-form.pdf">VETTED</a></td>'
+                    } else {
+                        row = row + '<td>VETTED</td>'
+                    }
+                } else {
+                    row = row + '<td>NOT VETTED</td>'
+                }
+
+                if (data.results[x].wavier == "true") {
+                    row = row + '<td><a href="/member/' + data.results[x].stripe_id + '/files/liability-waiver.pdf">Yes</a></td>'
+                } else {
+                    row = row + '<td>No</td>'
+                }
+
+                row = row + '</tr>'
+
+              $('#results').append(row);
             }
 
           }});
@@ -71,7 +94,7 @@
       </div>
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
-            
+
           {% if session.logged_in %}
             <li><a href="/logout">Logout</a></li>
           {% else %}
