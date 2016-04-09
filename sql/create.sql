@@ -40,12 +40,12 @@ create table shopidentifyer.event_types (
   event_type varchar(100)
 );
 
-insert into shopidentifyer.event_types values ('DOOR_SWIPE');
-insert into shopidentifyer.event_types values ('BADGE_SWIPE');
-insert into shopidentifyer.event_types values ('MANUAL_SWIPE');
-insert into shopidentifyer.event_types values ('ACCESS_ATTEMPT');
-insert into shopidentifyer.event_types values ('ACCESS_GRANT');
-insert into shopidentifyer.event_types values ('ACCESS_DENY');
+insert into shopidentifyer.event_types values (NULL, 'DOOR_SWIPE');
+insert into shopidentifyer.event_types values (NULL, 'BADGE_SWIPE');
+insert into shopidentifyer.event_types values (NULL, 'MANUAL_SWIPE');
+insert into shopidentifyer.event_types values (NULL, 'ACCESS_ATTEMPT');
+insert into shopidentifyer.event_types values (NULL, 'ACCESS_GRANT');
+insert into shopidentifyer.event_types values (NULL, 'ACCESS_DENY');
 
 create table shopidentifyer.message_queue (
   message varchar(255)
