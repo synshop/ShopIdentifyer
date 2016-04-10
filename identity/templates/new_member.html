@@ -19,13 +19,22 @@
   $(document).ready (
     function() {
 
-      setInterval(function(){
+      var badge_serial = "{{ member.badge_serial }}";
+
+      if (badge_serial == "-1") {
+          refresh_rate = 1000;
+      } else {
+          refresh_rate = 86400000;
+          $('#badge_serial').val(badge_serial);
+      }
+
+      setInterval(function() {
         $.ajax({ url: "/queue/message", type: "DELETE", success: function(data) {
           if (data.message != "NULL") {
             $('#badge_serial').val(data.message);
           }
         }, dataType: "json"});
-      }, 1000
+      }, refresh_rate
     );
 
     Webcam.set({
@@ -103,6 +112,12 @@
         </div>
 
         <hr/>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Onboard New Member</h3>
+      </div>
+      <div class="panel-body">
 
         <div class="form-group">
           <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
@@ -275,6 +290,9 @@
         </div>
       </div>
     </form>
+
+    </div>
+    </div>
 
   </div>
 
