@@ -324,7 +324,7 @@ def new_member_stripe(stripe_id):
     if session.get('logged_in') == None:
         return redirect(url_for("login",_scheme='https',_external=True))
 
-    # Give me a new form, or if a POST then save the data
+    # Get a new form, or if a POST then save the data
     if request.method == "GET":
         app.logger.info("User %s is onboarding member %s" % (session['username'],stripe_id))
 
@@ -359,6 +359,15 @@ def new_member_stripe(stripe_id):
         user["drupal_id"] = drupal_id
         user["stripe_email"] = member[0]
 
+        stmt = "select m2.badge_serial from members2 m2, stripe_cache s where m2.stripe_email = s.stripe_email and s.stripe_id = %s"
+        cur.execute(stmt,(stripe_id,))
+        rows = cur.fetchall()
+
+        if rows:
+            user['badge_serial'] = rows[0][0]
+        else:
+            user['badge_serial'] = -1
+
         return render_template('new_member.html', member=user)
 
     if request.method == "POST":
@@ -382,6 +391,7 @@ def new_member_stripe(stripe_id):
             badge_photo = None
 
         insert_data = (
+            request.form.get('badge_serial'),
             request.form.get('stripe_id'),
             request.form.get('drupal_id'),
             'ACTIVE',
@@ -400,7 +410,9 @@ def new_member_stripe(stripe_id):
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        cur.execute('insert into members (badge_serial, stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        db.commit()
+        cur.execute('delete from members2 where badge_serial = %s', (request.form.get('badge_serial'),))
         db.commit()
         db.close()
 
