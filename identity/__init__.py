@@ -692,6 +692,14 @@ def admin_onboard():
         print str(e)
         return redirect('/login?redirect_to=admin_onboard')
 
+@app.route('/admin/badgephoto')
+def admin_badge_photo():
+    
+    if session['logged_in']:
+        return render_template('badge_photo.html')
+    else:
+        return redirect('/login?redirect_to=admin_badge_photo')
+
 # Badge Swipe API Endpoint
 @app.route('/swipe/', methods=['POST'])
 def swipe_badge():
