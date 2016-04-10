@@ -11,6 +11,8 @@ DATABASE_HOST = 'localhost'
 DATABASE_PORT = 3306
 DATABASE_SCHEMA = "shopidentifyer"
 
+LOG_FILE = "/tmp/gunicorn.log"
+
 SCHEDULER_ENABLED = False
 
 STRIPE_CACHE_REFRESH_MINUTES = 60
