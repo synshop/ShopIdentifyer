@@ -40,10 +40,10 @@
     Webcam.set({
       width: 320,
       height: 240,
-      crop_width: 320,
-      crop_height: 240,
+      dest_width: 640,
+      dest_height: 480,
       image_format: 'jpeg',
-      jpeg_quality: 90,
+      jpeg_quality: 100,
       force_flash: false
     });
 
@@ -217,9 +217,13 @@
                 <div class="modal-header">
                   <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                   <h4>Take a photo!</h4>
+                  <div class="alert alert-info" role="alert">
+                      When capturing the photo, make sure to get the member's face fully inside the green rectanglar box.
+                  </div>
                 </div>
                 <div class="modal-body">
                   <div class="center-block" id="camera" style="width:320px; height:240px;"></div>
+                  <img style="position:absolute;left:136px;top:20px;" src="{{ url_for('static', filename='images/target-dashed.png')}}">
                 </div>
                 <div class="modal-footer">
                   <div id="pre_take_buttons">
