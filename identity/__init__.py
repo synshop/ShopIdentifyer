@@ -520,22 +520,22 @@ def member_badge(stripe_id):
 
     member = get_member(stripe_id)
 
-    svg_document = svgwrite.Drawing(size = ("2.125in","3.375in"))
+    svg_document = svgwrite.Drawing(size=("2.125in","3.365in"))
 
-    border = Rect(insert=(0,0),size=("2.125in","3.375in"),fill="#eeeeee")
+    border = Rect(insert=(0,0),size=("642px","1016px"),fill="#eeeeee")
     svg_document.add(border)
 
     #logo_text = svg_document.text("SYN Shop",insert = ("1in",".25in"),style="font-family:helvetica;font-weight:bold;font-size:16pt;")
     #svg_document.add(logo_text)
 
-    logo = Image(href="/static/images/syn_shop_badge_logo3.png", insert=("0.3125in",'0.0625in'), size=("1.5in","1.5in"))
+    logo = Image(href="/static/images/syn_shop_badge_logo3.png", insert=("0.3125in",'0.0625in'), size=("2.125in","3.300in"))
     svg_document.add(logo)
 
     photo_url = "/member/%s/files/photo.jpg" % (stripe_id,)
-    photo = Image(href=photo_url,insert=("0.0625in",'1.38in'),size=("2in","2in"))
-    svg_document.add(photo)
+    photo = Image(href=photo_url,insert=("0.0625in",'1.38in'),size=("400px","400px"))
+    # svg_document.add(photo)
 
-    svg_document.add(svg_document.text(member['full_name'],insert = ("0.0625in","3.300in"),style="font-family:helvetica;font-weight:bold;"))
+    svg_document.add(svg_document.text(member['full_name'],insert = ("0.0625in","3.25in"),style="font-family:helvetica;font-weight:bold;"))
 
     response = make_response(svg_document.tostring())
     response.headers['Content-Description'] = 'Badge'

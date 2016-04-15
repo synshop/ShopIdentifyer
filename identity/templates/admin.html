@@ -73,7 +73,7 @@
             <td>{{ entry[3] }}</td>
         {% else %}
             {% if entry[5] == None %}
-                <td>NOT VETTED</td>
+                <td>VETTED</td>
             {% else %}
                 <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
             {% endif %}
@@ -82,7 +82,7 @@
         {% if entry[4] == None %}
             <td>No</td>
         {% else %}
-        <td><a href="/member/{{ entry[0] }}/files/liability-waiver.pdf">Yes</a></td>
+            <td><a href="/member/{{ entry[0] }}/files/liability-waiver.pdf">Yes</a></td>
         {% endif %}
 
     </tr>
