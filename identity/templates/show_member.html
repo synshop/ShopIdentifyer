@@ -116,7 +116,7 @@ body {
 
       <table class="table table-striped table-bordered">
 
-        {% if member.has_vetted == True %}
+        {% if member.has_wavier == True %}
             <tr><th style="width:300px;">Signed Liability Wavier:</th><td><a href="/member/{{member.stripe_id}}/files/liability-waiver.pdf">liability-waiver.pdf</a></td></tr>
             {% else %}
             <tr><th style="width:300px;">Signed Liability Wavier:</th><td>No Waiver on File</td></tr>
