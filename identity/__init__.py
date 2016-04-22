@@ -140,11 +140,12 @@ def rebuild_stripe_cache():
 if config.SCHEDULER_ENABLED == True:
     s1.start()
 
-def log_swipe_event(stripe_id=None, swipe_event=None):
+def log_swipe_event(stripe_id=None, badge_status=None, swipe_event=None):
     db = get_db()
     cur = db.cursor()
 
-    cur.execute('insert into event_log values (NULL, %s, NULL, %s)', (stripe_id,swipe_event))
+    print (stripe_id,badge_status,swipe_event)
+    cur.execute('insert into event_log values (NULL, %s, %s, NULL, %s)', (stripe_id,badge_status,swipe_event))
     db.commit()
 
 # Check to see if a user is able to login and make changes to the system
@@ -201,6 +202,29 @@ def check_password(username=None, password=None):
 
         return passwords_match
 
+def get_badge_serials(stripe_id = None):
+
+    with app.app_context():
+
+        try:
+            db = get_db()
+            cur = db.cursor()
+
+            stmt = "select badge_serial from badges where stripe_id = %s and badge_status = 'ACTIVE'"
+
+            cur.execute(stmt, (stripe_id,))
+            entries = cur.fetchall()
+
+            badges = []
+
+            for entry in entries:
+                badges.append(entry[0])
+
+        except:
+            return "boom"
+
+        return badges
+
 # Fetch a member 'object'
 def get_member(stripe_id):
 
@@ -218,9 +242,7 @@ def get_member(stripe_id):
     db.commit()
 
     sql_stmt = '''select
-         stripe_id,
          member_status,
-         badge_serial,
          created_on,
          changed_on,
          full_name,
@@ -241,29 +263,29 @@ def get_member(stripe_id):
     entry = entries[0]
 
     member["stripe_id"] = stripe_id
-    member["member_status"] = entry[1]
-    member["badge_serial"] = entry[2]
-    member["created_on"] = entry[3]
-    member["changed_on"] = entry[4]
-    member["full_name"] = entry[5]
-    member["nick_name"] = entry[6]
-    member["drupal_id"] = entry[7]
-    member["stripe_email"] = entry[8]
-    member["meetup_email"] = entry[9]
-    member["mobile"] = entry[10]
-    member["emergency_contact_name"] = entry[11]
-    member["emergency_contact_mobile"] = entry[12]
-    member["vetted_status"] = entry[13]
+    member["member_status"] = entry[0]
+    member["badge_serials"] = get_badge_serials(stripe_id)
+    member["created_on"] = entry[1]
+    member["changed_on"] = entry[2]
+    member["full_name"] = entry[3]
+    member["nick_name"] = entry[4]
+    member["drupal_id"] = entry[5]
+    member["stripe_email"] = entry[6]
+    member["meetup_email"] = entry[7]
+    member["mobile"] = entry[8]
+    member["emergency_contact_name"] = entry[9]
+    member["emergency_contact_mobile"] = entry[10]
+    member["vetted_status"] = entry[11]
 
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
     # or if they are an admin in the system.
-    if entry[14] == None:
+    if entry[12] == None:
         member['has_wavier'] = False
     else:
         member['has_wavier'] = True
 
-    if entry[15] == None:
+    if entry[13] == None:
         member['has_vetted'] = False
     else:
         member['has_vetted'] = True
@@ -392,7 +414,6 @@ def new_member_stripe(stripe_id):
             badge_photo = None
 
         insert_data = (
-            request.form.get('badge_serial'),
             request.form.get('stripe_id'),
             request.form.get('drupal_id'),
             'ACTIVE',
@@ -411,7 +432,10 @@ def new_member_stripe(stripe_id):
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('insert into members (badge_serial, stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        db.commit()
+
+        cur.execute('insert into badges values (%s,%s,"ACTIVE",NULL,NULL)',(request.form.get('badge_serial'),request.form.get('stripe_id')))
         db.commit()
         cur.execute('delete from members2 where badge_serial = %s', (request.form.get('badge_serial'),))
         db.commit()
@@ -728,16 +752,16 @@ def swipe_badge():
     cur = db.cursor()
 
     try:
-        cur.execute('select stripe_id from members where badge_serial = %s', (badge_serial,))
+        cur.execute('select stripe_id, badge_status from badges where badge_serial = %s', (badge_serial,))
         entries = cur.fetchall()
         member = entries[0]
-        log_swipe_event(stripe_id=member[0],swipe_event=swipe)
+        log_swipe_event(stripe_id=member[0],badge_status=member[1], swipe_event=swipe)
     except IndexError:
         # The user's badge is not in the system
         swipe = "MISSING_ACCOUNT"
         cur.execute("insert into message_queue (message) values (%s)", (badge_serial,))
         db.commit()
-        log_swipe_event(stripe_id=badge_serial,swipe_event=swipe)
+        log_swipe_event(stripe_id=badge_serial,badge_status="ACTIVE",swipe_event=swipe)
 
     message = {'message':swipe}
     return jsonify(message)
