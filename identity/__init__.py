@@ -1,11 +1,11 @@
-from crypto import SettingsUtil, CryptoUtil
+from identity.crypto import SettingsUtil, CryptoUtil
 import base64, logging, time, bcrypt
 
 try:
-    import config
+    import identity.config
 except:
-    print "You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n"
-    print "Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information."
+    print("You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n")
+    print("Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information.")
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -144,7 +144,7 @@ def log_swipe_event(stripe_id=None, badge_status=None, swipe_event=None):
     db = get_db()
     cur = db.cursor()
 
-    print (stripe_id,badge_status,swipe_event)
+    print(stripe_id,badge_status,swipe_event)
     cur.execute('insert into event_log values (NULL, %s, %s, NULL, %s)', (stripe_id,badge_status,swipe_event))
     db.commit()
 
@@ -633,7 +633,7 @@ def remove_message():
 
     except:
         import sys
-        print sys.exc_info()[0]
+        print(sys.exc_info()[0])
         message = {'message':"NULL"}
 
     return jsonify(message)
@@ -723,8 +723,8 @@ def admin_onboard():
             return render_template('onboard.html',entries=entries_x)
         else:
             return redirect('/login?redirect_to=admin_onboard')
-    except Exception, e:
-        print str(e)
+    except(Exception, e):
+        print(str(e))
         return redirect('/login?redirect_to=admin_onboard')
 
 @app.route('/admin/badgephoto')
