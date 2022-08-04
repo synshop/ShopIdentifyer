@@ -34,7 +34,7 @@ app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, E
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
 app.config['STRIPE_CACHE_REBUILD_MINUTES'] = config.STRIPE_CACHE_REBUILD_MINUTES
-app.config['STRIPE_CACHE_REFRESH_BACKREACH_MIN'] = config.STRIPE_CACHE_REFRESH_BACKREACH_MIN
+app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] = config.STRIPE_CACHE_REFRESH_REACHBACK_MIN
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
 
@@ -92,7 +92,7 @@ def refresh_stripe_cache():
     app.logger.info("refreshing stripe cache")
 
     # Convert to milliseconds
-    i = app.config['STRIPE_CACHE_REFRESH_BACKREACH_MIN'] * 60000
+    i = app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] * 60000
 
     member_array = get_refresh_stripe_cache(int(time.time()) - i)
 

@@ -1,6 +1,8 @@
-DROP DATABASE IF EXISTS shopidentifyer;
+-- CREATE USER 'synshop@localhost'C IDENTIFIED BY 'changemepassword';
 
-create database shopidentifyer;
+DROP DATABASE IF EXISTS shopidentifyer;
+CREATE DATABASE shopidentifyer;
+GRANT ALL PRIVILEGES ON shopidentifyer.* TO 'synshop'@'localhost';
 
 create table shopidentifyer.members (
 
@@ -63,7 +65,7 @@ create table shopidentifyer.stripe_cache (
 
 create table shopidentifyer.admin_users (
 	stripe_id varchar(255) NOT NULL PRIMARY KEY,
-    password varchar(2048)
+  pwd varchar(2048)
 );
 
 insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','$2b$12$hOucr8SGLsC1jRz.L2JrFepK1BnfhYVAIOxOH3sT8kyIWFMKItO8q')

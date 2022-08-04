@@ -29,7 +29,7 @@ def main(args):
         try:
             encrypted_value = CryptoUtil.encrypt(plaintext, key)
             print("Encrypted Value: " + encrypted_value)
-        except KeyLengthError, ex:
+        except KeyLengthError as ex:
             print (ex)
 
     if op in ['dec', 'decrypt']:
@@ -38,7 +38,7 @@ def main(args):
         try:
             decrypted_value = CryptoUtil.decrypt(encrypted_value, key)
             print("Plaintext Value: " + decrypted_value)
-        except KeyLengthError, ex:
+        except KeyLengthError as ex:
             print(ex)
 
 if __name__ == "__main__":

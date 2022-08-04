@@ -15,9 +15,9 @@ def encrypt(plaintext, key):
         raise KeyLengthError("Encryption key cannot be %s bytes or longer" % AES_256_KEY_LEN)
     padplain = _pad(plaintext, AES_256_VAL_BLOCK)
     algo = _new(key)
-    encrypted = algo.encrypt(padplain)
+    encrypted = algo.encrypt(padplain.encode("utf8"))
     enc64 = b64encode(encrypted)
-    return enc64
+    return enc64.decode("utf8")
 
 
 def decrypt(enc64, key):
@@ -30,7 +30,7 @@ def decrypt(enc64, key):
 
 def _new(key):
     padkey = _pad(key, AES_256_KEY_LEN)
-    return AES.new(padkey, AES.MODE_CBC, IV)
+    return AES.new(padkey.encode("utf8"), AES.MODE_CBC, IV.encode("utf8"))
 
 
 def _pad(val, block_size):
@@ -45,7 +45,7 @@ def _unpad(val):
     """
     Removes PKCS5 padding.
     """
-    return val[ 0 : -ord(val[-1]) ]
+    return (val.decode('utf-8'))
 
 
 class KeyLengthError(ValueError):
