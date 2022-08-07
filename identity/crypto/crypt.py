@@ -24,10 +24,8 @@ def main(args):
     op = args[1]
 
     if op in ['enc', 'encrypt']:
-        # key = getpass.getpass('Please enter the encryption key: ')
-        key = "***REMOVED***"
-        plaintext = "MySqlIsMyPassport"
-        # plaintext = getpass.getpass('Please enter the plaintext you wish to encrypt: ')
+        key = getpass.getpass('Please enter the encryption key: ')
+        plaintext = getpass.getpass('Please enter the plaintext you wish to encrypt: ')
         try:
             encrypted_value = CryptoUtil.encrypt(plaintext, key)
             print (type(encrypted_value))
@@ -37,8 +35,8 @@ def main(args):
             print (ex)
 
     if op in ['dec', 'decrypt']:
-        # key = getpass.getpass('Please enter the encryption key: ')
-        # encrypted_value = getpass.getpass('Please enter the encrypted string you wish to decrypt: ')
+        key = getpass.getpass('Please enter the encryption key: ')
+        encrypted_value = getpass.getpass('Please enter the encrypted string you wish to decrypt: ')
         key = "***REMOVED***"
         encrypted_value = "QHtBLEE0h3fpQvSAcE/qpLGxpt/iz2il5qtewDxORFQ="
         try:
