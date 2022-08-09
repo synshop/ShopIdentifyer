@@ -1,9 +1,9 @@
-from identity.crypto import SettingsUtil, CryptoUtil
+from .crypto import SettingsUtil, CryptoUtil
 import base64, logging, time, bcrypt
 
 try:
     import identity.config
-except:
+except Exception as e:
     print("You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n")
     print("Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information.")
     quit()

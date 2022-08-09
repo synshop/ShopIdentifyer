@@ -19,3 +19,4 @@ ps aux | grep -i gunicorn;
 
 echo;
 echo "Errors are being written to /tmp/gunicorn.log";
+tail -f /tmp/gunicorn.log
