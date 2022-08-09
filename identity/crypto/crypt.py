@@ -28,6 +28,7 @@ def main(args):
         plaintext = getpass.getpass('Please enter the plaintext you wish to encrypt: ')
         try:
             encrypted_value = CryptoUtil.encrypt(plaintext, key)
+            
             print("Encrypted Value: " + encrypted_value)
         except KeyLengthError as ex:
             print (ex)
