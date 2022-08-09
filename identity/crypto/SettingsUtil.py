@@ -1,6 +1,5 @@
 import getpass
 import os
-# import CryptoUtil
 
 PASSWORD_KEY = 'ENCRYPTION_KEY'
 
