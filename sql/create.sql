@@ -1,4 +1,4 @@
--- CREATE USER 'synshop@localhost'C IDENTIFIED BY 'changemepassword';
+-- CREATE USER 'synshop@localhost' IDENTIFIED BY 'ChangeMe';
 
 DROP DATABASE IF EXISTS shopidentifyer;
 CREATE DATABASE shopidentifyer;
