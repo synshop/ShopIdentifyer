@@ -6,24 +6,13 @@ import CryptoUtil
 from CryptoUtil import KeyLengthError
 
 def usage():
-    print()
-    print("When the web server starts up, it will prompt you for a decryption password.")
-    print("Use this tool to encrypt/decrypt the sensitive properties that go in ./identity/config.py")
-    print("Make sure you use the same passphrase to encrypt all the values")
-    print()
-    print('Usage: crypt.py encrypt')
-    print('       crypt.py decrypt')
-    print()
     exit()
 
 def main(args):
 
-    if len(args) != 2 or args[1] not in ['decrypt','encrypt','enc','dec']:
-        usage()
+    op = args[0]
 
-    op = args[1]
-
-    if op in ['enc', 'encrypt']:
+    if 'encrypt' in op:
         key = getpass.getpass('Please enter the encryption key: ')
         plaintext = getpass.getpass('Please enter the plaintext you wish to encrypt: ')
         try:
@@ -32,7 +21,7 @@ def main(args):
         except KeyLengthError as ex:
             print (ex)
 
-    if op in ['dec', 'decrypt']:
+    if 'decrypt' in op:
         key = getpass.getpass('Please enter the encryption key: ')
         encrypted_value = getpass.getpass('Please enter the encrypted string you wish to decrypt: ')
         try:
