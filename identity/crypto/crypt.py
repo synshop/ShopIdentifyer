@@ -28,7 +28,6 @@ def main(args):
         plaintext = getpass.getpass('Please enter the plaintext you wish to encrypt: ')
         try:
             encrypted_value = CryptoUtil.encrypt(plaintext, key)
-            
             print("Encrypted Value: " + encrypted_value)
         except KeyLengthError as ex:
             print (ex)
@@ -38,7 +37,6 @@ def main(args):
         encrypted_value = getpass.getpass('Please enter the encrypted string you wish to decrypt: ')
         try:
             decrypted_value = CryptoUtil.decrypt(encrypted_value, key)
-            print (type(encrypted_value) + " " + len(encrypted_value))
             print("Plaintext Value: " + decrypted_value)
         except KeyLengthError as ex:
             print(ex)
