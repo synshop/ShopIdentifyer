@@ -7,6 +7,8 @@ DELINQUENT = "Delinquent"
 NOT_ACTIVE = "Not Active"
 NO_SUBSCRIPTION_PLAN = "No Subscription Plan"
 
+STRIPE_VERSION = "2022-08-01"
+
 # Delinquent email template
 D_EMAIL_TEMPLATE = """
 
@@ -30,7 +32,7 @@ D_EMAIL_TEMPLATE = """
 
 def get_refresh_stripe_cache(t=None):
 
-    stripe.api_version = '2013-02-13'
+    stripe.api_version = STRIPE_VERSION
     stripe.api_key = app.config['STRIPE_TOKEN']
     member_array = []
 
@@ -51,7 +53,7 @@ def get_refresh_stripe_cache(t=None):
 
 def get_rebuild_stripe_cache():
 
-    stripe.api_version = '2013-02-13'
+    stripe.api_version = STRIPE_VERSION
     stripe.api_key = app.config['STRIPE_TOKEN']
 
     m = 0
@@ -82,7 +84,7 @@ def get_realtime_stripe_info(stripe_id=None):
 
     stripe_info = {'status':DELINQUENT,'plan':NO_SUBSCRIPTION_PLAN}
 
-    stripe.api_version = '2013-02-13'
+    stripe.api_version = STRIPE_VERSION
     stripe.api_key = app.config['STRIPE_TOKEN']
 
     member = stripe.Customer.retrieve(stripe_id)
