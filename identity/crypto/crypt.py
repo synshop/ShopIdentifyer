@@ -37,8 +37,6 @@ def main(args):
     if op in ['dec', 'decrypt']:
         key = getpass.getpass('Please enter the encryption key: ')
         encrypted_value = getpass.getpass('Please enter the encrypted string you wish to decrypt: ')
-        key = "MyVoiceIsMyPassport"
-        encrypted_value = "QHtBLEE0h3fpQvSAcE/qpLGxpt/iz2il5qtewDxORFQ="
         try:
             decrypted_value = CryptoUtil.decrypt(encrypted_value, key)
             print (type(decrypted_value))
