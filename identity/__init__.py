@@ -59,8 +59,7 @@ app.logger.info("SYN Shop Identifyer Started...")
 app.logger.info("------------------------------")
 
 # Imports down here so that they can see the app.config elements
-from identity.stripe import get_rebuild_stripe_cache, get_refresh_stripe_cache
-from identity.stripe import get_realtime_stripe_info
+from identity.stripe import get_rebuild_stripe_cache, get_realtime_stripe_info
 from identity.stripe import DELINQUENT, IN_GOOD_STANDING,PAST_DUE, D_EMAIL_TEMPLATE
 from identity.models import Member
 
@@ -84,17 +83,13 @@ mail = Mail(app)
 s1 = BackgroundScheduler()
 
 # This helps with stripe information lookup performance
-# Currently it runs every 10 minutes and grabs
+# Currently it runs every 15 minutes and grabs
 # the last 15 minutes of data
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
 def refresh_stripe_cache():
 
     app.logger.info("refreshing stripe cache")
-
-    # Convert to milliseconds
-    i = app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] * 60000
-
-    member_array = get_refresh_stripe_cache(int(time.time()) - i)
+    member_array = get_rebuild_stripe_cache(incremental=True)
 
     with app.app_context():
         db = get_db()
@@ -102,9 +97,13 @@ def refresh_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s)",\
-            (member['stripe_id'], member['created'], member['description'], \
-             member['stripe_email'], member["member_sub_plan"],member['status']))
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
+            (member['stripe_id'], member['stripe_created_on'], member['stripe_email'], \
+             member['stripe_description'], member['stripe_last_payment_status'],\
+             member['stripe_subscription_id'], member['stripe_subscription_product'],\
+             member['stripe_subscription_status'], member['stripe_subscription_created_on']))
+        
+            print(member)
 
         db.commit()
 
@@ -113,7 +112,7 @@ def refresh_stripe_cache():
 @s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REBUILD_MINUTES'])
 def rebuild_stripe_cache():
 
-    app.logger.info("rebuilding stripe cache")
+    app.logger.info("rebuilding stripe cache...every " + str(app.config['STRIPE_CACHE_REBUILD_MINUTES']) + " minutes")
 
     member_array = get_rebuild_stripe_cache()
 
@@ -127,9 +126,11 @@ def rebuild_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s)",\
-            (member['stripe_id'], member['created'], member['description'], \
-             member['stripe_email'], member["member_sub_plan"],member['status']))
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
+            (member['stripe_id'], member['stripe_created_on'], member['stripe_email'], \
+             member['stripe_description'], member['stripe_last_payment_status'],\
+             member['stripe_subscription_id'], member['stripe_subscription_product'],\
+             member['stripe_subscription_status'], member['stripe_subscription_created_on']))
 
         db.commit()
 
@@ -162,7 +163,7 @@ def member_is_admin(stripe_id=None):
     except:
         return False
 
-def member_change_password(stripe_id=None,password=None):
+def admin_change_password(stripe_id=None,password=None):
 
     try:
         db = get_db()
@@ -170,7 +171,7 @@ def member_change_password(stripe_id=None,password=None):
 
         hashed_password = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
 
-        stmt = "update admin_users set password = %s where stripe_id = %s"
+        stmt = "update admin_users set pwd = %s where stripe_id = %s"
         cur.execute(stmt, (hashed_password, stripe_id,))
         db.commit()
         return True
@@ -186,18 +187,18 @@ def check_password(username=None, password=None):
             db = get_db()
             cur = db.cursor()
 
-            stmt = "select a.password from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
-
+            stmt = "select a.pwd from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
             cur.execute(stmt, (username,))
             entries = cur.fetchall()
-            hashed_password = entries[0][0]
+            hashed_password = entries[0][0].encode('utf-8')
 
             if bcrypt.hashpw(password.encode('utf-8'), hashed_password) == hashed_password:
                 passwords_match = True
             else:
                 passwords_match = False
 
-        except:
+        except Exception as e:
+            print(e)
             passwords_match = False
 
         return passwords_match
@@ -226,19 +227,25 @@ def get_badge_serials(stripe_id = None):
         return badges
 
 # Fetch a member 'object'
-def get_member(stripe_id):
+def get_member(subscription_id):
 
     member = {}
 
-    # Check and update the stripe cache everytime you view member details
-    app.logger.info("grabbing real-time stripe information for %s" % (stripe_id,))
-    stripe_info = get_realtime_stripe_info(stripe_id)
-    member["stripe_status"] = stripe_info['status'].upper()
-    member['stripe_plan'] = stripe_info['plan'].upper()
+    # Check and update the stripe cache every time you view member details
+    app.logger.info("grabbing real-time stripe information for %s" % (subscription_id,))
+    stripe_info = get_realtime_stripe_info(subscription_id)
+    
+    member["stripe_status"] = stripe_info['subscription_status'].upper()
+    member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("update stripe_cache set subscription = %s, stripe_status = %s where stripe_id = %s", (member['stripe_plan'],member['stripe_status'],stripe_id))
+    cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
+        (member['stripe_id'], member['stripe_created_on'], member['stripe_email'], \
+        member['stripe_description'], member['stripe_last_payment_status'],\
+        member['stripe_subscription_id'], member['stripe_subscription_product'],\
+        member['stripe_subscription_status'], member['stripe_subscription_created_on']))
+
     db.commit()
 
     sql_stmt = '''select
@@ -322,7 +329,7 @@ def update_member(request):
 
     insert_data = (
         request.form.get('drupal_id'),
-        request.form.get('member_status'    ),
+        request.form.get('member_status'),
         request.form.get('full_name'),
         request.form.get('nick_name'),
         request.form.get('stripe_email'),
@@ -683,7 +690,7 @@ def changepassword(stripe_id):
             return render_template('changepassword.html',stripe_id=stripe_id)
 
         if request.method == "POST":
-            x = member_change_password(stripe_id,request.form.get('password1'),)
+            x = admin_change_password(stripe_id,request.form.get('password1'),)
             return redirect(url_for('index',_scheme='https',_external=True))
 
     else:

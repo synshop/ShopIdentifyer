@@ -57,10 +57,13 @@ create table shopidentifyer.message_queue (
 create table shopidentifyer.stripe_cache (
   stripe_id varchar(255) unique,
   stripe_created_on varchar(255),
-  stripe_description text,
   stripe_email varchar(255),
-  subscription varchar(255),
-  stripe_status varchar(255)
+  stripe_description text,
+  stripe_last_payment_status varchar(255),
+  stripe_subscription_id varchar(255),
+  stripe_subscription_product varchar(255),
+  stripe_subscription_status varchar(255),
+  stripe_subscription_created_on varchar(255)
 );
 
 create table shopidentifyer.admin_users (
