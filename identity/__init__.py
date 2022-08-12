@@ -1,5 +1,5 @@
 from .crypto import SettingsUtil, CryptoUtil
-import base64, logging, time, bcrypt
+import base64, logging, time, bcrypt, io
 
 try:
     import identity.config
@@ -19,6 +19,7 @@ from flask import Flask, request, g, flash
 from flask import redirect,  make_response
 from flask import render_template, jsonify
 from flask import session, escape, url_for
+from flask import send_file
 
 from flask_mail import Mail, Message
 
@@ -281,6 +282,7 @@ def get_member(subscription_id):
     member["emergency_contact_name"] = entry[8]
     member["emergency_contact_mobile"] = entry[9]
     member["vetted_status"] = entry[10]
+    member["stripe_subscription_id"] = subscription_id
 
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
@@ -473,18 +475,18 @@ def edit_member(stripe_id):
 
 @app.route('/member/<stripe_id>/files/photo.jpg')
 def member_photo(stripe_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
+    photo = cur.fetchone()[0]
 
     try:
-        db = get_db()
-        cur = db.cursor()
-        cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
-        photo = cur.fetchone()
-
         response = make_response(photo)
         response.headers['Content-Description'] = 'Badge Photo'
         response.headers['Content-Type'] = 'image/jpeg'
         response.headers['Content-Disposition'] = 'inline'
-    except:
+    except Exception as e:
+        print(e)
         response = make_response("No photo on file, please fix this!")
         response.headers['Content-Description'] = 'Stock Photo'
         response.headers['Cache-Control'] = 'no-cache'
@@ -499,7 +501,7 @@ def member_wavier(stripe_id):
     db = get_db()
     cur = db.cursor()
     cur.execute("select liability_waiver from members where stripe_id = %s", (stripe_id,))
-    wavier = cur.fetchone()
+    wavier = cur.fetchone()[0]
 
     if wavier[0] == None:
         response = make_response("No Waiver on file, please fix this!")
@@ -524,7 +526,7 @@ def member_vetted(stripe_id):
     db = get_db()
     cur = db.cursor()
     cur.execute("select vetted_membership_form from members where stripe_id = %s", (stripe_id,))
-    vetted = cur.fetchone()
+    vetted = cur.fetchone()[0]
 
     if vetted[0] == None:
         response = make_response("No signed vetted membership form on file, please fix this!")
