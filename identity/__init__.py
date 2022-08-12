@@ -61,7 +61,7 @@ app.logger.info("------------------------------")
 # Imports down here so that they can see the app.config elements
 from identity.stripe import get_rebuild_stripe_cache, get_realtime_stripe_info
 from identity.stripe import DELINQUENT, IN_GOOD_STANDING,PAST_DUE, D_EMAIL_TEMPLATE
-from identity.models import Member
+# from identity.models import Member
 
 def connect_db():
     return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
@@ -232,19 +232,19 @@ def get_member(subscription_id):
     member = {}
 
     # Check and update the stripe cache every time you view member details
-    app.logger.info("grabbing real-time stripe information for %s" % (subscription_id,))
+    app.logger.info("updating real-time stripe information for %s" % (subscription_id,))
     stripe_info = get_realtime_stripe_info(subscription_id)
     
-    member["stripe_status"] = stripe_info['subscription_status'].upper()
+    member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
     member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
 
     db = get_db()
     cur = db.cursor()
     cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
-        (member['stripe_id'], member['stripe_created_on'], member['stripe_email'], \
-        member['stripe_description'], member['stripe_last_payment_status'],\
-        member['stripe_subscription_id'], member['stripe_subscription_product'],\
-        member['stripe_subscription_status'], member['stripe_subscription_created_on']))
+        (stripe_info['stripe_id'], stripe_info['stripe_created_on'], stripe_info['stripe_email'], \
+        stripe_info['stripe_description'], stripe_info['stripe_last_payment_status'],\
+        stripe_info['stripe_subscription_id'], stripe_info['stripe_subscription_product'],\
+        stripe_info['stripe_subscription_status'], stripe_info['stripe_subscription_created_on']))
 
     db.commit()
 
@@ -255,7 +255,6 @@ def get_member(subscription_id):
          full_name,
          nick_name,
          drupal_id,
-         stripe_email,
          meetup_email,
          mobile,
          emergency_contact_name,
@@ -265,24 +264,23 @@ def get_member(subscription_id):
          vetted_membership_form
       from members where stripe_id = %s'''
 
-    cur.execute(sql_stmt, (stripe_id,))
+    cur.execute(sql_stmt, (stripe_info['stripe_id'],))
     entries = cur.fetchall()
     entry = entries[0]
 
-    member["stripe_id"] = stripe_id
+    member["stripe_id"] = stripe_info['stripe_id']
     member["member_status"] = entry[0]
-    member["badge_serials"] = get_badge_serials(stripe_id)
+    member["badge_serials"] = get_badge_serials(stripe_info['stripe_id'])
     member["created_on"] = entry[1]
     member["changed_on"] = entry[2]
     member["full_name"] = entry[3]
     member["nick_name"] = entry[4]
     member["drupal_id"] = entry[5]
-    member["stripe_email"] = entry[6]
-    member["meetup_email"] = entry[7]
-    member["mobile"] = entry[8]
-    member["emergency_contact_name"] = entry[9]
-    member["emergency_contact_mobile"] = entry[10]
-    member["vetted_status"] = entry[11]
+    member["meetup_email"] = entry[6]
+    member["mobile"] = entry[7]
+    member["emergency_contact_name"] = entry[8]
+    member["emergency_contact_mobile"] = entry[9]
+    member["vetted_status"] = entry[10]
 
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
@@ -292,12 +290,12 @@ def get_member(subscription_id):
     else:
         member['has_wavier'] = True
 
-    if entry[13] == None:
+    if entry[11] == None:
         member['has_vetted'] = False
     else:
         member['has_vetted'] = True
 
-    if member_is_admin(stripe_id):
+    if member_is_admin(stripe_info['stripe_id']):
         member['is_admin'] = True
     else:
         member['is_admin'] = False
@@ -451,9 +449,9 @@ def new_member_stripe(stripe_id):
         return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
 # Show member details
-@app.route('/member/<stripe_id>')
-def show_member(stripe_id):
-    user = get_member(stripe_id)
+@app.route('/member/<stripe_subscription_id>')
+def show_member(stripe_subscription_id):
+    user = get_member(stripe_subscription_id)
     return render_template('show_member.html', member=user)
 
 # Edit member details
@@ -701,7 +699,22 @@ def changepassword(stripe_id):
 def admin():
     db = get_db()
     cur = db.cursor()
-    cur.execute('select stripe_id, stripe_email, full_name, is_vetted, liability_waiver, vetted_membership_form from members where member_status = "ACTIVE"')
+    stmt = """  SELECT 
+                    m.stripe_id,
+                    s.stripe_subscription_id,
+                    m.full_name,
+                    m.is_vetted, 
+                    m.liability_waiver, 
+                    m.vetted_membership_form, 
+                    s.stripe_email
+                FROM 
+                    members m, stripe_cache s
+                WHERE
+                    m.member_status = "ACTIVE"
+                AND
+                    m.stripe_id = s.stripe_id
+            """
+    cur.execute(stmt)
     entries = cur.fetchall()
     return render_template('admin.html',entries=entries)
 
@@ -714,7 +727,8 @@ def admin_onboard():
 
             db = get_db()
             cur = db.cursor()
-            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description from stripe_cache where subscription != "No Subscription Plan" and stripe_id not in (select stripe_id from members) order by stripe_created_on')
+
+            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description from stripe_cache where stripe_id not in (select stripe_id from members) order by stripe_created_on')
             rows = cur.fetchall()
 
             for row in rows:
@@ -730,7 +744,7 @@ def admin_onboard():
             return render_template('onboard.html',entries=entries_x)
         else:
             return redirect('/login?redirect_to=admin_onboard')
-    except(Exception, e):
+    except Exception as e:
         print(str(e))
         return redirect('/login?redirect_to=admin_onboard')
 

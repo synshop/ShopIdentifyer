@@ -5,7 +5,6 @@ CREATE DATABASE shopidentifyer;
 GRANT ALL PRIVILEGES ON shopidentifyer.* TO 'synshop'@'localhost';
 
 create table shopidentifyer.members (
-
   stripe_id varchar(255) NOT NULL PRIMARY KEY UNIQUE,
   drupal_id varchar(255),
   badge_serial varchar(255) default "N/A",
@@ -13,7 +12,6 @@ create table shopidentifyer.members (
   is_vetted ENUM('VETTED','NOT VETTED') NOT NULL DEFAULT "NOT VETTED",
   full_name varchar(255),
   nick_name varchar(255),
-  stripe_email varchar(255),
   meetup_email varchar(255),
   mobile varchar(25),
   emergency_contact_name varchar(255),
@@ -23,7 +21,6 @@ create table shopidentifyer.members (
   badge_photo longblob,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-
 );
 
 create table shopidentifyer.event_log (
