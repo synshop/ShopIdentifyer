@@ -728,7 +728,7 @@ def admin_onboard():
             db = get_db()
             cur = db.cursor()
 
-            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description from stripe_cache where stripe_id not in (select stripe_id from members) order by stripe_created_on')
+            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, stripe_subscription_status from stripe_cache where stripe_id not in (select stripe_id from members) order by stripe_created_on')
             rows = cur.fetchall()
 
             for row in rows:
@@ -739,7 +739,7 @@ def admin_onboard():
                 else:
                     drupal_legal_name = "No Legal Name Provided"
 
-                entries_x.append(dict(stripe_id=row[0],stripe_email=row[2],drupal_legal_name=drupal_legal_name))
+                entries_x.append(dict(stripe_id=row[0],stripe_email=row[2],drupal_legal_name=drupal_legal_name,stripe_last_payment_status=row[4], stripe_subscription_product=row[5], stripe_subscription_status=row[6]))
 
             return render_template('onboard.html',entries=entries_x)
         else:
