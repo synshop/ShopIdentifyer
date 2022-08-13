@@ -389,10 +389,7 @@ def new_member_stripe(stripe_id):
         user["drupal_id"] = drupal_id
         user["stripe_email"] = member[0]
 
-        stmt = "select m2.badge_serial from members2 m2, stripe_cache s where m2.stripe_email = s.stripe_email and s.stripe_id = %s"
-        cur.execute(stmt,(stripe_id,))
-        rows = cur.fetchall()
-
+        rows = None
         if rows:
             user['badge_serial'] = rows[0][0]
         else:
@@ -401,8 +398,7 @@ def new_member_stripe(stripe_id):
         return render_template('new_member.html', member=user)
 
     if request.method == "POST":
-        app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
-
+        
         if request.files['liability_wavier_form'].filename != "":
             liability_wavier_form = request.files['liability_wavier_form'].read()
         else:
@@ -426,7 +422,6 @@ def new_member_stripe(stripe_id):
             'ACTIVE',
             request.form.get('full_name'),
             request.form.get('nick_name'),
-            request.form.get('stripe_email'),
             request.form.get('meetup_email'),
             request.form.get('mobile'),
             request.form.get('emergency_contact_name'),
@@ -439,15 +434,11 @@ def new_member_stripe(stripe_id):
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,stripe_email,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
-        db.commit()
-
-        cur.execute('insert into badges values (%s,%s,"ACTIVE",NULL,NULL)',(request.form.get('badge_serial'),request.form.get('stripe_id')))
-        db.commit()
-        cur.execute('delete from members2 where badge_serial = %s', (request.form.get('badge_serial'),))
+        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
         db.commit()
         db.close()
-
+        
+        app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
         return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
 # Show member details
