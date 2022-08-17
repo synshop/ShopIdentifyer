@@ -1,5 +1,6 @@
 from .crypto import SettingsUtil, CryptoUtil
 import base64, logging, time, bcrypt, io
+from PIL import Image as PILImage
 
 try:
     import identity.config
@@ -287,12 +288,12 @@ def get_member(subscription_id):
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
     # or if they are an admin in the system.
-    if entry[12] == None:
+    if entry[11] == None:
         member['has_wavier'] = False
     else:
         member['has_wavier'] = True
 
-    if entry[11] == None:
+    if entry[12] == None:
         member['has_vetted'] = False
     else:
         member['has_vetted'] = True
@@ -399,22 +400,36 @@ def new_member_stripe(stripe_id):
 
     if request.method == "POST":
         
-        if request.files['liability_wavier_form'].filename != "":
-            liability_wavier_form = request.files['liability_wavier_form'].read()
-        else:
-            liability_wavier_form = None
+        # Need to determine if this is a file upload or an webcam image capture
+        # for badge photos, liability waivers, and vetted membership forms
 
-        if request.files['vetted_membership_form'].filename != "":
-            vetted_membership_form = request.files['vetted_membership_form'].read()
+        if request.files['badge_file'].filename != "":
+            badge_photo = request.files['badge_file'].read()
+        else:
+            badge_base64 = request.form.get('badge_base64_data',default=None)
+            if badge_base64 != None:
+                badge_photo = base64.b64decode(badge_base64)
+            else:
+                badge_photo = None
+        
+        if request.files['liability_file'].filename != "":
+            liability_wavier_form = request.files['liability_file'].read()
+        else:
+            liability_base64 = request.form.get('liability_base64_data',default=None)
+            if liability_base64 != None:
+                liability_wavier_form = base64.b64decode(liability_base64)
+                liability_wavier_form = io.BytesIO(liability_wavier_form)
+                image = PILImage.open(liability_wavier_form)
+                liability_wavier_form = io.BytesIO()
+                image.save(liability_wavier_form,format='PDF')
+                liability_wavier_form = liability_wavier_form.getvalue()
+            else:
+                liability_wavier_form = None
+
+        if request.files['vetted_file'].filename != "":
+            vetted_membership_form = request.files['vetted_file'].read()
         else:
             vetted_membership_form = None
-
-        photo_base64 = request.form.get('base64_photo_data',default=None)
-
-        if photo_base64 != None:
-            badge_photo = base64.b64decode(photo_base64)
-        else:
-            badge_photo = None
 
         insert_data = (
             request.form.get('stripe_id'),
@@ -779,3 +794,8 @@ def swipe_badge():
 
     message = {'message':swipe}
     return jsonify(message)
+
+# Widget Testing
+@app.route('/widget', methods=['GET','POST'])
+def test_widget():
+    return render_template('camera-widget.html')
