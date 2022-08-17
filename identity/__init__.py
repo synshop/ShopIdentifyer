@@ -1,6 +1,7 @@
 from .crypto import SettingsUtil, CryptoUtil
 import base64, logging, time, bcrypt, io
 from PIL import Image as PILImage
+from PIL import ImageFilter, ImageEnhance
 
 try:
     import identity.config
@@ -11,9 +12,12 @@ except Exception as e:
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-import svgwrite, json
-from svgwrite.image import Image
-from svgwrite.shapes import Rect
+# TODO: Move to svglib
+# TODO: Look at using CursorDictRowsMixIn for db operations
+
+import json
+# from svgwrite.image import Image
+# from svgwrite.shapes import Rect
 import MySQLdb as mysql
 
 from flask import Flask, request, g, flash
@@ -420,6 +424,9 @@ def new_member_stripe(stripe_id):
                 liability_wavier_form = base64.b64decode(liability_base64)
                 liability_wavier_form = io.BytesIO(liability_wavier_form)
                 image = PILImage.open(liability_wavier_form)
+                image = image.transpose(PILImage.Transpose.ROTATE_270)
+                enh = ImageEnhance.Contrast(image)
+                image = enh.enhance(1.8)
                 liability_wavier_form = io.BytesIO()
                 image.save(liability_wavier_form,format='PDF')
                 liability_wavier_form = liability_wavier_form.getvalue()
@@ -429,7 +436,19 @@ def new_member_stripe(stripe_id):
         if request.files['vetted_file'].filename != "":
             vetted_membership_form = request.files['vetted_file'].read()
         else:
-            vetted_membership_form = None
+            vetted_base64 = request.form.get('vetted_base64_data',default=None)
+            if vetted_base64 != None:
+                vetted_membership_form = base64.b64decode(vetted_base64)
+                vetted_membership_form = io.BytesIO(vetted_membership_form)
+                image = PILImage.open(vetted_membership_form)
+                image = image.transpose(PILImage.Transpose.ROTATE_270)
+                enh = ImageEnhance.Contrast(image)
+                image = enh.enhance(1.8)
+                vetted_membership_form = io.BytesIO()
+                image.save(vetted_membership_form,format='PDF')
+                vetted_membership_form = vetted_membership_form.getvalue()            
+            else:
+                vetted_membership_form = None
 
         insert_data = (
             request.form.get('stripe_id'),
@@ -549,7 +568,7 @@ def member_vetted(stripe_id):
         response.headers['Content-Disposition'] = 'inline'
 
     return response
-
+"""
 @app.route('/member/<stripe_id>/files/badge.svg',methods=['GET'])
 def member_badge(stripe_id):
 
@@ -581,7 +600,7 @@ def member_badge(stripe_id):
     response.headers['Content-Disposition'] = 'inline'
 
     return response
-
+"""
 @app.route('/member/search')
 def member_search():
     return render_template('search_member.html')
