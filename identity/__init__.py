@@ -243,6 +243,7 @@ def get_member(subscription_id):
     
     member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
     member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
+    member['stripe_email'] = stripe_info['stripe_email']
 
     db = get_db()
     cur = db.cursor()
@@ -315,38 +316,78 @@ def update_member(request):
     db = connect_db()
     cur = db.cursor()
 
+    if request.files['badge_file'].filename != "":
+        badge_photo = request.files['badge_file'].read()
+    else:
+        badge_base64 = request.form.get('badge_base64_data',default=None)
+        if badge_base64 != None:
+            badge_photo = base64.b64decode(badge_base64)
+        else:
+            badge_photo = None
+    
+    if request.files['liability_file'].filename != "":
+        liability_wavier_form = request.files['liability_file'].read()
+    else:
+        liability_base64 = request.form.get('liability_base64_data',default=None)
+        if liability_base64 != None:
+            liability_wavier_form = base64.b64decode(liability_base64)
+            liability_wavier_form = io.BytesIO(liability_wavier_form)
+            image = PILImage.open(liability_wavier_form)
+            image = image.transpose(PILImage.Transpose.ROTATE_270)
+            enh = ImageEnhance.Contrast(image)
+            image = enh.enhance(1.8)
+            liability_wavier_form = io.BytesIO()
+            image.save(liability_wavier_form,format='PDF')
+            liability_wavier_form = liability_wavier_form.getvalue()
+        else:
+            liability_wavier_form = None
+
+    if request.files['vetted_file'].filename != "":
+        vetted_membership_form = request.files['vetted_file'].read()
+    else:
+        vetted_base64 = request.form.get('vetted_base64_data',default=None)
+        if vetted_base64 != None:
+            vetted_membership_form = base64.b64decode(vetted_base64)
+            vetted_membership_form = io.BytesIO(vetted_membership_form)
+            image = PILImage.open(vetted_membership_form)
+            image = image.transpose(PILImage.Transpose.ROTATE_270)
+            enh = ImageEnhance.Contrast(image)
+            image = enh.enhance(1.8)
+            vetted_membership_form = io.BytesIO()
+            image.save(vetted_membership_form,format='PDF')
+            vetted_membership_form = vetted_membership_form.getvalue()            
+        else:
+            vetted_membership_form = None
+
+    # Do the image / document updates separate, otherwise you will clobber the existing blobs
+    
     stripe_id = request.form.get('stripe_id')
 
-    if request.files['liability_wavier_form'].filename != "":
-        liability_wavier_form = request.files['liability_wavier_form'].read()
-        cur.execute('update members set liability_waiver=%s where stripe_id=%s', (liability_wavier_form,stripe_id))
-        db.commit()
-
-    if request.files['vetted_membership_form'].filename != "":
-        vetted_membership_form = request.files['vetted_membership_form'].read()
+    if vetted_membership_form != None:
         cur.execute('update members set vetted_membership_form=%s where stripe_id=%s', (vetted_membership_form,stripe_id))
         db.commit()
-
-    if request.files['badge_photo'].filename != "":
-        badge_photo = request.files['badge_photo'].read()
+    
+    if liability_wavier_form != None:
+        cur.execute('update members set liability_waiver=%s where stripe_id=%s', (liability_wavier_form,stripe_id))
+        db.commit()
+    
+    if badge_photo != None:
         cur.execute('update members set badge_photo=%s where stripe_id=%s', (badge_photo,stripe_id))
         db.commit()
 
     insert_data = (
-        request.form.get('drupal_id'),
         request.form.get('member_status'),
         request.form.get('full_name'),
         request.form.get('nick_name'),
-        request.form.get('stripe_email'),
         request.form.get('meetup_email'),
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
         request.form.get('is_vetted','NOT VETTED'),
-        request.form.get('stripe_id'),
+        stripe_id
     )
 
-    cur.execute('update members set drupal_id=%s,member_status=%s,full_name=%s,nick_name=%s,stripe_email=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where stripe_id=%s', insert_data)
+    cur.execute('update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where stripe_id=%s', insert_data)
 
     db.commit()
     db.close()

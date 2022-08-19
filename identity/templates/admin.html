@@ -60,7 +60,7 @@
 <h3>There are currently {{entries|length}} Active Members at SYN Shop</h3>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th><th>Waiver On File?</th></tr>
+    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th></tr>
     </thead>
     <tbody>
     {% for entry in entries %}
@@ -77,12 +77,6 @@
             {% else %}
                 <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
             {% endif %}
-        {% endif %}
-
-        {% if entry[4] == None %}
-            <td>No</td>
-        {% else %}
-            <td><a href="/member/{{ entry[0] }}/files/liability-waiver.pdf">Yes</a></td>
         {% endif %}
 
     </tr>
