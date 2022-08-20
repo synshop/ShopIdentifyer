@@ -8,8 +8,8 @@ Setup (Development)
 1. Requirements
   * Python 3.10.x
   * virtualenv 
-  * MySQL 
-  * USB / Serial RFID Reader (see below)
+  * MySQL
+  * NGINX
 
 2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/) and [virtualenvwrapper](http://docs.python-guide.org/en/latest/dev/virtualenvs/#virtualenvwrapper), clone or download the source for ShopIdentifyer and pip install the requirements.txt file included:
 
@@ -73,8 +73,11 @@ So, if you wanted `foo` to be the value for the `ENCRYPTED_DATABASE_PASSWORD` yo
 
 Again, you need to use the same password for each of the 6 encrypted strings in your config file.
 
+NGINX Configuration
+===
+
 Starting, Stopping and Debugging
-================================
+===
 In a dev  environment, you'll need to run this to start the app:
 
     $ ./localserver.py
