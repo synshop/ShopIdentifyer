@@ -609,39 +609,7 @@ def member_vetted(stripe_id):
         response.headers['Content-Disposition'] = 'inline'
 
     return response
-"""
-@app.route('/member/<stripe_id>/files/badge.svg',methods=['GET'])
-def member_badge(stripe_id):
 
-    # http://pixelyzer.com/inches_to_pixels.html
-
-    member = get_member(stripe_id)
-
-    svg_document = svgwrite.Drawing(size=("2.125in","3.365in"))
-
-    border = Rect(insert=(0,0),size=("642px","1016px"),fill="#eeeeee")
-    svg_document.add(border)
-
-    #logo_text = svg_document.text("SYN Shop",insert = ("1in",".25in"),style="font-family:helvetica;font-weight:bold;font-size:16pt;")
-    #svg_document.add(logo_text)
-
-    logo = Image(href="/static/images/syn_shop_badge_logo3.png", insert=("0.3125in",'0.0625in'), size=("2.125in","3.300in"))
-    svg_document.add(logo)
-
-    photo_url = "/member/%s/files/photo.jpg" % (stripe_id,)
-    photo = Image(href=photo_url,insert=("0.0625in",'1.38in'),size=("400px","400px"))
-    # svg_document.add(photo)
-
-    svg_document.add(svg_document.text(member['full_name'],insert = ("0.0625in","3.25in"),style="font-family:helvetica;font-weight:bold;"))
-
-    response = make_response(svg_document.tostring())
-    response.headers['Content-Description'] = 'Badge'
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['Content-Type'] = 'image/svg+xml'
-    response.headers['Content-Disposition'] = 'inline'
-
-    return response
-"""
 @app.route('/member/search')
 def member_search():
     return render_template('search_member.html')
@@ -815,14 +783,6 @@ def admin_onboard():
     except Exception as e:
         print(str(e))
         return redirect('/login?redirect_to=admin_onboard')
-
-@app.route('/admin/badgephoto')
-def admin_badge_photo():
-
-    if session.get('logged_in'):
-        return render_template('badge_photo.html')
-    else:
-        return render_template('login.html',r_to=request.referrer)
 
 # Badge Swipe API Endpoint
 @app.route('/swipe/', methods=['POST'])
