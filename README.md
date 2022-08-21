@@ -75,7 +75,7 @@ Again, you need to use the same password for each of the 6 encrypted strings in 
 
 NGINX Configuration
 ===
-You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  Probably the easiest solution is to [https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https| follow these steps for using the built-in ad-hoc mechanism built into Flask / Werkzeug]
+You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  Probably the easiest solution is to [follow these steps for using the built-in ad-hoc mechanism built into Flask / Werkzeug](https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https)
 
 Starting, Stopping and Debugging
 ===
