@@ -11,7 +11,7 @@ Setup (Development)
     * MySQL
     * NGINX
 
-2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/) and [virtualenvwrapper](http://docs.python-guide.org/en/latest/dev/virtualenvs/#virtualenvwrapper), clone or download the source for ShopIdentifyer and pip install the requirements.txt file included:
+2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/), clone or download the source for ShopIdentifyer and pip install the requirements.txt file included:
 
         $ git clone git@github.com:synshop/ShopIdentifyer.git
         $ python3 -m venv ShopIdentifyer/.venv/
@@ -51,9 +51,9 @@ Setup (Development)
         ACCESS_CONTROL_HOSTNAME = 'localhost'
         ACCESS_CONTROL_SSH_PORT = 22
 
-To get started, cp the `config.dist.py` file to `config.py` in the identify folder. Edit it to have the specific values for your environment.
+To get started, copy the `config.dist.py` file to `config.py` in the `identify` folder. Modify it to have the specific values for your environment.
 
-Please note that <em style="background-color:#FFD700">all of the properties starting with `ENCRYPTED_` are encrypted.  When the web server starts up, it will prompt you for a single decryption password.</em>  This is the same password that you will use to encrypt the properties using the tool in ./identity/crypto/crypt.py.  The instructions for use are pretty straightforward:
+Please note that <em style="background-color:#FFD700">all of the properties starting with `ENCRYPTED_` are encrypted.  When the application starts up, it will prompt you for a single decryption password.</em>  This is the same password that you will use to encrypt the properties using the cli tool `./identity/crypto/crypt.py`.  The instructions for use are pretty straightforward:
 
     $ python crypt.py
 
