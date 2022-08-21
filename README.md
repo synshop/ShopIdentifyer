@@ -1,5 +1,12 @@
 ## Introduction
-Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where validating membership is no longer on a first-name basis.  The space was in need of something more robust and automated.  This system integrates with the shop's payment processor (Stripe) and manages user contact information and payment / subscription status.  It also tracks liability waivers and various other documents related to shop operation.
+Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where validating membership is no longer on a first-name basis.  The space was in need of something more robust and automated.  Some of the features included are:
+
+    * Membership Status
+    * Contact Information
+    * Emergency Contact Information
+    * Payment Processor Information (via Stripe) to show payment / subscription status
+    * Shop Liability Waiver (scanned document)
+    * Vetted Membership Agreement (scanned document)
 
 ## Setup (Development)
 
