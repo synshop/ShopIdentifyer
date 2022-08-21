@@ -1,9 +1,8 @@
-Introduction
-===
+## Introduction
 Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where the management of validating membership when entering the shop is no longer a first-name basis and was in need of something more robust and automated.
 
-Quick Setup (Development)
-===
+## Quick Setup (Development)
+
 
 1. Requirements
     * Python 3.10.x
@@ -73,15 +72,13 @@ So, if you wanted `foo` to be the value for the `ENCRYPTED_DATABASE_PASSWORD` yo
 
 Again, you need to use the same password for each of the 6 encrypted strings in your config file.
 
-Setup (Production)
-===
+## Setup (Production)
 
-NGINX Configuration
-====
+### NGINX Configuration
 You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  The development instance is already configured to use an ad-hoc SSL generation mechanism when you start the application using `./localserver.py`, but there is more work involved to set a production instance that uses Gunicorn.  You'll need to set up a HTTP server (we choose NGINX) to terminate the SSL requests and proxy them to the Gunicorn container.  There is a very basic NGINX configuration in `nginx/default` that you should be able to use out of the box or without many changes.  You will need to provide a SSL certificate but there are many solutions available on the internet.
 
-Starting, Stopping and Debugging
-===
+### Starting, Stopping and Debugging
+
 In a dev environment, you'll need to run this to start the app:
 
     $ ./localserver.py
@@ -108,8 +105,8 @@ If you need to stop it, us kill
 
     $ kill $(ps aux | grep 'gunicorn' | awk '{print $2}')
 
-Ubuntu Quick Setup
-==================
+### Ubuntu Quick Setup
+
 	$ apt-get install python3-dev python3.10-venv \
                       mysql-server build-essential \
                       libmysqlclient-dev git gh nginx \
