@@ -75,7 +75,7 @@ Again, you need to use the same password for each of the 6 encrypted strings in 
 
 NGINX Configuration
 ===
-You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  Probably the easiest solution is to [follow these steps for using the built-in ad-hoc mechanism built into Flask / Werkzeug](https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https)
+You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  The development instance is already configured to use this ad-hoc mechanism when you start the application using `./localserver.py`, but there is more work involved to set a production instance that uses Gunicorn.  You'll need to set up a HTTP server (we choose NGINX) to terminate the SSL requests and proxy them to the WSGI container.  There is a very basic NGINX configuration in `nginx/default` that you should be able to use out of the box or without many changes.  You will next to provide a SSL certificate but there are many solutions available on the internet.
 
 Starting, Stopping and Debugging
 ===
@@ -83,7 +83,7 @@ In a dev  environment, you'll need to run this to start the app:
 
     $ ./localserver.py
 
-This will start a local Flask 
+This will start a local Flask instance on port 8000 
 
 In a production environment, you'll need to launch the application using Gunicorn:
 
