@@ -1,8 +1,7 @@
 ## Introduction
 Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where the management of validating membership when entering the shop is no longer a first-name basis and was in need of something more robust and automated.
 
-## Quick Setup (Development)
-
+## Setup (Development)
 
 1. Requirements
     * Python 3.10.x
@@ -79,12 +78,6 @@ You'll need to set up SSL/TLS to do development, since all the Flask routes are 
 
 ### Starting, Stopping and Debugging
 
-In a dev environment, you'll need to run this to start the app:
-
-    $ ./localserver.py
-
-This will start a local Flask instance on port 8000 using SSL
-
 In a production environment, you'll need to launch the application using Gunicorn:
 
     $ ./start_gunicorn.sh
@@ -99,11 +92,7 @@ When you run this command, you'll some output similar to this:
     mrjones   9411  0.0  0.1  50584 11848 ?        R    22:07   0:00 /home/mrjones/Envs/ShopIdentifyer/bin/python /home/mrjones/Envs/ShopIdentifyer/bin/gunicorn --bind 127.0.0.1:8000 -D --log-file /tmp/gunicorn.log runserver:app
     mrjones   9413  0.0  0.0  15936   936 pts/9    S+   22:07   0:00 grep -i gunicorn
 
-And if you need to look at the log to see why something isn't working, the logs are in `/tmp/gunicorn.log`    
-
-If you need to stop it, us kill
-
-    $ kill $(ps aux | grep 'gunicorn' | awk '{print $2}')
+If you need to look at the log to see why something isn't working, the logs are in `/tmp/gunicorn.log`    
 
 ### Ubuntu Quick Setup
 
@@ -111,4 +100,3 @@ If you need to stop it, us kill
                       mysql-server build-essential \
                       libmysqlclient-dev git gh nginx \
                       libffi-dev
-
