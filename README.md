@@ -53,7 +53,7 @@ Setup (Development)
 
 To get started, copy the `config.dist.py` file to `config.py` in the `identify` folder. Modify it to have the specific values for your environment.
 
-Please note that <em style="background-color:#FFD700">all of the properties starting with `ENCRYPTED_` are encrypted.  When the application starts up, it will prompt you for a single decryption password.</em>  This is the same password that you will use to encrypt the properties using the cli tool `./identity/crypto/crypt.py`.  The instructions for use are pretty straightforward:
+Please note that all of the properties starting with `ENCRYPTED_` are encrypted.  When the application starts up, it will prompt you for a single decryption password.  This is the same password that you will use to encrypt the properties using the cli tool `./identity/crypto/crypt.py`.  The instructions for use are pretty straightforward:
 
     $ python crypt.py
 
@@ -75,15 +75,15 @@ Again, you need to use the same password for each of the 6 encrypted strings in 
 
 NGINX Configuration
 ===
-You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  The development instance is already configured to use this ad-hoc mechanism when you start the application using `./localserver.py`, but there is more work involved to set a production instance that uses Gunicorn.  You'll need to set up a HTTP server (we choose NGINX) to terminate the SSL requests and proxy them to the WSGI container.  There is a very basic NGINX configuration in `nginx/default` that you should be able to use out of the box or without many changes.  You will next to provide a SSL certificate but there are many solutions available on the internet.
+You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  The development instance is already configured to use an ad-hoc SSL generation mechanism when you start the application using `./localserver.py`, but there is more work involved to set a production instance that uses Gunicorn.  You'll need to set up a HTTP server (we choose NGINX) to terminate the SSL requests and proxy them to the Gunicorn container.  There is a very basic NGINX configuration in `nginx/default` that you should be able to use out of the box or without many changes.  You will need to provide a SSL certificate but there are many solutions available on the internet.
 
 Starting, Stopping and Debugging
 ===
-In a dev  environment, you'll need to run this to start the app:
+In a dev environment, you'll need to run this to start the app:
 
     $ ./localserver.py
 
-This will start a local Flask instance on port 8000 
+This will start a local Flask instance on port 8000 using SSL
 
 In a production environment, you'll need to launch the application using Gunicorn:
 
