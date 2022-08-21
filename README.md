@@ -2,7 +2,7 @@ Introduction
 ===
 Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where the management of validating membership when entering the shop is no longer a first-name basis and was in need of something more robust and automated.
 
-Setup (Development)
+Quick Setup (Development)
 ===
 
 1. Requirements
@@ -20,7 +20,7 @@ Setup (Development)
         $ pip install -r requirements.txt
         $ ./localserver.py (starts a local Flask instance on port 8000)
 
-3. Additionally, the system needs a ./identity/config.py file with the following properties:
+3. Additionally, the system needs a `./identity/config.py` file with the following properties:
 
         ENCRYPTED_STRIPE_TOKEN = 'encrypted-token'
         ENCRYPTED_DATABASE_PASSWORD = 'encrypted-password'
@@ -73,8 +73,11 @@ So, if you wanted `foo` to be the value for the `ENCRYPTED_DATABASE_PASSWORD` yo
 
 Again, you need to use the same password for each of the 6 encrypted strings in your config file.
 
-NGINX Configuration
+Setup (Production)
 ===
+
+NGINX Configuration
+====
 You'll need to set up SSL/TLS to do development, since all the Flask routes are designed to use SSL.  The development instance is already configured to use an ad-hoc SSL generation mechanism when you start the application using `./localserver.py`, but there is more work involved to set a production instance that uses Gunicorn.  You'll need to set up a HTTP server (we choose NGINX) to terminate the SSL requests and proxy them to the Gunicorn container.  There is a very basic NGINX configuration in `nginx/default` that you should be able to use out of the box or without many changes.  You will need to provide a SSL certificate but there are many solutions available on the internet.
 
 Starting, Stopping and Debugging
