@@ -20,7 +20,6 @@ server {
 	
     root /var/www/html;
     index index.html index.htm index.nginx-debian.html;
-    server_name id.synshop.org;
 
     location / {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
