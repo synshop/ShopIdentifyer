@@ -10,7 +10,6 @@ Over the past several years, the [SYN Shop hacker/makerspace](https://www.synsho
 
 1. Requirements
     * Python 3.10.x
-    * virtualenv 
     * MySQL
     * NGINX
 
