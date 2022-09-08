@@ -118,6 +118,11 @@
         document.getElementById('vetted_post_take_buttons').style.display = 'none';
       });
     });
+
+    $("#cancel").bind( "click", function() {
+      window.location.href = "/admin/onboard";
+    });
+
   });
 
   </script>
@@ -154,7 +159,7 @@
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
         <div class="alert alert-info" role="alert">
-            Please fill out as much information as possible.  Attached forms should be in PDF and photos should be in jpeg.
+            Please fill out as much information as possible.  Uploaded forms should be in PDF and photos should be in JPEG.
         </div>
 
         <hr/>
@@ -168,7 +173,7 @@
         <div class="form-group">
           <label for="badge_serial" class="col-sm-2 control-label">Badge Serial:</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="badge_serial" name="badge_serial" placeholder="Swipe Badge on RFID Reader to Begin">
+            <input type="text" class="form-control" id="badge_serial" name="badge_serial" placeholder="Swipe Badge on RFID Reader to Begin" readonly>
           </div>
         </div>
 
@@ -192,6 +197,27 @@
           <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
           <div class="col-sm-10">
             <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subscription_plan" class="col-sm-2 control-label">Subscription Plan:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="subscription_plan" name="subscription_plan" value="{{ member.stripe_subscription_product }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subscription_status" class="col-sm-2 control-label">Subscription Status:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="subscription_status" name="subscription_status" value="{{ member.stripe_subscription_status }}" readonly>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="payment_status" class="col-sm-2 control-label">Payment Status:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="payment_status" name="payment_status" value="{{ member.stripe_last_payment_status }}" readonly>
           </div>
         </div>
 

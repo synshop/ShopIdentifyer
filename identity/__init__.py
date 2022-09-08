@@ -320,7 +320,7 @@ def update_member(request):
         badge_photo = request.files['badge_file'].read()
     else:
         badge_base64 = request.form.get('badge_base64_data',default=None)
-        if badge_base64 != None:
+        if len(badge_base64) != 0:
             badge_photo = base64.b64decode(badge_base64)
         else:
             badge_photo = None
@@ -329,7 +329,7 @@ def update_member(request):
         liability_wavier_form = request.files['liability_file'].read()
     else:
         liability_base64 = request.form.get('liability_base64_data',default=None)
-        if liability_base64 != None:
+        if len(liability_base64) != 0:
             liability_wavier_form = base64.b64decode(liability_base64)
             liability_wavier_form = io.BytesIO(liability_wavier_form)
             image = PILImage.open(liability_wavier_form)
@@ -346,7 +346,7 @@ def update_member(request):
         vetted_membership_form = request.files['vetted_file'].read()
     else:
         vetted_base64 = request.form.get('vetted_base64_data',default=None)
-        if vetted_base64 != None:
+        if len(vetted_base64) != 0:
             vetted_membership_form = base64.b64decode(vetted_base64)
             vetted_membership_form = io.BytesIO(vetted_membership_form)
             image = PILImage.open(vetted_membership_form)
@@ -406,7 +406,7 @@ def new_member_stripe(stripe_id):
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('select stripe_email, stripe_description from stripe_cache where stripe_id = %s', (stripe_id,))
+        cur.execute('select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, stripe_subscription_status from stripe_cache where stripe_id = %s', (stripe_id,))
         rows = cur.fetchall()
         member = rows[0]
 
@@ -434,6 +434,9 @@ def new_member_stripe(stripe_id):
         user["drupal_name"] = drupal_name
         user["drupal_id"] = drupal_id
         user["stripe_email"] = member[0]
+        user["stripe_last_payment_status"] = member[2].upper()
+        user["stripe_subscription_product"] = member[3].upper()
+        user["stripe_subscription_status"] = member[4].upper()
 
         rows = None
         if rows:
@@ -452,7 +455,7 @@ def new_member_stripe(stripe_id):
             badge_photo = request.files['badge_file'].read()
         else:
             badge_base64 = request.form.get('badge_base64_data',default=None)
-            if badge_base64 != None:
+            if len(badge_base64) != 0:
                 badge_photo = base64.b64decode(badge_base64)
             else:
                 badge_photo = None
@@ -461,7 +464,7 @@ def new_member_stripe(stripe_id):
             liability_wavier_form = request.files['liability_file'].read()
         else:
             liability_base64 = request.form.get('liability_base64_data',default=None)
-            if liability_base64 != None:
+            if len(liability_base64) != 0:
                 liability_wavier_form = base64.b64decode(liability_base64)
                 liability_wavier_form = io.BytesIO(liability_wavier_form)
                 image = PILImage.open(liability_wavier_form)
@@ -478,7 +481,7 @@ def new_member_stripe(stripe_id):
             vetted_membership_form = request.files['vetted_file'].read()
         else:
             vetted_base64 = request.form.get('vetted_base64_data',default=None)
-            if vetted_base64 != None:
+            if len(vetted_base64) != 0:
                 vetted_membership_form = base64.b64decode(vetted_base64)
                 vetted_membership_form = io.BytesIO(vetted_membership_form)
                 image = PILImage.open(vetted_membership_form)
