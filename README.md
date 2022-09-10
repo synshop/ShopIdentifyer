@@ -1,5 +1,7 @@
 ## Introduction
-Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to where validating membership is no longer on a first-name basis.  The space was in need of something more robust and automated.  Some of the features included are:
+Over the past several years, the [SYN Shop hacker/makerspace](https://www.synshop.org) has grown to a size where validating membership is no longer via a first-name basis.  The shop was in need of something more robust, automated and easy to use.  
+
+Some of the features included are:
 
 - Membership Status Tracking
 - Contact Information / Emergency Contact Tracking
