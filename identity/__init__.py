@@ -268,7 +268,9 @@ def get_member(subscription_id):
          emergency_contact_mobile,
          is_vetted,
          liability_waiver,
-         vetted_membership_form
+         vetted_membership_form,
+         discord_handle,
+         locker_num
       from members where stripe_id = %s'''
 
     cur.execute(sql_stmt, (stripe_info['stripe_id'],))
@@ -288,7 +290,6 @@ def get_member(subscription_id):
     member["emergency_contact_name"] = entry[8]
     member["emergency_contact_mobile"] = entry[9]
     member["vetted_status"] = entry[10]
-    member["stripe_subscription_id"] = subscription_id
 
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
@@ -307,6 +308,10 @@ def get_member(subscription_id):
         member['is_admin'] = True
     else:
         member['is_admin'] = False
+
+    member["stripe_subscription_id"] = subscription_id
+    member["discord_handle"] = entry[13]
+    member["locker_num"] = entry[14]
 
     return member
 
@@ -359,7 +364,7 @@ def update_member(request):
         else:
             vetted_membership_form = None
 
-    # Do the image / document updates separate, otherwise you will clobber the existing blobs
+    # Do any image / document updates separately, otherwise you will clobber the existing blobs
     
     stripe_id = request.form.get('stripe_id')
 
@@ -384,10 +389,12 @@ def update_member(request):
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
         request.form.get('is_vetted','NOT VETTED'),
+        request.form.get('discord_handle'),
+        request.form.get('locker_num'),
         stripe_id
     )
 
-    cur.execute('update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s where stripe_id=%s', insert_data)
+    cur.execute('update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s where stripe_id=%s', insert_data)
 
     db.commit()
     db.close()
@@ -542,6 +549,7 @@ def edit_member(stripe_id):
         app.logger.info("User %s updated member %s" % (session['username'],stripe_id))
         return redirect(url_for("index",_scheme='https',_external=True))
 
+# Get member badge photo
 @app.route('/member/<stripe_id>/files/photo.jpg')
 def member_photo(stripe_id):
     db = get_db()
@@ -564,6 +572,7 @@ def member_photo(stripe_id):
 
     return response
 
+# Get member liability waiver
 @app.route("/member/<stripe_id>/files/liability-waiver.pdf")
 def member_wavier(stripe_id):
 
@@ -589,6 +598,7 @@ def member_wavier(stripe_id):
 
     return response
 
+# Get member vetted membership form
 @app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
 def member_vetted(stripe_id):
 
@@ -612,10 +622,6 @@ def member_vetted(stripe_id):
         response.headers['Content-Disposition'] = 'inline'
 
     return response
-
-@app.route('/member/search')
-def member_search():
-    return render_template('search_member.html')
 
 # AJAX service for search_member.html
 @app.route('/search',methods=['GET'])
@@ -682,6 +688,37 @@ def remove_message():
 
     return jsonify(message)
 
+# Badge Swipe API Endpoint
+@app.route('/swipe/', methods=['POST'])
+def swipe_badge():
+
+    badge_serial = request.form['tag']
+
+    if request.form.has_key('reader') != False:
+        badge_reader = request.form['reader']
+    else:
+        badge_reader = None
+
+    swipe = "BADGE_SWIPE"
+
+    db = get_db()
+    cur = db.cursor()
+
+    try:
+        cur.execute('select stripe_id, badge_status from badges where badge_serial = %s', (badge_serial,))
+        entries = cur.fetchall()
+        member = entries[0]
+        log_swipe_event(stripe_id=member[0],badge_status=member[1], swipe_event=swipe)
+    except IndexError:
+        # The user's badge is not in the system
+        swipe = "MISSING_ACCOUNT"
+        cur.execute("insert into message_queue (message) values (%s)", (badge_serial,))
+        db.commit()
+        log_swipe_event(stripe_id=badge_serial,badge_status="ACTIVE",swipe_event=swipe)
+
+    message = {'message':swipe}
+    return jsonify(message)
+
 # Landing Page Routes
 @app.route('/')
 def index():
@@ -716,23 +753,6 @@ def logout():
     session.pop('username', None)
     flash('You were logged out')
     return redirect(url_for('index',_scheme='https',_external=True))
-
-@app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
-def changepassword(stripe_id):
-
-    if session.get('logged_in') != None:
-        app.logger.info("User %s is changing their password" % (session['username'],))
-
-        if request.method == "GET":
-            return render_template('changepassword.html',stripe_id=stripe_id)
-
-        if request.method == "POST":
-            x = admin_change_password(stripe_id,request.form.get('password1'),)
-            return redirect(url_for('index',_scheme='https',_external=True))
-
-    else:
-        app.logger.info("Someone tried to hit the change password page without authenticating")
-        return render_template('login.html',r_to=request.referrer)
 
 @app.route('/admin')
 def admin():
@@ -787,38 +807,29 @@ def admin_onboard():
         print(str(e))
         return redirect('/login?redirect_to=admin_onboard')
 
-# Badge Swipe API Endpoint
-@app.route('/swipe/', methods=['POST'])
-def swipe_badge():
+@app.route('/member/search')
+def member_search():
+    return render_template('search_member.html')
 
-    badge_serial = request.form['tag']
+@app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
+def changepassword(stripe_id):
 
-    if request.form.has_key('reader') != False:
-        badge_reader = request.form['reader']
+    if session.get('logged_in') == None:
+        # app.logger.info("User %s is changing their password" % (session['username'],))
+
+        if request.method == "GET":
+            return render_template('changepassword.html',stripe_id=stripe_id)
+
+        if request.method == "POST":
+            x = admin_change_password(stripe_id,request.form.get('password1'),)
+            return redirect(url_for('index',_scheme='https',_external=True))
+
     else:
-        badge_reader = None
-
-    swipe = "BADGE_SWIPE"
-
-    db = get_db()
-    cur = db.cursor()
-
-    try:
-        cur.execute('select stripe_id, badge_status from badges where badge_serial = %s', (badge_serial,))
-        entries = cur.fetchall()
-        member = entries[0]
-        log_swipe_event(stripe_id=member[0],badge_status=member[1], swipe_event=swipe)
-    except IndexError:
-        # The user's badge is not in the system
-        swipe = "MISSING_ACCOUNT"
-        cur.execute("insert into message_queue (message) values (%s)", (badge_serial,))
-        db.commit()
-        log_swipe_event(stripe_id=badge_serial,badge_status="ACTIVE",swipe_event=swipe)
-
-    message = {'message':swipe}
-    return jsonify(message)
+        app.logger.info("Someone tried to hit the change password page without authenticating")
+        return render_template('login.html',r_to=request.referrer)
 
 # Widget Testing
 @app.route('/widget', methods=['GET','POST'])
 def test_widget():
     return render_template('camera-widget.html')
+

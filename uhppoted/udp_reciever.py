@@ -7,7 +7,7 @@ receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 receiver.bind((RECEIVER_IP, RECEIVER_PORT))
 
 while True:
-    print("####### Server is listening #######")
+    print("####### Server is listening #######")n
     data = receiver.recv(1024)
     d = struct.unpack_from("I",data,offset=4)
     c = struct.unpack_from("I",data,offset=16)
