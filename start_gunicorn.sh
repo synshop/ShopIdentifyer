@@ -11,7 +11,7 @@ then
 fi
 
 export ENCRYPTION_KEY=${key};
-gunicorn --bind 127.0.0.1:8000 -D --log-file /tmp/gunicorn.log --pid /tmp/gunicorn.pid runserver:app
+gunicorn --bind 127.0.0.1:8000 -D --log-file /tmp/gunicorn.log --pid /tmp/gunicorn.pid identity:app
 export ENCRYPTION_KEY=;
 
 echo "Showing application status: ";
