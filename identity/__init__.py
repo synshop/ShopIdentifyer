@@ -825,6 +825,10 @@ def admin_onboard():
             cur.execute(sql_stmt)
             rows = cur.fetchall()
 
+            sql_stmt = "select count(*) from stripe_cache where stripe_subscription_product like '%pause%'"
+            cur.execute(sql_stmt)
+            paused = cur.fetchall()[0][0]
+
             for row in rows:
 
                 x = json.loads(row[3])
@@ -842,8 +846,7 @@ def admin_onboard():
                     stripe_subscription_status=row[6])
 
                 entries_x.append(entry_dict)
-
-            return render_template('onboard.html',entries=entries_x)
+            return render_template('onboard.html',entries=entries_x, paused_count=paused)
         else:
             return redirect('/login?redirect_to=admin_onboard')
     except Exception as e:
