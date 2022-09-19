@@ -62,7 +62,7 @@ body {
       <div id="navbar" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
           {% if session.logged_in %}
-          <li><a href="/member/{{ member.stripe_subscription_id }}/edit">Edit User</a></li>
+          <li><a href="/member/{{ member.stripe_id }}/edit">Edit User</a></li>
           <li><a href="/logout">Logout</a></li>
           {% else %}
           <li><a href="/login">Login</a></li>

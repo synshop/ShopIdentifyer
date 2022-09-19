@@ -209,7 +209,7 @@ def check_password(username=None, password=None):
 
         return passwords_match
 
-def get_badge_serials(stripe_id = None):
+def get_badge_serials(stripe_id=None):
 
     with app.app_context():
 
@@ -232,13 +232,23 @@ def get_badge_serials(stripe_id = None):
 
         return badges
 
+def get_subscription_id_from_stripe_cache(stripe_id=None):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select stripe_subscription_id from stripe_cache where stripe_id = %s"
+    cur.execute(sql_stmt, (stripe_id,))
+
+    return cur.fetchall()[0][0]
+    
 # Fetch a member 'object'
-def get_member(subscription_id):
+def get_member(stripe_id):
 
     member = {}
 
+    subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
+
     # Check and update the stripe cache every time you view member details
-    app.logger.info("updating real-time stripe information for %s" % (subscription_id,))
+    app.logger.info("updating real-time stripe information for %s" % (stripe_id,))
     stripe_info = get_realtime_stripe_info(subscription_id)
     
     member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
@@ -441,7 +451,15 @@ def new_member_stripe(stripe_id):
         user["drupal_name"] = drupal_name
         user["drupal_id"] = drupal_id
         user["stripe_email"] = member[0]
-        user["stripe_last_payment_status"] = member[2].upper()
+
+        if member[2] != None:
+            user["stripe_last_payment_status"] = member[2].upper()
+        else:
+            if member[3] == "Free Membership":
+                user["stripe_last_payment_status"] = "NOT AVAILABLE"
+            else:
+                user["stripe_last_payment_status"] = "STATUS ERROR"
+
         user["stripe_subscription_product"] = member[3].upper()
         user["stripe_subscription_status"] = member[4].upper()
 
@@ -527,9 +545,9 @@ def new_member_stripe(stripe_id):
         return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
 # Show member details
-@app.route('/member/<stripe_subscription_id>')
-def show_member(stripe_subscription_id):
-    user = get_member(stripe_subscription_id)
+@app.route('/member/<stripe_id>')
+def show_member(stripe_id):
+    user = get_member(stripe_id)
     return render_template('show_member.html', member=user)
 
 # Edit member details
@@ -624,7 +642,7 @@ def member_vetted(stripe_id):
     return response
 
 # AJAX service for search_member.html
-@app.route('/search',methods=['GET'])
+@app.route('/search', methods=['GET'])
 def search_users():
     user = request.args.get('s')
 
@@ -787,7 +805,24 @@ def admin_onboard():
             db = get_db()
             cur = db.cursor()
 
-            cur.execute('select stripe_id, stripe_created_on, stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, stripe_subscription_status from stripe_cache where stripe_id not in (select stripe_id from members) order by stripe_created_on')
+            sql_stmt = """
+                SELECT
+                    stripe_id, 
+                    stripe_created_on, 
+                    stripe_email, 
+                    stripe_description,
+                    stripe_last_payment_status,
+                    stripe_subscription_product,
+                    stripe_subscription_status
+                FROM 
+                    stripe_cache 
+                WHERE
+                    stripe_id 
+                NOT IN
+                    (SELECT stripe_id FROM members) 
+                ORDER BY stripe_created_on
+            """
+            cur.execute(sql_stmt)
             rows = cur.fetchall()
 
             for row in rows:
@@ -798,7 +833,15 @@ def admin_onboard():
                 else:
                     drupal_legal_name = "No Legal Name Provided"
 
-                entries_x.append(dict(stripe_id=row[0],stripe_email=row[2],drupal_legal_name=drupal_legal_name,stripe_last_payment_status=row[4], stripe_subscription_product=row[5], stripe_subscription_status=row[6]))
+                entry_dict = dict(
+                    stripe_id=row[0],
+                    stripe_email=row[2],
+                    drupal_legal_name=drupal_legal_name,
+                    stripe_last_payment_status=row[4],
+                    stripe_subscription_product=row[5],
+                    stripe_subscription_status=row[6])
+
+                entries_x.append(entry_dict)
 
             return render_template('onboard.html',entries=entries_x)
         else:
