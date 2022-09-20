@@ -1,0 +1,14 @@
+[Unit]
+Description=SYN Shop Member Managment System
+After=network.target
+
+[Service]
+Type=simple
+User=brian
+WorkingDirectory=/home/brian/ShopIdentifyer
+ExecStart=/home/brian/ShopIdentifyer/start_gunicorn.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

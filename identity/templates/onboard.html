@@ -46,21 +46,33 @@
 <div class="container">
 
 <div class="alert alert-success" role="alert">
-    New members that need to be onboarded are automatically pulled in every 10 minutes from our payment processor.
+    New members that need to be on boarded are automatically pulled in every 10 minutes from our payment processor.
     If you can't find the person you're trying to onboard and they just created their account,
     give it a few minutes and check back.  Otherwise please sent an email to
     <a href="#" class="alert-link">brian@synshop.org</a> and he will look into it.
 </div>
 
 <div class="list-group">
-<h3>{{entries|length}} Members Need Onboarding</h3>
+<h3>{{entries|length}} Members Need Onboarding ({{ paused_count }} Paused Memberships)</h3>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Stripe Id</th><th>Drupal Legal Name</th><th>Stripe Email</th></tr>
+    <tr><th>Stripe Id</th>
+        <th>Drupal Legal Name</th>
+        <th>Stripe Email</th>
+        <th>Payment Status</th>
+        <th>Subscription Type</th>
+        <th>Subscription Status</th>
+    </tr>
     </thead>
     <tbody>
 {% for entry in entries %}
-  <tr><td><a href="/member/new/{{ entry['stripe_id'] }}">{{ entry['stripe_id'] }}</a></td><td>{{ entry['drupal_legal_name'] }}</td><td>{{ entry['stripe_email'] }}</td></tr>
+  <tr><td><a href="/member/new/{{ entry['stripe_id'] }}">{{ entry['stripe_id'] }}</a></td>
+      <td>{{ entry['drupal_legal_name'] }}</td>
+      <td>{{ entry['stripe_email'] }}</td>
+      <td>{{ entry['stripe_last_payment_status'] }}</td>
+      <td>{{ entry['stripe_subscription_product'] }}</td>
+      <td>{{ entry['stripe_subscription_status'] }}</td>
+  </tr>
 {% else %}
   <li><em>Unbelievable.  No entries here so far</em>
 {% endfor %}
