@@ -119,7 +119,7 @@ def refresh_stripe_cache():
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REBUILD_CRON']))
 def rebuild_stripe_cache():
 
-    app.logger.info("rebuilding stripe cache...every " + str(app.config['STRIPE_CACHE_REBUILD_MINUTES']) + " minutes")
+    app.logger.info("nightly stripe cache rebuild")
 
     member_array = get_rebuild_stripe_cache()
 
