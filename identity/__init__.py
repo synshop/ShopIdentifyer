@@ -11,6 +11,7 @@ except Exception as e:
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 # TODO: Move to svglib
 # TODO: Look at using CursorDictRowsMixIn for db operations
@@ -38,9 +39,9 @@ app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
-app.config['STRIPE_CACHE_REFRESH_MINUTES'] = config.STRIPE_CACHE_REFRESH_MINUTES
-app.config['STRIPE_CACHE_REBUILD_MINUTES'] = config.STRIPE_CACHE_REBUILD_MINUTES
+app.config['STRIPE_CACHE_REFRESH_CRON'] = config.STRIPE_CACHE_REFRESH_CRON
 app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] = config.STRIPE_CACHE_REFRESH_REACHBACK_MIN
+app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
 app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
 app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
 
@@ -89,9 +90,9 @@ mail = Mail(app)
 s1 = BackgroundScheduler()
 
 # This helps with stripe information lookup performance
-# Currently it runs every 15 minutes and grabs
+# Currently it runs every ~15 minutes and grabs
 # the last 15 minutes of data
-@s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REFRESH_MINUTES'])
+@s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REFRESH_CRON']))
 def refresh_stripe_cache():
 
     app.logger.info("refreshing stripe cache")
@@ -115,7 +116,7 @@ def refresh_stripe_cache():
 
     app.logger.info("finished refreshing stripe cache")
 
-@s1.scheduled_job('interval', minutes=app.config['STRIPE_CACHE_REBUILD_MINUTES'])
+@s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REBUILD_CRON']))
 def rebuild_stripe_cache():
 
     app.logger.info("rebuilding stripe cache...every " + str(app.config['STRIPE_CACHE_REBUILD_MINUTES']) + " minutes")
