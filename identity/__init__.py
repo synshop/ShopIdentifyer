@@ -648,7 +648,7 @@ def search_users():
 
     db = get_db()
     cur = db.cursor()
-    cur.execute('select stripe_id,full_name,stripe_email,member_status,is_vetted,liability_waiver, vetted_membership_form from members where full_name like %s', ("%" + user + '%',))
+    cur.execute('select stripe_id,full_name,member_status,is_vetted,liability_waiver,vetted_membership_form from members where full_name like %s', ("%" + user + '%',))
     data = cur.fetchall()
 
     results = []
@@ -657,17 +657,17 @@ def search_users():
 
     for row in data:
 
-        if row[5] == None:
+        if row[4] == None:
             wavier = "false"
         else:
             wavier = "true"
 
-        if row[6] == None:
+        if row[5] == None:
             vetted_form = "false"
         else:
             vetted_form = "true"
 
-        results.append({'stripe_id':row[0],'full_name':row[1],'stripe_email':row[2],'member_status':row[3],'is_vetted':row[4],'wavier':wavier,'vetted_form':vetted_form})
+        results.append({'stripe_id':row[0],'full_name':row[1],'member_status':row[2],'is_vetted':row[3],'wavier':wavier,'vetted_form':vetted_form})
 
     return jsonify({'results':results})
 

@@ -32,13 +32,12 @@
           success: function(data) {
 
             $('#results').html("");
-            $('#results').append('<tr><th style="width:200px">Full Name</th><th>Stripe Email</th><th>Membership Status</th><th>Is Vetted?</th><th>Waiver on File?</th></tr>');
+            $('#results').append('<tr><th style="width:200px">Full Name</th><th>Membership Status</th><th>Is Vetted?</th><th>Waiver on File?</th></tr>');
 
             for (x in data.results) {
 
                 row = '<tr>' +
                 '<td><a href="/member/' + data.results[x].stripe_id + '">' + data.results[x].full_name + '</a></td>' +
-                '<td>' + data.results[x].stripe_email + '</td>' +
                 '<td>' + data.results[x].member_status + '</td>'
 
                 if (data.results[x].is_vetted == "VETTED") {
