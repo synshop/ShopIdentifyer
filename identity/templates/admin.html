@@ -60,11 +60,15 @@
 <h3>There are currently {{entries|length}} Active Members at SYN Shop</h3>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th></tr>
+    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th><th>Payment Status</th></tr>
     </thead>
     <tbody>
     {% for entry in entries %}
-    <tr>
+      {% if entry[7] == "past_due" %}
+        <tr class="warning">
+      {% else %}
+        <tr>
+      {% endif %}
         <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td>
         <td>{{ entry[6] }}</td>
 
@@ -76,6 +80,12 @@
             {% else %}
                 <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
             {% endif %}
+        {% endif %}
+
+        {% if entry[7] == "past_due" %}
+          <td>PAST DUE</td>
+        {% else %}
+          <td>ACTIVE</td>
         {% endif %}
 
     </tr>

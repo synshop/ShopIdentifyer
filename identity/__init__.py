@@ -784,7 +784,8 @@ def admin():
                     m.is_vetted, 
                     m.liability_waiver, 
                     m.vetted_membership_form, 
-                    s.stripe_email
+                    s.stripe_email,
+                    s.stripe_subscription_status
                 FROM 
                     members m, stripe_cache s
                 WHERE
