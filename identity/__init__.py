@@ -258,12 +258,7 @@ def get_member(stripe_id):
 
     db = get_db()
     cur = db.cursor()
-    cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
-        (stripe_info['stripe_id'], stripe_info['stripe_created_on'], stripe_info['stripe_email'], \
-        stripe_info['stripe_description'], stripe_info['stripe_last_payment_status'],\
-        stripe_info['stripe_subscription_id'], stripe_info['stripe_subscription_product'],\
-        stripe_info['stripe_subscription_status'], stripe_info['stripe_subscription_created_on']))
-
+    cur.execute('update stripe_cache SET stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE stripe_id = %s', (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
     db.commit()
 
     sql_stmt = '''select
