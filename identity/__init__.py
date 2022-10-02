@@ -404,6 +404,9 @@ def update_member(request):
     db.commit()
     db.close()
 
+def log_event(request):
+    print(request.form['ID'])
+
 # Onboarding process - this attempts to pre-populate some
 # fields when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
@@ -660,40 +663,11 @@ def search_users():
 
     return jsonify({'results':results})
 
-# RFID queuing services
-@app.route('/queue/message', methods=['PUT'])
-def add_message():
-
-    db = get_db()
-    cur = db.cursor()
-    message = request.form['message'].strip()
-    cur.execute("insert into message_queue (message) values (%s)", (message,))
-    db.commit()
-
-    return jsonify({'status':'enqueued successfully'})
-
-@app.route('/queue/message', methods=['DELETE'])
-def remove_message():
-
-    try:
-        db = get_db()
-        cur = db.cursor()
-        cur.execute("select message from message_queue limit 1")
-        message = cur.fetchall()
-        cur.execute("delete from message_queue")
-        db.commit()
-
-        message = {'message':message[0]}
-
-    except IndexError:
-        message = {'message':"NULL"}
-
-    except:
-        import sys
-        print(sys.exc_info()[0])
-        message = {'message':"NULL"}
-
-    return jsonify(message)
+# Door Access Event Webhook
+@app.route('/logevent', methods=['POST'])
+def event_log():
+    log_event(request)
+    return jsonify({"status":200})
 
 # Landing Page Routes
 @app.route('/')

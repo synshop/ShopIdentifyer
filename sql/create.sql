@@ -26,13 +26,11 @@ create table shopidentifyer.members (
 );
 
 create table shopidentifyer.event_log (
-
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
   stripe_id varchar(255) NOT NULL,
   badge_status varchar(255),
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_ACCOUNT') DEFAULT 'BADGE_SWIPE'
-
 );
 
 create table shopidentifyer.event_types (
@@ -71,14 +69,6 @@ create table shopidentifyer.admin_users (
 );
 
 insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','$2b$12$fyqvNiP3ouafim/p.xPDDOqu6I3qXROoroPfoe/pWPb1nkzkbItJm');
-
-create table shopidentifyer.badges (
-    badge_serial varchar (255) unique,
-    stripe_id varchar(255),
-    badge_status ENUM('ACTIVE','INACTIVE','LOST','BROKEN') DEFAULT 'ACTIVE',
-    created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
 
 CREATE TABLE shopidentifyer.electric_badger_import (
   id int UNIQUE DEFAULT NULL,
