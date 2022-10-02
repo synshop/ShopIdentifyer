@@ -257,7 +257,8 @@ def get_member(stripe_id):
 
     db = get_db()
     cur = db.cursor()
-    cur.execute('update stripe_cache SET stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE stripe_id = %s', (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
+    sql_stmt = 'update stripe_cache set stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE stripe_id = %s'
+    cur.execute(sql_stmt, (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
     db.commit()
 
     sql_stmt = '''select
