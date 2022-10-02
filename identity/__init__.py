@@ -405,7 +405,7 @@ def update_member(request):
     db.close()
 
 def log_event(request):
-    print(request.form['ID'])
+   app.logger.info(request.form['ID'])
 
 # Onboarding process - this attempts to pre-populate some
 # fields when setting up a new user.
