@@ -79,3 +79,14 @@ create table shopidentifyer.badges (
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+CREATE TABLE shopidentifyer.electric_badger_import (
+  id int UNIQUE DEFAULT NULL,
+  level int DEFAULT NULL,
+  badge text,
+  name text,
+  handle text,
+  color text,
+  email text,
+  badge_decimal int DEFAULT NULL
+);

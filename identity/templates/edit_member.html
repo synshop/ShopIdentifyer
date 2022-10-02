@@ -18,27 +18,7 @@
 
     $(document).ready (
       function() {
-  
-        /*
-        var badge_serial = "{{ member.badge_serial }}";
-  
-        if (badge_serial == "-1") {
-            refresh_rate = 1000;
-        } else {
-            refresh_rate = 86400000;
-            $('#badge_serial').val(badge_serial);
-        }
-  
-        setInterval(function() {
-          $.ajax({ url: "/queue/message", type: "DELETE", success: function(data) {
-            if (data.message != "NULL") {
-              $('#badge_serial').val(data.message);
-            }
-          }, dataType: "json"});
-        }, refresh_rate
-      );
-      */
-      
+        
       $('[data-toggle="tooltip"]').tooltip();
 
       Webcam.set({
@@ -179,20 +159,6 @@
       </div>
 
       <div class="form-group">
-        <label for="badge_serial" class="col-sm-2 control-label">Badge Serial(s):</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="badge_serials" name="badge_serials" value="{{ member.badge_serials }}" readonly>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="full_name" class="col-sm-2 control-label">Drupal Id:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}" readonly>
-        </div>
-      </div>
-
-      <div class="form-group">
         <label for="full_name" class="col-sm-2 control-label">Stripe Id:</label>
         <div class="col-sm-10">
           <input type="text" class="form-control" id="stripe_id" name="stripe_id" value="{{ member.stripe_id }}" readonly>
@@ -217,6 +183,13 @@
         <label for="stripe_email" class="col-sm-2 control-label"><a href="#" data-toggle="tooltip" title="Stripe information is pulled real-time">Stripe Email:</a></label>
         <div class="col-sm-10">
           <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" readonly>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="door_access" class="col-sm-2 control-label"><a href="#" data-toggle="tooltip" title="Does this member have door access?">Door Access:</a></label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="door_access" name="door_access" value="{{ member.door_access }}" readonly>
         </div>
       </div>
 

@@ -2,6 +2,7 @@ from .crypto import SettingsUtil, CryptoUtil
 import base64, logging, time, bcrypt, io
 from PIL import Image as PILImage
 from PIL import ImageFilter, ImageEnhance
+from functools import wraps
 
 try:
     import identity.config
@@ -148,13 +149,14 @@ def rebuild_stripe_cache():
 if config.SCHEDULER_ENABLED == True:
     s1.start()
 
-def log_swipe_event(stripe_id=None, badge_status=None, swipe_event=None):
-    db = get_db()
-    cur = db.cursor()
-
-    print(stripe_id,badge_status,swipe_event)
-    cur.execute('insert into event_log values (NULL, %s, %s, NULL, %s)', (stripe_id,badge_status,swipe_event))
-    db.commit()
+# Decorator for Required Auth
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('logged_in') == None:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Check to see if a user is able to login and make changes to the system
 def member_is_admin(stripe_id=None):
@@ -167,9 +169,28 @@ def member_is_admin(stripe_id=None):
         entry = cur.fetchone()
         if entry[0] > 0:
             return True
+        else:
+            return False
+    except:
+        return False
+    
+# Returns True if Member has an RFID Token
+def member_has_authorized_rfid(stripe_email=None):
+    try:
+        db = get_db()
+        cur = db.cursor()
+        stmt = "select count(*) from electric_badger_import where email = %s"
+        cur.execute(stmt, (stripe_email,))
+        entry = cur.fetchone()
+        print(entry)
+        if entry[0] > 0:
+            return True
+        else:
+            return False
     except:
         return False
 
+# Allow admin users to change their passwords
 def admin_change_password(stripe_id=None,password=None):
 
     try:
@@ -210,29 +231,7 @@ def check_password(username=None, password=None):
 
         return passwords_match
 
-def get_badge_serials(stripe_id=None):
-
-    with app.app_context():
-
-        try:
-            db = get_db()
-            cur = db.cursor()
-
-            stmt = "select badge_serial from badges where stripe_id = %s and badge_status = 'ACTIVE'"
-
-            cur.execute(stmt, (stripe_id,))
-            entries = cur.fetchall()
-
-            badges = []
-
-            for entry in entries:
-                badges.append(entry[0])
-
-        except:
-            return "boom"
-
-        return badges
-
+# Convert a given stripe_id to its current subscription_id
 def get_subscription_id_from_stripe_cache(stripe_id=None):
     db = get_db()
     cur = db.cursor()
@@ -285,7 +284,6 @@ def get_member(stripe_id):
 
     member["stripe_id"] = stripe_info['stripe_id']
     member["member_status"] = entry[0]
-    member["badge_serials"] = get_badge_serials(stripe_info['stripe_id'])
     member["created_on"] = entry[1]
     member["changed_on"] = entry[2]
     member["full_name"] = entry[3]
@@ -318,6 +316,7 @@ def get_member(stripe_id):
     member["stripe_subscription_id"] = subscription_id
     member["discord_handle"] = entry[13]
     member["locker_num"] = entry[14]
+    member["door_access"] = member_has_authorized_rfid(stripe_info['stripe_email'])
 
     return member
 
@@ -458,12 +457,6 @@ def new_member_stripe(stripe_id):
 
         user["stripe_subscription_product"] = member[3].upper()
         user["stripe_subscription_status"] = member[4].upper()
-
-        rows = None
-        if rows:
-            user['badge_serial'] = rows[0][0]
-        else:
-            user['badge_serial'] = -1
 
         return render_template('new_member.html', member=user)
 
@@ -702,37 +695,6 @@ def remove_message():
 
     return jsonify(message)
 
-# Badge Swipe API Endpoint
-@app.route('/swipe/', methods=['POST'])
-def swipe_badge():
-
-    badge_serial = request.form['tag']
-
-    if request.form.has_key('reader') != False:
-        badge_reader = request.form['reader']
-    else:
-        badge_reader = None
-
-    swipe = "BADGE_SWIPE"
-
-    db = get_db()
-    cur = db.cursor()
-
-    try:
-        cur.execute('select stripe_id, badge_status from badges where badge_serial = %s', (badge_serial,))
-        entries = cur.fetchall()
-        member = entries[0]
-        log_swipe_event(stripe_id=member[0],badge_status=member[1], swipe_event=swipe)
-    except IndexError:
-        # The user's badge is not in the system
-        swipe = "MISSING_ACCOUNT"
-        cur.execute("insert into message_queue (message) values (%s)", (badge_serial,))
-        db.commit()
-        log_swipe_event(stripe_id=badge_serial,badge_status="ACTIVE",swipe_event=swipe)
-
-    message = {'message':swipe}
-    return jsonify(message)
-
 # Landing Page Routes
 @app.route('/')
 def index():
@@ -747,7 +709,10 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        url = request.form['r_to']
+        if 'r_to' in request.form:
+            url = request.form['r_to']
+        else:
+            url = "/"
 
         if check_password(username,password):
             session['logged_in'] = True
@@ -850,10 +815,6 @@ def admin_onboard():
         print(str(e))
         return redirect('/login?redirect_to=admin_onboard')
 
-@app.route('/member/search')
-def member_search():
-    return render_template('search_member.html')
-
 @app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
 def changepassword(stripe_id):
 
@@ -870,6 +831,15 @@ def changepassword(stripe_id):
     else:
         app.logger.info("Someone tried to hit the change password page without authenticating")
         return render_template('login.html',r_to=request.referrer)
+
+@app.route('/admin/badges', methods=['GET'])
+@login_required
+def badges_landing():
+    return render_template('badges.html',entries=None)
+
+@app.route('/member/search')
+def member_search():
+    return render_template('search_member.html')
 
 # Widget Testing
 @app.route('/widget', methods=['GET','POST'])
