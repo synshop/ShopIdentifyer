@@ -48,7 +48,7 @@ def _get_customer_attributes(subscription):
     customer = stripe.Customer.retrieve(subscription.customer)
 
     user["stripe_id"] = customer.id
-    user["stripe_email"] = customer.email
+    user["stripe_email"] = customer.email.lower()
     user["stripe_created_on"] = customer.created
     user["stripe_description"] = customer.description
     user["stripe_subscription_status"] = subscription.status
