@@ -430,6 +430,22 @@ def log_event(request):
     cur.execute(sql_stmt,(stripe_id,badge_hex,event_type))
     db.commit()
 
+# Get unbounded event logs
+def get_event_log():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select el.event_id,el.stripe_id,el.created_on,el.event_type,m.full_name from event_log el, members m where el.stripe_id = m.stripe_id order by el.event_id desc"
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Get the list of users with door access
+def get_rfid_door_access_list():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select id,name,handle,color,email,stripe_id from electric_badger_import,stripe_cache where electric_badger_import.email = stripe_cache.stripe_email order by id"
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
 # Onboarding process - this attempts to pre-populate some
 # fields when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
@@ -652,36 +668,6 @@ def member_vetted(stripe_id):
 
     return response
 
-# AJAX service for search_member.html
-@app.route('/search', methods=['GET'])
-def search_users():
-    user = request.args.get('s')
-
-    db = get_db()
-    cur = db.cursor()
-    cur.execute('select stripe_id,full_name,member_status,is_vetted,liability_waiver,vetted_membership_form from members where full_name like %s', ("%" + user + '%',))
-    data = cur.fetchall()
-
-    results = []
-    wavier = ""
-    vetted_form = ""
-
-    for row in data:
-
-        if row[4] == None:
-            wavier = "false"
-        else:
-            wavier = "true"
-
-        if row[5] == None:
-            vetted_form = "false"
-        else:
-            vetted_form = "true"
-
-        results.append({'stripe_id':row[0],'full_name':row[1],'member_status':row[2],'is_vetted':row[3],'wavier':wavier,'vetted_form':vetted_form})
-
-    return jsonify({'results':results})
-
 # Door Access Event Webhook
 @app.route('/logevent', methods=['POST'])
 def event_log():
@@ -818,19 +804,20 @@ def changepassword(stripe_id):
         x = admin_change_password(stripe_id,request.form.get('password1'),)
         return redirect(url_for('index',_scheme='https',_external=True))
 
-@app.route('/admin/badges', methods=['GET'])
+@app.route('/admin/dooraccess', methods=['GET'])
 @login_required
-def badges_landing():
-    return render_template('badges.html',entries=None)
+def door_access_landing():
+    return render_template('door_access.html',entries=get_rfid_door_access_list())
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
 def eventlog_landing():
-    return render_template('access_control_events.html')
+    return render_template('event_log.html', entries=get_event_log())
 
-@app.route('/member/search')
-def member_search():
-    return render_template('search_member.html')
+@app.route('/admin/discordroles', methods=['GET'])
+@login_required
+def manage_discord_roles():
+    return render_template('manage_discord_roles.html', entries=None)
 
 # Widget Testing
 @app.route('/widget', methods=['GET','POST'])

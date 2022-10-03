@@ -52,10 +52,15 @@
   <h3>What do you want to do?</h3>
   {% if session.logged_in %}
   <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
-  <a href="/admin/badges" class="list-group-item">Manage RFID Badges</a>
+  <hr/>
   <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
+  <a href="/admin/dooraccess" class="list-group-item">Manage RFID Badges / Door Access</a>
+  <a href="/admin/discordroles" class="list-group-item">Manage Discord Roles</a>
   {% endif %}
+<!--
+  <hr/>
   <a href="/member/search" class="list-group-item">Search for an Existing Member</a>
+-->
 </div>
 
 <div class="list-group">
