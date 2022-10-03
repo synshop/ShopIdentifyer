@@ -3,3 +3,4 @@
 .DS_Store
 config.py
 .venv*
+start_gunicorn.sh

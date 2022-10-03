@@ -172,7 +172,7 @@ def member_is_admin(stripe_id=None):
     except:
         return False
     
-# Returns True if Member has an RFID Token
+# Returns True if member has an RFID token in the access control system
 def member_has_authorized_rfid(stripe_email=None):
     try:
         db = get_db()
@@ -822,6 +822,11 @@ def changepassword(stripe_id):
 @login_required
 def badges_landing():
     return render_template('badges.html',entries=None)
+
+@app.route('/admin/eventlog', methods=['GET'])
+@login_required
+def eventlog_landing():
+    return render_template('access_control_events.html')
 
 @app.route('/member/search')
 def member_search():
