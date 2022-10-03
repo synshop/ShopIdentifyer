@@ -48,9 +48,16 @@
 
 <div class="container">
 
+  {% if not session.logged_in %}
+  <div class="alert alert-info" role="alert">
+    Please login to add / remove / update user information.
+  </div>
+  {% endif %}
+
 <div class="list-group">
-  <h3>What do you want to do?</h3>
+
   {% if session.logged_in %}
+  <h2>What do you want to do?</h2>
   <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
   <hr/>
   <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
@@ -64,7 +71,7 @@
 </div>
 
 <div class="list-group">
-<h3>There are currently {{entries|length}} Active Members at SYN Shop</h3>
+<h2>There are currently {{entries|length}} Active Members at SYN Shop</h2>
 <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th><th>Payment Status</th></tr>
