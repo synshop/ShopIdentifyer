@@ -67,9 +67,7 @@ app.logger.info("SYN Shop Identifyer Started...")
 app.logger.info("------------------------------")
 
 # Imports down here so that they can see the app.config elements
-from identity.stripe import get_rebuild_stripe_cache, get_realtime_stripe_info
-from identity.stripe import DELINQUENT, IN_GOOD_STANDING,PAST_DUE, D_EMAIL_TEMPLATE
-# from identity.models import Member
+import identity.stripe
 
 def connect_db():
     return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
@@ -97,7 +95,7 @@ s1 = BackgroundScheduler()
 def refresh_stripe_cache():
 
     app.logger.info("refreshing stripe cache")
-    member_array = get_rebuild_stripe_cache(incremental=True)
+    member_array = identity.stripe.rebuild_stripe_cache(incremental=True)
 
     with app.app_context():
         db = get_db()
@@ -122,7 +120,7 @@ def rebuild_stripe_cache():
 
     app.logger.info("nightly stripe cache rebuild")
 
-    member_array = get_rebuild_stripe_cache()
+    member_array = identity.stripe.rebuild_stripe_cache()
 
     with app.app_context():
         db = get_db()
@@ -249,7 +247,7 @@ def get_member(stripe_id):
 
     # Check and update the stripe cache every time you view member details
     app.logger.info("updating real-time stripe information for %s" % (stripe_id,))
-    stripe_info = get_realtime_stripe_info(subscription_id)
+    stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
     
     member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
     member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
@@ -405,24 +403,46 @@ def update_member(request):
     db.commit()
     db.close()
 
+# Push log event into database
 def log_event(request):
-   app.logger.info(request.form['ID'])
+    id = request.form['ID']
+    badge_hex =  request.form['badge']
+    swipe_status = request.form['result']
+
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select stripe_id from stripe_cache where stripe_email = (select email from electric_badger_import where id = %s)"
+    cur.execute(sql_stmt,id)
+    entries = cur.fetchall()
+
+    if len(entries) != 0:
+        stripe_id = entries[0][0]
+    else:
+        stripe_id = "NA"
+
+    if (swipe_status == "granted"):
+        event_type = "ACCESS_GRANT"
+    
+    if (swipe_status == "denied"):
+        event_type = "ACCESS_DENY"
+
+    sql_stmt = 'insert into event_log (stripe_id, badge_hex, event_type) values (%s,%s,%s)'
+    cur.execute(sql_stmt,(stripe_id,badge_hex,event_type))
+    db.commit()
 
 # Onboarding process - this attempts to pre-populate some
 # fields when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
-def new_member_stripe(stripe_id):
-
-    if session.get('logged_in') == None:
-        return redirect(url_for("login",_scheme='https',_external=True))
-
+@login_required
+def onboard_new_member(stripe_id):
     # Get a new form, or if a POST then save the data
     if request.method == "GET":
         app.logger.info("User %s is onboarding member %s" % (session['username'],stripe_id))
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, stripe_subscription_status from stripe_cache where stripe_id = %s', (stripe_id,))
+        sql_stmt = 'select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, stripe_subscription_status from stripe_cache where stripe_id = %s'
+        cur.execute(sql_stmt, (stripe_id,))
         rows = cur.fetchall()
         member = rows[0]
 
@@ -545,10 +565,8 @@ def show_member(stripe_id):
 
 # Edit member details
 @app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
-def edit_member(stripe_id):
-
-    if session.get('logged_in') == None:
-        return redirect(url_for("login",_scheme='https',_external=True))
+@login_required
+def edit_member_details(stripe_id):
 
     if request.method == "GET":
         user = get_member(stripe_id)
@@ -791,21 +809,14 @@ def admin_onboard():
         return redirect('/login?redirect_to=admin_onboard')
 
 @app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
+@login_required
 def changepassword(stripe_id):
+    if request.method == "GET":
+        return render_template('changepassword.html',stripe_id=stripe_id)
 
-    if session.get('logged_in') == None:
-        # app.logger.info("User %s is changing their password" % (session['username'],))
-
-        if request.method == "GET":
-            return render_template('changepassword.html',stripe_id=stripe_id)
-
-        if request.method == "POST":
-            x = admin_change_password(stripe_id,request.form.get('password1'),)
-            return redirect(url_for('index',_scheme='https',_external=True))
-
-    else:
-        app.logger.info("Someone tried to hit the change password page without authenticating")
-        return render_template('login.html',r_to=request.referrer)
+    if request.method == "POST":
+        x = admin_change_password(stripe_id,request.form.get('password1'),)
+        return redirect(url_for('index',_scheme='https',_external=True))
 
 @app.route('/admin/badges', methods=['GET'])
 @login_required
