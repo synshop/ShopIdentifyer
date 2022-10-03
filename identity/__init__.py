@@ -95,7 +95,7 @@ s1 = BackgroundScheduler()
 def refresh_stripe_cache():
 
     app.logger.info("refreshing stripe cache")
-    member_array = identity.stripe.rebuild_stripe_cache(incremental=True)
+    member_array = identity.stripe.get_stripe_customers(incremental=True)
 
     with app.app_context():
         db = get_db()
@@ -120,7 +120,7 @@ def rebuild_stripe_cache():
 
     app.logger.info("nightly stripe cache rebuild")
 
-    member_array = identity.stripe.rebuild_stripe_cache()
+    member_array = identity.stripe.get_stripe_customers()
 
     with app.app_context():
         db = get_db()
@@ -142,10 +142,10 @@ def rebuild_stripe_cache():
 
     app.logger.info("finished rebuilding stripe cache")
 
-# End cron tasks
-
 if config.SCHEDULER_ENABLED == True:
     s1.start()
+
+# End cron tasks
 
 # Decorator for Required Auth
 def login_required(f):

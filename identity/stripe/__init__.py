@@ -66,7 +66,7 @@ def _get_customer_attributes(subscription):
 
     return user
 
-def rebuild_stripe_cache(incremental=False):
+def get_stripe_customers(incremental=False):
 
     stripe.api_version = STRIPE_VERSION
     stripe.api_key = app.config['STRIPE_TOKEN']
