@@ -409,12 +409,10 @@ def log_event(request):
     badge_hex =  request.form['badge']
     swipe_status = request.form['result']
 
-    app.logger.info(request.data)
-
     db = get_db()
     cur = db.cursor()
     sql_stmt = "select stripe_id from stripe_cache where stripe_email = (select email from electric_badger_import where id = %s)"
-    cur.execute(sql_stmt,id)
+    cur.execute(sql_stmt,[id])
     entries = cur.fetchall()
 
     if len(entries) != 0:
