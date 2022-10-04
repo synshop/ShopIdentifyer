@@ -434,7 +434,20 @@ def log_event(request):
 def get_event_log():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select el.event_id,el.stripe_id,el.created_on,el.event_type,m.full_name from event_log el, members m where el.stripe_id = m.stripe_id order by el.event_id desc"
+    sql_stmt = """
+        select 
+            event_log.event_id,
+            event_log.stripe_id,
+            event_log.badge_hex,
+            event_log.created_on,
+            event_log.event_type,
+            members.full_name 
+        from 
+            event_log 
+        LEFT JOIN members 
+        ON event_log.stripe_id = members.stripe_id
+        ORDER BY event_log.event_id desc
+    """
     cur.execute(sql_stmt)
     return cur.fetchall()
 
