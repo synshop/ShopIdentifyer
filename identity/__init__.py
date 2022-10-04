@@ -7,8 +7,10 @@ from functools import wraps
 try:
     import identity.config
 except Exception as e:
-    print("You need to create/install a <project-home>/identity/config.py file and populate it with some values.\n")
-    print("Please see https://github.com/munroebot/ShopIdentifyer/blob/master/README.md for more information.")
+    config_error = """
+        You need to create/install a <project-home>/identity/config.py file and populate it with some values.
+        Please see https://github.com/synshop/ShopIdentifyer/blob/master/README.md for more information."""
+    app.logger.info(e)
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -108,8 +110,6 @@ def refresh_stripe_cache():
              member['stripe_description'], member['stripe_last_payment_status'],\
              member['stripe_subscription_id'], member['stripe_subscription_product'],\
              member['stripe_subscription_status'], member['stripe_subscription_created_on']))
-        
-            print(member)
 
         db.commit()
 
@@ -180,7 +180,7 @@ def member_has_authorized_rfid(stripe_email=None):
         stmt = "select count(*) from electric_badger_import where email = %s"
         cur.execute(stmt, (stripe_email,))
         entry = cur.fetchone()
-        print(entry)
+
         if entry[0] > 0:
             return True
         else:
@@ -224,7 +224,7 @@ def check_password(username=None, password=None):
                 passwords_match = False
 
         except Exception as e:
-            print(e)
+            app.logger.info(e)
             passwords_match = False
 
         return passwords_match
@@ -459,6 +459,53 @@ def get_rfid_door_access_list():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+# Get public membership statistics for the front page
+def get_public_stats():
+
+    stats = {
+        'total_membership': {
+            'count':0, 
+            'sql':'select count(*) from stripe_cache'
+        },
+        'total_paused': {
+            'count':0,
+            'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Pause Membership"'
+        },
+        'total_need_onboarding': {
+            'count':0,
+            'sql':'select count(*) FROM stripe_cache WHERE stripe_id NOT IN (SELECT stripe_id FROM members)'
+        },
+        'total_vetted': {
+            'count':0,
+            'sql':'select count(*) from members where IS_VETTED = "VETTED"'
+        },
+        'total_not_vetted': {
+            'count':0,
+            'sql':'select count(*) from members where IS_VETTED = "NOT VETTED"'
+        },
+        'total_have_waivers': {
+            'count':0,
+            'sql':'select count(*) from members where liability_waiver is NOT NULL'
+        },
+        'total_no_waivers': {
+            'count':0,
+            'sql':'select count(*) from members where liability_waiver is NULL'
+        },
+        'total_door_access': {
+            'count':0,
+            'sql':'select count(*) from electric_badger_import'
+        }
+    }
+
+    db = get_db()
+    cur = db.cursor()
+    
+    for key in stats:
+        cur.execute(stats[key]['sql'])
+        stats[key]['count'] = cur.fetchall()[0][0]
+
+    return stats
+
 # Onboarding process - this attempts to pre-populate some
 # fields when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
@@ -621,7 +668,7 @@ def member_photo(stripe_id):
         response.headers['Content-Type'] = 'image/jpeg'
         response.headers['Content-Disposition'] = 'inline'
     except Exception as e:
-        print(e)
+        app.logger.info(e)
         response = make_response("No photo on file, please fix this!")
         response.headers['Content-Description'] = 'Stock Photo'
         response.headers['Cache-Control'] = 'no-cache'
@@ -690,7 +737,7 @@ def event_log():
 # Landing Page Routes
 @app.route('/')
 def index():
-    return redirect(url_for("admin",_scheme='https',_external=True))
+    return render_template('index.html',stats=get_public_stats())
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -701,10 +748,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if 'r_to' in request.form:
-            url = request.form['r_to']
-        else:
-            url = "/"
+        url = "/admin"
 
         if check_password(username,password):
             session['logged_in'] = True
@@ -726,6 +770,7 @@ def logout():
     return redirect(url_for('index',_scheme='https',_external=True))
 
 @app.route('/admin')
+@login_required
 def admin():
     db = get_db()
     cur = db.cursor()
@@ -804,7 +849,7 @@ def admin_onboard():
         else:
             return redirect('/login?redirect_to=admin_onboard')
     except Exception as e:
-        print(str(e))
+        app.logger.info(e)
         return redirect('/login?redirect_to=admin_onboard')
 
 @app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
