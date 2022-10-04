@@ -409,7 +409,7 @@ def log_event(request):
     badge_hex =  request.form['badge']
     swipe_status = request.form['result']
 
-    app.logger.info(request)
+    app.logger.info(request.data)
 
     db = get_db()
     cur = db.cursor()
