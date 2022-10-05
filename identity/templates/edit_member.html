@@ -187,11 +187,11 @@
       </div>
 
       <div class="form-group">
-        <label for="door_access" class="col-sm-2 control-label"><a href="#" data-toggle="tooltip" title="Does this member have door access?">Door Access:</a></label>
+        <label for="door_access" class="col-sm-2 control-label">RFID Tokens:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="door_access" name="door_access" value="{{ member.door_access }}" readonly>
+          <input type="text" class="form-control" id="rfid_tokens" name="rfid_tokens" value="{{ member.rfid_tokens }}" readonly>
         </div>
-      </div>
+      </div
 
       <hr/>
 
@@ -259,6 +259,13 @@
         <label for="meetup_email" class="col-sm-2 control-label">Locker:</label>
         <div class="col-sm-10">
           <input type="text" class="form-control" id="locker_num" name="locker_num" value="{{ member.locker_num }}">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="meetup_email" class="col-sm-2 control-label">LED Color:</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" id="locker_num" name="led_color" value="{{ member.led_color }}">
         </div>
       </div>
 

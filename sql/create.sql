@@ -15,6 +15,7 @@ create table shopidentifyer.members (
   meetup_email varchar(255),
   discord_handle varchar(255),
   locker_num varchar(255),
+  led_color varchar(255) DEFAULT "#000000,#000000",
   mobile varchar(25),
   emergency_contact_name varchar(255),
   emergency_contact_mobile varchar(25),
@@ -31,10 +32,6 @@ create table shopidentifyer.event_log (
   badge_hex varchar(255) NOT NULL,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_ACCOUNT') DEFAULT 'BADGE_SWIPE'
-);
-
-create table shopidentifyer.message_queue (
-  message varchar(255)
 );
 
 create table shopidentifyer.stripe_cache (
@@ -55,6 +52,12 @@ create table shopidentifyer.admin_users (
 );
 
 insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','$2b$12$fyqvNiP3ouafim/p.xPDDOqu6I3qXROoroPfoe/pWPb1nkzkbItJm');
+
+CREATE TABLE shopidentifyer.rfid_tokens (
+  eb_id int UNIQUE DEFAULT NULL,
+  stripe_id varchar(255) NOT NULL,
+  rfid_token_hex varchar(255) NOT NULL
+);
 
 CREATE TABLE shopidentifyer.electric_badger_import (
   id int UNIQUE DEFAULT NULL,

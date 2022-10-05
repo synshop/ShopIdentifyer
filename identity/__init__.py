@@ -172,13 +172,13 @@ def member_is_admin(stripe_id=None):
     except:
         return False
     
-# Returns True if member has an RFID token in the access control system
-def member_has_authorized_rfid(stripe_email=None):
+# Returns True if user has an RFID token in the access control system
+def member_has_authorized_rfid(stripe_id=None):
     try:
         db = get_db()
         cur = db.cursor()
-        stmt = "select count(*) from electric_badger_import where email = %s"
-        cur.execute(stmt, (stripe_email,))
+        stmt = "select count(*) from rfid_tokens where stripe_id = %s"
+        cur.execute(stmt, (stripe_id,))
         entry = cur.fetchone()
 
         if entry[0] > 0:
@@ -237,7 +237,21 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     cur.execute(sql_stmt, (stripe_id,))
 
     return cur.fetchall()[0][0]
+
+# Fetch the rfid_token(s) for a user
+def get_member_rfid_tokens(stripe_id):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s"
+    cur.execute(sql_stmt, (stripe_id,))
     
+    rfid_tokens = []
+
+    for entry in cur.fetchall():
+        rfid_tokens.append(entry[0])
+    
+    return ", ".join(rfid_tokens)
+
 # Fetch a member 'object'
 def get_member(stripe_id=None):
 
@@ -252,6 +266,8 @@ def get_member(stripe_id=None):
     member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
     member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
     member['stripe_email'] = stripe_info['stripe_email']
+
+    member['rfid_tokens'] = get_member_rfid_tokens(stripe_id)
 
     db = get_db()
     cur = db.cursor()
@@ -274,8 +290,9 @@ def get_member(stripe_id=None):
          liability_waiver,
          vetted_membership_form,
          discord_handle,
-         locker_num
-      from members where stripe_id = %s'''
+         locker_num,
+         led_color 
+         from members where stripe_id = %s'''
 
     cur.execute(sql_stmt, (stripe_info['stripe_id'],))
     entries = cur.fetchall()
@@ -315,7 +332,7 @@ def get_member(stripe_id=None):
     member["stripe_subscription_id"] = subscription_id
     member["discord_handle"] = entry[13]
     member["locker_num"] = entry[14]
-    member["door_access"] = member_has_authorized_rfid(stripe_info['stripe_email'])
+    member["led_color"] = entry[15]
 
     return member
 
@@ -395,10 +412,12 @@ def update_member(request=None):
         request.form.get('is_vetted','NOT VETTED'),
         request.form.get('discord_handle'),
         request.form.get('locker_num'),
+        request.form.get('led_color'),
         stripe_id
     )
-
-    cur.execute('update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s where stripe_id=%s', insert_data)
+    
+    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,led_color=%s where stripe_id=%s'
+    cur.execute(sql_stmt, insert_data)
 
     db.commit()
     db.close()
@@ -411,8 +430,8 @@ def log_event(request=None):
 
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select stripe_id from stripe_cache where stripe_email = (select email from electric_badger_import where id = %s)"
-    cur.execute(sql_stmt,[id])
+    sql_stmt = "select stripe_id from rfid_tokens where eb_id = %s"
+    cur.execute(sql_stmt,(id,))
     entries = cur.fetchall()
 
     if len(entries) != 0:
@@ -443,7 +462,7 @@ def get_event_log():
             event_log.event_type,
             members.full_name 
         from 
-            event_log 
+            event_log
         LEFT JOIN members 
         ON event_log.stripe_id = members.stripe_id
         ORDER BY event_log.event_id desc
@@ -455,9 +474,50 @@ def get_event_log():
 def get_rfid_door_access_list():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select id,name,handle,color,email,stripe_id from electric_badger_import,stripe_cache where electric_badger_import.email = stripe_cache.stripe_email order by id"
+    sql_stmt = "select eb.id,eb.badge,eb.name,eb.handle,eb.email,stripe_id from electric_badger_import eb LEFT JOIN stripe_cache on eb.email = stripe_cache.stripe_email"
     cur.execute(sql_stmt)
     return cur.fetchall()
+
+# Get a list of users to assign RFID
+def get_rfid_associate_list():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where m.stripe_id = sc.stripe_id and member_status = 'ACTIVE'"
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+def get_inactive_members_with_rfid():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = """
+        SELECT members.stripe_id,members.full_name, stripe_cache.stripe_email,rfid_tokens.rfid_token_hex
+        FROM members JOIN stripe_cache ON members.stripe_id = stripe_cache.stripe_id 
+        JOIN rfid_tokens ON members.stripe_id = rfid_tokens.stripe_id 
+        WHERE (members.member_status = 'INACTIVE' OR stripe_cache.stripe_last_payment_status <> 'succeeded') 
+        AND members.stripe_id = rfid_tokens.stripe_id;
+    """
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Get a list of inactive users
+def get_inactive_members():
+    return {"status":"TODO"}
+
+# Internal method used to integrate electric_badger_import into rfid_token table
+def merge_rfid_tables():
+    with app.app_context():
+        db = get_db()
+        cur = db.cursor()
+        sql_stmt = "select id, email, badge, stripe_cache.stripe_id from electric_badger_import, stripe_cache where electric_badger_import.email = stripe_cache.stripe_email"
+        cur.execute(sql_stmt)
+        
+        for entry in cur.fetchall():
+            sql_stmt = "insert into rfid_tokens (eb_id, stripe_id, rfid_token_hex) values (%s,%s,%s)"
+            cur.execute(sql_stmt, (entry[0],entry[3], entry[2]))
+            sql_stmt = "delete from electric_badger_import where badge = %s"
+            cur.execute(sql_stmt, (entry[2], ))
+        
+        db.commit()
 
 # Get public membership statistics for the front page
 def get_public_stats():
@@ -493,7 +553,7 @@ def get_public_stats():
         },
         'total_door_access': {
             'count':0,
-            'sql':'select count(*) from electric_badger_import'
+            'sql':'select count(*) from members'
         }
     }
 
@@ -871,12 +931,28 @@ def changepassword(stripe_id):
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
 def door_access_landing():
-    return render_template('door_access.html',entries=get_rfid_door_access_list())
+    return render_template('door_access.html',entries=get_rfid_door_access_list(), inactive_members=get_inactive_members_with_rfid())
+
+@app.route('/admin/dooraccess/assign', methods=['GET'])
+@login_required
+def door_access_assign():
+    eb_id = request.args.get('eb_id')
+    return render_template('door_access_assign.html',entries=get_rfid_associate_list(),eb_id=eb_id)
+
+@app.route('/admin/dooraccess/assign', methods=['POST'])
+@login_required
+def door_access_assign_post():
+    return render_template('admin.html',entries=get_admin_view(), stats=get_public_stats())
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
 def eventlog_landing():
     return render_template('event_log.html', entries=get_event_log())
+
+@app.route('/admin/reactivate', methods=['GET'])
+@login_required
+def reactivate_member():
+    return render_template('reactivate.html', entries=get_inactive_members())
 
 @app.route('/admin/discordroles', methods=['GET'])
 @login_required
