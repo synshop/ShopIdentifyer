@@ -239,7 +239,7 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
     
 # Fetch a member 'object'
-def get_member(stripe_id):
+def get_member(stripe_id=None):
 
     member = {}
 
@@ -320,7 +320,7 @@ def get_member(stripe_id):
     return member
 
 # Update an existing member 'object'
-def update_member(request):
+def update_member(request=None):
 
     db = connect_db()
     cur = db.cursor()
@@ -404,7 +404,7 @@ def update_member(request):
     db.close()
 
 # Push log event into database
-def log_event(request):
+def log_event(request=None):
     id = request.form['ID']
     badge_hex =  request.form['badge']
     swipe_status = request.form['result']
@@ -506,8 +506,34 @@ def get_public_stats():
 
     return stats
 
-# Onboarding process - this attempts to pre-populate some
-# fields when setting up a new user.
+# Build the /admin view
+def get_admin_view():
+    db = get_db()
+    cur = db.cursor()
+    stmt = """  
+        SELECT 
+            m.stripe_id,
+            s.stripe_subscription_id,
+            m.full_name,
+            m.is_vetted, 
+            m.liability_waiver, 
+            m.vetted_membership_form, 
+            s.stripe_email,
+            s.stripe_subscription_status
+        FROM 
+            members m, stripe_cache s
+        WHERE
+            m.member_status = "ACTIVE"
+        AND
+            m.stripe_id = s.stripe_id
+        ORDER BY
+            m.is_vetted desc
+    """
+    cur.execute(stmt)
+    return cur.fetchall()
+
+# Onboarding process - this attempts to pre-populate some fields 
+# when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
 @login_required
 def onboard_new_member(stripe_id):
@@ -635,9 +661,9 @@ def onboard_new_member(stripe_id):
 
 # Show member details
 @app.route('/member/<stripe_id>')
+@login_required
 def show_member(stripe_id):
-    user = get_member(stripe_id)
-    return render_template('show_member.html', member=user)
+    return render_template('show_member.html', member=get_member(stripe_id))
 
 # Edit member details
 @app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
@@ -652,7 +678,7 @@ def edit_member_details(stripe_id):
     if request.method == "POST":
         update_member(request)
         app.logger.info("User %s updated member %s" % (session['username'],stripe_id))
-        return redirect(url_for("index",_scheme='https',_external=True))
+        return redirect(url_for("admin",_scheme='https',_external=True))
 
 # Get member badge photo
 @app.route('/member/<stripe_id>/files/photo.jpg')
@@ -772,27 +798,7 @@ def logout():
 @app.route('/admin')
 @login_required
 def admin():
-    db = get_db()
-    cur = db.cursor()
-    stmt = """  SELECT 
-                    m.stripe_id,
-                    s.stripe_subscription_id,
-                    m.full_name,
-                    m.is_vetted, 
-                    m.liability_waiver, 
-                    m.vetted_membership_form, 
-                    s.stripe_email,
-                    s.stripe_subscription_status
-                FROM 
-                    members m, stripe_cache s
-                WHERE
-                    m.member_status = "ACTIVE"
-                AND
-                    m.stripe_id = s.stripe_id
-            """
-    cur.execute(stmt)
-    entries = cur.fetchall()
-    return render_template('admin.html',entries=entries, stats=get_public_stats())
+    return render_template('admin.html',entries=get_admin_view(), stats=get_public_stats())
 
 @app.route('/admin/onboard')
 def admin_onboard():
