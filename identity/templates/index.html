@@ -47,13 +47,6 @@
   </nav>
 
 <div class="container">
-
-  {% if not session.logged_in %}
-  <div class="alert alert-info" role="alert">
-    Please login to add / remove / update user information.
-  </div>
-  {% endif %}
-
   <div class="jumbotron">
   <h1>
   SYN Shop currently has <span class="text-primary">{{ stats['total_membership']['count'] }}</span> members, 
@@ -61,19 +54,7 @@
   <span class="text-primary">{{ stats['total_need_onboarding']['count'] }}</span> need onboarding, while 
   <span class="text-primary">{{ stats['total_vetted']['count'] }}</span> are vetted and 
   <span class="text-primary">{{ stats['total_not_vetted']['count'] }}</span> are not.
-  </h1>
-
-  <h1>
-    There are <span class="text-primary">{{ stats['total_have_waivers']['count'] }}</span> 
-    members that have signed liability waivers on file while 
-    <span class="text-primary">{{ stats['total_no_waivers']['count'] }}</span> members do not.
-  </h1>
-
-  <h1>
-    <span class="text-primary">{{ stats['total_door_access']['count'] }}</span> members have active door access.
-  </h1>
-  </div>
-  
+  </h1> 
 </div>
 
 </body>

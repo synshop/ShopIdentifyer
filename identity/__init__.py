@@ -792,7 +792,7 @@ def admin():
             """
     cur.execute(stmt)
     entries = cur.fetchall()
-    return render_template('admin.html',entries=entries)
+    return render_template('admin.html',entries=entries, stats=get_public_stats())
 
 @app.route('/admin/onboard')
 def admin_onboard():
