@@ -54,18 +54,9 @@ create table shopidentifyer.admin_users (
 insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','$2b$12$fyqvNiP3ouafim/p.xPDDOqu6I3qXROoroPfoe/pWPb1nkzkbItJm');
 
 CREATE TABLE shopidentifyer.rfid_tokens (
-  eb_id int UNIQUE DEFAULT NULL,
-  stripe_id varchar(255) NOT NULL,
-  rfid_token_hex varchar(255) NOT NULL
-);
-
-CREATE TABLE shopidentifyer.electric_badger_import (
-  id int UNIQUE DEFAULT NULL,
-  level int DEFAULT NULL,
-  badge text,
-  name text,
-  handle text,
-  color text,
-  email text,
-  badge_decimal int DEFAULT NULL
+  eb_id int DEFAULT NULL,
+  stripe_id varchar(255),
+  rfid_token_hex varchar(255) NOT NULL PRIMARY KEY,
+  status ENUM('ASSIGNED','UNASSIGNED','LOST','BROKEN') NOT NULL DEFAULT "UNASSIGNED",
+  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

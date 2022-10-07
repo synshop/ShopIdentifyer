@@ -238,11 +238,90 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
 
     return cur.fetchall()[0][0]
 
+# Mnaully insert a new RFID token into the system 
+def create_new_rfid_token_record(eb_id=None,rfid_token_hex=None):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex) values (%s,%s)"
+    cur.execute(sql_stmt, (eb_id,rfid_token_hex))
+    db.commit()
+
+def assign_rfid_token_to_member(eb_id=None,stripe_id=None):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "update rfid_tokens set stripe_id = %s, status = 'ASSIGNED' where eb_id = %s"
+    cur.execute(sql_stmt, (stripe_id,eb_id))
+    print(sql_stmt)
+    db.commit()
+
+# Get the list of unassigned tokens
+def get_unassigned_rfid_tokens():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = 'select eb_id,rfid_token_hex,created_on from rfid_tokens where status = "UNASSIGNED"'
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Scan the event log for RFID tokens that haven't been imported into the system
+# and add them
+def get_unassigned_rfid_tokens_from_event_log():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = """
+        select distinct badge_hex from event_log 
+        where event_type = "ACCESS_GRANT" 
+        and badge_hex not in 
+        (select rfid_token_hex from rfid_tokens where status = "ASSIGNED")'
+    """
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Get a list of users to assign a RFID
+def get_members_for_rfid_association():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where m.stripe_id = sc.stripe_id and member_status = 'ACTIVE'"
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+def get_inactive_members_with_rfid():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = """
+        SELECT members.stripe_id,members.full_name, stripe_cache.stripe_email,rfid_tokens.rfid_token_hex
+        FROM members JOIN stripe_cache ON members.stripe_id = stripe_cache.stripe_id 
+        JOIN rfid_tokens ON members.stripe_id = rfid_tokens.stripe_id 
+        WHERE (members.member_status = 'INACTIVE' OR stripe_cache.stripe_last_payment_status <> 'succeeded') 
+        AND members.stripe_id = rfid_tokens.stripe_id;
+    """
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Get a list of inactive users
+def get_inactive_members():
+    return {"status":"TODO"}
+
+# DEPRECATE - Internal method used to integrate electric_badger_import into rfid_token table
+def merge_rfid_tables():
+    with app.app_context():
+        db = get_db()
+        cur = db.cursor()
+        sql_stmt = "select id, email, badge, stripe_cache.stripe_id from electric_badger_import, stripe_cache where electric_badger_import.email = stripe_cache.stripe_email"
+        cur.execute(sql_stmt)
+        
+        for entry in cur.fetchall():
+            sql_stmt = "insert into rfid_tokens (eb_id, stripe_id, rfid_token_hex) values (%s,%s,%s)"
+            cur.execute(sql_stmt, (entry[0],entry[3], entry[2]))
+            sql_stmt = "delete from electric_badger_import where badge = %s"
+            cur.execute(sql_stmt, (entry[2], ))
+        
+        db.commit()
+
 # Fetch the rfid_token(s) for a user
 def get_member_rfid_tokens(stripe_id):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s"
+    sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s and status = 'ASSIGNED'"
     cur.execute(sql_stmt, (stripe_id,))
     
     rfid_tokens = []
@@ -460,64 +539,15 @@ def get_event_log():
             event_log.badge_hex,
             event_log.created_on,
             event_log.event_type,
-            members.full_name 
+            members.full_name
         from 
             event_log
-        LEFT JOIN members 
+        LEFT JOIN members
         ON event_log.stripe_id = members.stripe_id
         ORDER BY event_log.event_id desc
     """
     cur.execute(sql_stmt)
     return cur.fetchall()
-
-# Get the list of users with door access
-def get_rfid_door_access_list():
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = "select eb.id,eb.badge,eb.name,eb.handle,eb.email,stripe_id from electric_badger_import eb LEFT JOIN stripe_cache on eb.email = stripe_cache.stripe_email"
-    cur.execute(sql_stmt)
-    return cur.fetchall()
-
-# Get a list of users to assign RFID
-def get_rfid_associate_list():
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where m.stripe_id = sc.stripe_id and member_status = 'ACTIVE'"
-    cur.execute(sql_stmt)
-    return cur.fetchall()
-
-def get_inactive_members_with_rfid():
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = """
-        SELECT members.stripe_id,members.full_name, stripe_cache.stripe_email,rfid_tokens.rfid_token_hex
-        FROM members JOIN stripe_cache ON members.stripe_id = stripe_cache.stripe_id 
-        JOIN rfid_tokens ON members.stripe_id = rfid_tokens.stripe_id 
-        WHERE (members.member_status = 'INACTIVE' OR stripe_cache.stripe_last_payment_status <> 'succeeded') 
-        AND members.stripe_id = rfid_tokens.stripe_id;
-    """
-    cur.execute(sql_stmt)
-    return cur.fetchall()
-
-# Get a list of inactive users
-def get_inactive_members():
-    return {"status":"TODO"}
-
-# Internal method used to integrate electric_badger_import into rfid_token table
-def merge_rfid_tables():
-    with app.app_context():
-        db = get_db()
-        cur = db.cursor()
-        sql_stmt = "select id, email, badge, stripe_cache.stripe_id from electric_badger_import, stripe_cache where electric_badger_import.email = stripe_cache.stripe_email"
-        cur.execute(sql_stmt)
-        
-        for entry in cur.fetchall():
-            sql_stmt = "insert into rfid_tokens (eb_id, stripe_id, rfid_token_hex) values (%s,%s,%s)"
-            cur.execute(sql_stmt, (entry[0],entry[3], entry[2]))
-            sql_stmt = "delete from electric_badger_import where badge = %s"
-            cur.execute(sql_stmt, (entry[2], ))
-        
-        db.commit()
 
 # Get public membership statistics for the front page
 def get_public_stats():
@@ -823,7 +853,10 @@ def event_log():
 # Landing Page Routes
 @app.route('/')
 def index():
-    return render_template('index.html',stats=get_public_stats())
+    if session.get('logged_in') == None:
+        return render_template('index.html',stats=get_public_stats())
+    else:
+        return redirect(url_for('admin'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -931,18 +964,32 @@ def changepassword(stripe_id):
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
 def door_access_landing():
-    return render_template('door_access.html',entries=get_rfid_door_access_list(), inactive_members=get_inactive_members_with_rfid())
+    return render_template('door_access.html',entries=get_unassigned_rfid_tokens(), inactive_members=get_inactive_members_with_rfid())
+
+@app.route('/admin/dooraccess/newtoken', methods=['GET'])
+@login_required
+def door_access_new_token():
+    return render_template('door_access_new_token.html')
+
+@app.route('/admin/dooraccess/newtoken', methods=['POST'])
+@login_required
+def door_access_new_token_post():
+    create_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'])
+    return redirect(url_for('door_access_landing'))
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
 @login_required
 def door_access_assign():
     eb_id = request.args.get('eb_id')
-    return render_template('door_access_assign.html',entries=get_rfid_associate_list(),eb_id=eb_id)
+    return render_template('door_access_assign.html',entries=get_members_for_rfid_association(),eb_id=eb_id)
 
 @app.route('/admin/dooraccess/assign', methods=['POST'])
 @login_required
 def door_access_assign_post():
-    return render_template('admin.html',entries=get_admin_view(), stats=get_public_stats())
+    stripe_id = request.form.get('stripe_id')
+    eb_id = request.form.get('eb_id')
+    assign_rfid_token_to_member(eb_id=eb_id,stripe_id=stripe_id)
+    return redirect(url_for('door_access_landing'))
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required

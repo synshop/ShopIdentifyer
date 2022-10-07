@@ -47,11 +47,14 @@
   </nav>
 
 <div class="container">
-  
-  <div class="alert alert-info" role="alert">
-    Unassigned RFID Token data is manually pulled from Electric Badger and is read-only.  
-    Please email <strong>brian@synshop.org</strong> if you need to change something.
+  <h2>What do you want to do?</h2>
+  <div class="list-group">    
+    <a href="/admin/dooraccess/scanlog" class="list-group-item">Scan Event Log for Unassigned Tokens</a>
+    <a href="/admin/dooraccess/newtoken" class="list-group-item">Manually Add a new RFID Token</a>
+    <a href="/admin/dooraccess/unassign" class="list-group-item">Unassign a RFID Token</a>
   </div>
+  
+  <hr/>
 
   <h2>Unassigned RFID Tokens</h2>
   <table class="table table-hover table-bordered" id="results">
@@ -59,9 +62,7 @@
     <tr>
         <th>EB ID</th>
         <th>RFID</th>
-        <th>Name</th>
-        <th>Handle</th>
-        <th>Email</th>
+        <th>Created On</th> 
         <th>Action</th>
     </tr>
     </thead>
@@ -70,16 +71,15 @@
     {% for entry in entries %}
     <tr>
       <td>{{ entry[0] }}</td>
-      <td>{{ entry[1] }}</td>      
+      <td>{{ entry[1] }}</td>
       <td>{{ entry[2] }}</td>
-      <td>{{ entry[3] }}</td>
-      <td>{{ entry[4] }}</td>
-      <td style="text-align:center"><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Assign</a></td>
+      <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Assign</a></td>
     </tr>
     {% endfor %}
 
 </tbody>
 </table>
+<!--
 
 <h2>Inactive Members With Active RFID Tokens</h2>
 <table class="table table-hover table-bordered" id="results">
@@ -109,6 +109,7 @@
 
 </tbody>
 </table>
+-->
 
 </div>
 </body>
