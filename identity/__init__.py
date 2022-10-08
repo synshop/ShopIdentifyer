@@ -188,6 +188,10 @@ def member_has_authorized_rfid(stripe_id=None):
     except:
         return False
 
+# Returns True is user's payment status is OK
+def member_is_in_good_standing(stripe_id=None):
+    pass
+
 # Allow admin users to change their passwords
 def admin_change_password(stripe_id=None,password=None):
 
@@ -772,6 +776,7 @@ def edit_member_details(stripe_id):
 
 # Get member badge photo
 @app.route('/member/<stripe_id>/files/photo.jpg')
+@login_required
 def member_photo(stripe_id):
     db = get_db()
     cur = db.cursor()
@@ -795,6 +800,7 @@ def member_photo(stripe_id):
 
 # Get member liability waiver
 @app.route("/member/<stripe_id>/files/liability-waiver.pdf")
+@login_required
 def member_wavier(stripe_id):
 
     db = get_db()
@@ -821,6 +827,7 @@ def member_wavier(stripe_id):
 
 # Get member vetted membership form
 @app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
+@login_required
 def member_vetted(stripe_id):
 
     db = get_db()
@@ -990,6 +997,11 @@ def door_access_assign_post():
     eb_id = request.form.get('eb_id')
     assign_rfid_token_to_member(eb_id=eb_id,stripe_id=stripe_id)
     return redirect(url_for('door_access_landing'))
+
+@app.route('/admin/dooraccess/scanlog', methods=['GET'])
+@login_required
+def door_access_scanlog():
+    return render_template('door_access_scanlog.html')
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
