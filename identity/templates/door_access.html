@@ -47,11 +47,25 @@
   </nav>
 
 <div class="container">
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-info" role="alert">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  {{ message }}
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+  
+
   <h2>What do you want to do?</h2>
-  <div class="list-group">    
+  <div class="list-group">
     <a href="/admin/dooraccess/scanlog" class="list-group-item">Scan Event Log for Unassigned Tokens</a>
+    <hr/>
     <a href="/admin/dooraccess/newtoken" class="list-group-item">Manually Add a new RFID Token</a>
     <a href="/admin/dooraccess/unassign" class="list-group-item">Unassign a RFID Token</a>
+    <a href="/admin/dooraccess/tokenattributes" class="list-group-item">Mange RFID Token Attributes</a>
   </div>
   
   <hr/>

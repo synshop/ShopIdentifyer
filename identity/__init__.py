@@ -1,8 +1,9 @@
 from .crypto import SettingsUtil, CryptoUtil
-import base64, logging, time, bcrypt, io
+import base64, logging, time, bcrypt, io, datetime
 from PIL import Image as PILImage
 from PIL import ImageFilter, ImageEnhance
 from functools import wraps
+
 
 try:
     import identity.config
@@ -56,6 +57,9 @@ app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,
 app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
 app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
 app.config['LOG_FILE'] = config.LOG_FILE
+
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=12)
+
 
 # Logging
 file_handler = logging.FileHandler(app.config['LOG_FILE'])
@@ -156,6 +160,24 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Send alert email about a member swiping in
+# but is not in good standing
+def send_payment_alert_email(stripe_id = None):
+    print("email sent")
+
+    """
+    if conf.email_send:
+        # Create the message to send
+        msg = EmailMessage()
+        msg["to"] = config.email_to
+        msg["from"] = config.email_from
+        msg["Subject"] = subject
+        msg.set_content()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(conf.email_account, conf.email_password)
+            smtp.send_message(msg)
+    """
+
 # Check to see if a user is able to login and make changes to the system
 def member_is_admin(stripe_id=None):
 
@@ -190,7 +212,7 @@ def member_has_authorized_rfid(stripe_id=None):
 
 # Returns True is user's payment status is OK
 def member_is_in_good_standing(stripe_id=None):
-    pass
+    return False
 
 # Allow admin users to change their passwords
 def admin_change_password(stripe_id=None,password=None):
@@ -243,22 +265,31 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
 
 # Mnaully insert a new RFID token into the system 
-def create_new_rfid_token_record(eb_id=None,rfid_token_hex=None):
+def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex) values (%s,%s)"
     cur.execute(sql_stmt, (eb_id,rfid_token_hex))
     db.commit()
 
+# Attach a RFID token to a member
 def assign_rfid_token_to_member(eb_id=None,stripe_id=None):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = %s, status = 'ASSIGNED' where eb_id = %s"
     cur.execute(sql_stmt, (stripe_id,eb_id))
+    db.commit()
+
+# Detach a RFID token from a member
+def unassign_rfid_token_from_member(rfid_id_token_hex):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED' where rfid_token_hex = %s"
+    cur.execute(sql_stmt, (rfid_id_token_hex,))
     print(sql_stmt)
     db.commit()
 
-# Get the list of unassigned tokens
+# Get a list of unassigned tokens
 def get_unassigned_rfid_tokens():
     db = get_db()
     cur = db.cursor()
@@ -266,8 +297,7 @@ def get_unassigned_rfid_tokens():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
-# Scan the event log for RFID tokens that haven't been imported into the system
-# and add them
+# NOT USED YET
 def get_unassigned_rfid_tokens_from_event_log():
     db = get_db()
     cur = db.cursor()
@@ -284,11 +314,21 @@ def get_unassigned_rfid_tokens_from_event_log():
 def get_members_for_rfid_association():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where m.stripe_id = sc.stripe_id and member_status = 'ACTIVE'"
+    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where m.stripe_id = sc.stripe_id and member_status = 'ACTIVE' and is_vetted = 'VETTED'"
     cur.execute(sql_stmt)
     return cur.fetchall()
 
-def get_inactive_members_with_rfid():
+# Get a list of members with RFID Tokens assigned to them
+def get_members_with_rfid_tokens():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select m.stripe_id, m.full_name, r.rfid_token_hex from members m, rfid_tokens r where m.stripe_id = r.stripe_id order by m.full_name"
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Get a list of members who are marked as inactive but have
+# an RFID attached to their account
+def get_inactive_members_with_rfid_tokens():
     db = get_db()
     cur = db.cursor()
     sql_stmt = """
@@ -304,22 +344,6 @@ def get_inactive_members_with_rfid():
 # Get a list of inactive users
 def get_inactive_members():
     return {"status":"TODO"}
-
-# DEPRECATE - Internal method used to integrate electric_badger_import into rfid_token table
-def merge_rfid_tables():
-    with app.app_context():
-        db = get_db()
-        cur = db.cursor()
-        sql_stmt = "select id, email, badge, stripe_cache.stripe_id from electric_badger_import, stripe_cache where electric_badger_import.email = stripe_cache.stripe_email"
-        cur.execute(sql_stmt)
-        
-        for entry in cur.fetchall():
-            sql_stmt = "insert into rfid_tokens (eb_id, stripe_id, rfid_token_hex) values (%s,%s,%s)"
-            cur.execute(sql_stmt, (entry[0],entry[3], entry[2]))
-            sql_stmt = "delete from electric_badger_import where badge = %s"
-            cur.execute(sql_stmt, (entry[2], ))
-        
-        db.commit()
 
 # Fetch the rfid_token(s) for a user
 def get_member_rfid_tokens(stripe_id):
@@ -506,10 +530,13 @@ def update_member(request=None):
     db.close()
 
 # Push log event into database
-def log_event(request=None):
+def insert_log_event(request=None):
     id = request.form['ID']
     badge_hex =  request.form['badge']
     swipe_status = request.form['result']
+    
+    # Default Stripe Id
+    stripe_id = "NA"
 
     db = get_db()
     cur = db.cursor()
@@ -519,8 +546,6 @@ def log_event(request=None):
 
     if len(entries) != 0:
         stripe_id = entries[0][0]
-    else:
-        stripe_id = "NA"
 
     if (swipe_status == "granted"):
         event_type = "ACCESS_GRANT"
@@ -528,12 +553,16 @@ def log_event(request=None):
     if (swipe_status == "denied"):
         event_type = "ACCESS_DENY"
 
+    if member_is_in_good_standing() == False and stripe_id != 'NA':
+        send_payment_alert_email(stripe_id)
+
     sql_stmt = 'insert into event_log (stripe_id, badge_hex, event_type) values (%s,%s,%s)'
     cur.execute(sql_stmt,(stripe_id,badge_hex,event_type))
     db.commit()
 
 # Get unbounded event logs
 def get_event_log():
+
     db = get_db()
     cur = db.cursor()
     sql_stmt = """
@@ -854,7 +883,7 @@ def member_vetted(stripe_id):
 # Door Access Event Webhook
 @app.route('/logevent', methods=['POST'])
 def event_log():
-    log_event(request)
+    insert_log_event(request)
     return jsonify({"status":200})
 
 # Landing Page Routes
@@ -879,6 +908,7 @@ def login():
         if check_password(username,password):
             session['logged_in'] = True
             session['username'] = username
+            session.permanent = True
             app.logger.info("User %s logged in successfully" % (username))
             return redirect(url)
         else:
@@ -971,7 +1001,7 @@ def changepassword(stripe_id):
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
 def door_access_landing():
-    return render_template('door_access.html',entries=get_unassigned_rfid_tokens(), inactive_members=get_inactive_members_with_rfid())
+    return render_template('door_access.html',entries=get_unassigned_rfid_tokens(), inactive_members=get_inactive_members_with_rfid_tokens())
 
 @app.route('/admin/dooraccess/newtoken', methods=['GET'])
 @login_required
@@ -981,7 +1011,7 @@ def door_access_new_token():
 @app.route('/admin/dooraccess/newtoken', methods=['POST'])
 @login_required
 def door_access_new_token_post():
-    create_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'])
+    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'])
     return redirect(url_for('door_access_landing'))
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
@@ -997,6 +1027,24 @@ def door_access_assign_post():
     eb_id = request.form.get('eb_id')
     assign_rfid_token_to_member(eb_id=eb_id,stripe_id=stripe_id)
     return redirect(url_for('door_access_landing'))
+
+@app.route('/admin/dooraccess/unassign', methods=['GET'])
+@login_required
+def door_access_unassign():
+    return render_template('door_access_unassign.html', entries=get_members_with_rfid_tokens())
+
+@app.route('/admin/dooraccess/unassign', methods=['POST'])
+@login_required
+def door_access_unassign_post():
+    rfid_token_hex = request.form.get('rfid_id_token_hex')
+    unassign_rfid_token_from_member(rfid_token_hex)
+    flash('RFID Token has been unassigned')
+    return redirect(url_for('door_access_landing'))
+
+@app.route('/admin/dooraccess/tokenattributes', methods=['GET'])
+@login_required
+def door_access_token_attributes():
+    return render_template('door_access_modify_attributes.html')  
 
 @app.route('/admin/dooraccess/scanlog', methods=['GET'])
 @login_required
