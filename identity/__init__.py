@@ -286,7 +286,6 @@ def unassign_rfid_token_from_member(rfid_id_token_hex):
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED' where rfid_token_hex = %s"
     cur.execute(sql_stmt, (rfid_id_token_hex,))
-    print(sql_stmt)
     db.commit()
 
 # Get a list of unassigned tokens
