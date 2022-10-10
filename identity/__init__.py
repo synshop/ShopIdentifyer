@@ -1,9 +1,9 @@
 from .crypto import SettingsUtil, CryptoUtil
-import base64, logging, time, bcrypt, io, datetime
+import base64, logging, time, bcrypt, io, datetime, json, smtplib
 from PIL import Image as PILImage
 from PIL import ImageFilter, ImageEnhance
 from functools import wraps
-
+from email.message import EmailMessage
 
 try:
     import identity.config
@@ -20,7 +20,6 @@ from apscheduler.triggers.cron import CronTrigger
 # TODO: Move to svglib
 # TODO: Look at using CursorDictRowsMixIn for db operations
 
-import json
 # from svgwrite.image import Image
 # from svgwrite.shapes import Rect
 import MySQLdb as mysql
@@ -31,8 +30,6 @@ from flask import render_template, jsonify
 from flask import session, escape, url_for
 from flask import send_file
 
-from flask_mail import Mail, Message
-
 RUN_MODE = 'development'
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
@@ -41,25 +38,21 @@ app = Flask(__name__)
 
 app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
 
+# Encrypted Configuration
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REFRESH_CRON'] = config.STRIPE_CACHE_REFRESH_CRON
 app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] = config.STRIPE_CACHE_REFRESH_REACHBACK_MIN
 app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
-app.config['ACCESS_CONTROL_HOSTNAME'] = config.ACCESS_CONTROL_HOSTNAME
-app.config['ACCESS_CONTROL_SSH_PORT'] = config.ACCESS_CONTROL_SSH_PORT
+app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME,ENCRYPTION_KEY)
+app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD,ENCRYPTION_KEY)
 
-app.config['MAIL_SERVER'] = config.MAIL_SERVER
-app.config['MAIL_PORT'] = config.MAIL_PORT
-app.config['MAIL_USE_TLS'] = config.MAIL_USE_TLS
-app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
-app.config['MAIL_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_USERNAME,ENCRYPTION_KEY)
-app.config['MAIL_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_MAIL_PASSWORD,ENCRYPTION_KEY)
-app.config['ADMIN_PASSPHRASE'] = CryptoUtil.decrypt(config.ENCRYPTED_ADMIN_PASSPHRASE,ENCRYPTION_KEY)
+# Plaintext Configuration
+app.config['SMTP_SERVER'] = config.SMTP_SERVER
+app.config['SMTP_PORT'] = config.SMTP_PORT
 app.config['LOG_FILE'] = config.LOG_FILE
 
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=12)
-
 
 # Logging
 file_handler = logging.FileHandler(app.config['LOG_FILE'])
@@ -76,7 +69,12 @@ app.logger.info("------------------------------")
 import identity.stripe
 
 def connect_db():
-    return mysql.connect(host=config.DATABASE_HOST,user=config.DATABASE_USER,passwd=app.config["DATABASE_PASSWORD"],db=config.DATABASE_SCHEMA)
+    return mysql.connect(
+        host=config.DATABASE_HOST,
+        user=config.DATABASE_USER,
+        passwd=app.config["DATABASE_PASSWORD"],
+        db=config.DATABASE_SCHEMA
+    )
 
 def get_db():
     if not hasattr(g, 'mysql_db'):
@@ -87,9 +85,6 @@ def get_db():
 def close_db(error):
     if hasattr(g, 'mysql_db'):
         g.mysql_db.close()
-
-# Set up the mail sender object
-mail = Mail(app)
 
 # Start cron tasks
 s1 = BackgroundScheduler()
@@ -160,21 +155,21 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Send alert email about a member swiping in
+# Send alert eSMTP about a member swiping in
 # but is not in good standing
-def send_payment_alert_email(stripe_id = None):
-    print("email sent")
+def send_payment_alert_eSMTP(stripe_id = None):
+    print("eSMTP sent")
 
     """
-    if conf.email_send:
+    if conf.eSMTP_send:
         # Create the message to send
-        msg = EmailMessage()
-        msg["to"] = config.email_to
-        msg["from"] = config.email_from
-        msg["Subject"] = subject
+        msg = ESMTPMessage()
+        msg["to"] = ""
+        msg["from"] = ""
+        msg["Subject"] = "hello, world"
         msg.set_content()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(conf.email_account, conf.email_password)
+        with smtplib.SMTP_SSL(config.SMTP_SERVER, config.SMTP_PORT) as smtp:
+            smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             smtp.send_message(msg)
     """
 
@@ -325,6 +320,14 @@ def get_members_with_rfid_tokens():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+# Get a list of inactive members
+def get_inactive_members():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select stripe_id, full_name, created_on, changed_on from members where member_status = 'INACTIVE'"
+    cur.execute(sql_stmt)
+    return cur.fetchall() 
+
 # Get a list of members who are marked as inactive but have
 # an RFID attached to their account
 def get_inactive_members_with_rfid_tokens():
@@ -339,10 +342,6 @@ def get_inactive_members_with_rfid_tokens():
     """
     cur.execute(sql_stmt)
     return cur.fetchall()
-
-# Get a list of inactive users
-def get_inactive_members():
-    return {"status":"TODO"}
 
 # Fetch the rfid_token(s) for a user
 def get_member_rfid_tokens(stripe_id):
@@ -553,7 +552,7 @@ def insert_log_event(request=None):
         event_type = "ACCESS_DENY"
 
     if member_is_in_good_standing() == False and stripe_id != 'NA':
-        send_payment_alert_email(stripe_id)
+        send_payment_alert_eSMTP(stripe_id)
 
     sql_stmt = 'insert into event_log (stripe_id, badge_hex, event_type) values (%s,%s,%s)'
     cur.execute(sql_stmt,(stripe_id,badge_hex,event_type))
@@ -817,11 +816,12 @@ def member_photo(stripe_id):
         response.headers['Content-Type'] = 'image/jpeg'
         response.headers['Content-Disposition'] = 'inline'
     except Exception as e:
-        app.logger.info(e)
-        response = make_response("No photo on file, please fix this!")
-        response.headers['Content-Description'] = 'Stock Photo'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/plain'
+        with open("./identity/static/images/syn_shop_badge_logo.png", mode='rb') as file:
+            photo = file.read()
+        
+        response = make_response(photo)
+        response.headers['Content-Description'] = 'Badge Photo'
+        response.headers['Content-Type'] = 'image/jpeg'
         response.headers['Content-Disposition'] = 'inline'
 
     return response

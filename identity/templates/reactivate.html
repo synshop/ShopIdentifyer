@@ -47,10 +47,40 @@
   </nav>
 
 <div class="container">
-  
+
   <div class="alert alert-info" role="alert">
-COMING SOON
+    Choose a user to reactivate.
   </div>
+  <form method="POST">
+  <input type="hidden" name="eb_id" value="{{ eb_id }}">
+
+  <table class="table table-hover table-bordered" id="results">
+    <thead>
+    <tr>
+        <th>Reactivate</th>
+        <th>Name</th>
+        <th>Account Created</th>
+        <th>Account Last Updated</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for entry in entries %}
+    <tr>
+      <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
+      <td>{{ entry[1] }}</td>      
+      <td>{{ entry[2] }}</td>
+      <td>{{ entry[3] }}</td>
+    </tr>
+    {% endfor %}
+</tbody>
+</table>
+
+<div class="form-group">
+    <button type="submit" class="btn btn-primary btn-success">Assign Token</button>
+    <button type="button" id="cancel" name="cancel" class="btn btn-secondary">Cancel</button>
+</div>
+
+</form>
 
 </div>
 </body>
