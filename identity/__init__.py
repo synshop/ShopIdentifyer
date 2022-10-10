@@ -296,10 +296,11 @@ def get_unassigned_rfid_tokens_from_event_log():
     db = get_db()
     cur = db.cursor()
     sql_stmt = """
-        select distinct badge_hex from event_log 
-        where event_type = "ACCESS_GRANT" 
-        and badge_hex not in 
-        (select rfid_token_hex from rfid_tokens where status = "ASSIGNED")'
+        select distinct event_log.rfid_token_hex from event_log 
+        where event_log.event_type = "ACCESS_GRANT" 
+        and event_log.rfid_token_hex not in 
+        (select rfid_tokens.rfid_token_hex from rfid_tokens 
+        where rfid_tokens.status = "ASSIGNED")'
     """
     cur.execute(sql_stmt)
     return cur.fetchall()
@@ -530,7 +531,7 @@ def update_member(request=None):
 # Push log event into database
 def insert_log_event(request=None):
     id = request.form['ID']
-    badge_hex =  request.form['badge']
+    rfid_token_hex =  request.form['badge']
     swipe_status = request.form['result']
     
     # Default Stripe Id
@@ -554,8 +555,8 @@ def insert_log_event(request=None):
     if member_is_in_good_standing() == False and stripe_id != 'NA':
         send_payment_alert_eSMTP(stripe_id)
 
-    sql_stmt = 'insert into event_log (stripe_id, badge_hex, event_type) values (%s,%s,%s)'
-    cur.execute(sql_stmt,(stripe_id,badge_hex,event_type))
+    sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type) values (%s,%s,%s)'
+    cur.execute(sql_stmt,(stripe_id,rfid_token_hex,event_type))
     db.commit()
 
 # Get unbounded event logs
@@ -567,7 +568,7 @@ def get_event_log():
         select 
             event_log.event_id,
             event_log.stripe_id,
-            event_log.badge_hex,
+            event_log.rfid_token_hex,
             event_log.created_on,
             event_log.event_type,
             members.full_name
@@ -1059,6 +1060,12 @@ def eventlog_landing():
 @login_required
 def reactivate_member():
     return render_template('reactivate.html', entries=get_inactive_members())
+
+@app.route('/admin/reactivate', methods=['POST'])
+@login_required
+def reactivate_member_post():
+    stripe_id = request.form.get('stripe_id')
+    return redirect('/member/' + stripe_id + '/edit')
 
 @app.route('/admin/discordroles', methods=['GET'])
 @login_required
