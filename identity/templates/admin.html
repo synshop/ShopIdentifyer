@@ -68,7 +68,7 @@
 <h2>There are currently {{entries|length}} Active Members at SYN Shop</h2>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Full Name</th><th>Stripe Email</th><th>Is Vetted?</th><th>Payment Status</th></tr>
+    <tr><th>Full Name</th><th>Is Vetted?</th><th>Subscription Plan</th><th>Last Payment Status</th></tr>
     </thead>
     <tbody>
     {% for entry in entries %}
@@ -78,22 +78,23 @@
         <tr>
       {% endif %}
         <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td>
-        <td>{{ entry[6] }}</td>
 
         {% if entry[3] == "NOT VETTED" %}
-            <td>{{ entry[3] }}</td>
+          <td>{{ entry[3] }}</td>
         {% else %}
-            {% if entry[5] == None %}
-                <td>VETTED</td>
-            {% else %}
-                <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
-            {% endif %}
+          {% if entry[5] == None %}
+            <!-- Member is vetted but no vetted form on file -->
+            <td>VETTED</td>
+          {% else %}
+            <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
+          {% endif %}
         {% endif %}
 
-        {% if entry[7] == "past_due" %}
-          <td>PAST DUE</td>
+        <td>{{ entry[8] }}</td>
+        {% if entry[9] == None %}
+        <td>N / A</td>
         {% else %}
-          <td>ACTIVE</td>
+        <td>{{ entry[9].upper() }}</td>
         {% endif %}
 
     </tr>

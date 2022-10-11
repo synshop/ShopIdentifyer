@@ -155,23 +155,54 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Send alert eSMTP about a member swiping in
+# Send alert email about a member swiping in
 # but is not in good standing
-def send_payment_alert_eSMTP(stripe_id = None):
-    print("eSMTP sent")
+def send_payment_alert_email(sub_id=None):
+    stripe_info = identity.stripe.get_realtime_stripe_info(sub_id)
+    member = get_member(stripe_info['stripe_id'])
+    
+    email_body_data = (
+        member['full_name'], 
+        stripe_info['stripe_subscription_product'],
+        stripe_info['stripe_last_payment_status']
+    )
 
-    """
-    if conf.eSMTP_send:
-        # Create the message to send
-        msg = ESMTPMessage()
-        msg["to"] = ""
-        msg["from"] = ""
-        msg["Subject"] = "hello, world"
-        msg.set_content()
+    email_subject = "DOOR ACCESS ALERT: %s swiped in but has a Stripe issue"
+    email_body = """
+    The following member swiped in but their Stripe status is delinquent
+    or in a Paused membership state:
+
+    Name:
+    %s
+    
+    Stripe Subscription:
+    %s
+    
+    Last Payment Status:
+    %s
+
+    """  % email_body_data
+
+    if config.SMTP_SEND_EMAIL:
+        app.logger.info("Sending alert email regading a delinquent door swipe")
+        msg = EmailMessage()
+        msg["to"] = config.SMTP_ALERT_TO
+        msg["from"] = config.SMTP_ALERT_FROM
+        msg["Subject"] = email_subject
+        msg.set_content(email_body)
         with smtplib.SMTP_SSL(config.SMTP_SERVER, config.SMTP_PORT) as smtp:
             smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             smtp.send_message(msg)
-    """
+    else:
+        log_message = "[EMAIL DISABLED] - Logging swipe event for delinquent member %s" % (stripe_info['stripe_id'],)
+        app.logger.info(log_message) 
+
+# Send alert email about a rfid token swiping in
+# but is not assigned to a member in the system
+def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
+    log_message = "[EMAIL DISABLED] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
+    app.logger.info(log_message)
+
 
 # Check to see if a user is able to login and make changes to the system
 def member_is_admin(stripe_id=None):
@@ -205,9 +236,11 @@ def member_has_authorized_rfid(stripe_id=None):
     except:
         return False
 
-# Returns True is user's payment status is OK
-def member_is_in_good_standing(stripe_id=None):
-    return False
+# FOR TESTING -- Returns True if a user's payment status is OK
+def t_member_is_in_good_standing(stripe_id=None):
+    with app.app_context():
+        subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
+        print(identity.stripe.member_is_in_good_standing(subscription_id))
 
 # Allow admin users to change their passwords
 def admin_change_password(stripe_id=None,password=None):
@@ -305,7 +338,7 @@ def get_unassigned_rfid_tokens_from_event_log():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
-# Get a list of users to assign a RFID
+# Get a list of users to assign a RFID (need to be VETTED and ACTIVE)
 def get_members_for_rfid_association():
     db = get_db()
     cur = db.cursor()
@@ -552,12 +585,17 @@ def insert_log_event(request=None):
     if (swipe_status == "denied"):
         event_type = "ACCESS_DENY"
 
-    if member_is_in_good_standing() == False and stripe_id != 'NA':
-        send_payment_alert_eSMTP(stripe_id)
-
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type) values (%s,%s,%s)'
     cur.execute(sql_stmt,(stripe_id,rfid_token_hex,event_type))
     db.commit()
+
+    if stripe_id == 'NA':
+        send_na_stripe_id_alert_email(rfid_token_hex)
+    else:
+        sub_id = get_subscription_id_from_stripe_cache(stripe_id)
+
+        if identity.stripe.member_is_in_good_standing(sub_id) == False:
+            send_payment_alert_email(sub_id)
 
 # Get unbounded event logs
 def get_event_log():
@@ -641,7 +679,9 @@ def get_admin_view():
             m.liability_waiver, 
             m.vetted_membership_form, 
             s.stripe_email,
-            s.stripe_subscription_status
+            s.stripe_subscription_status,
+            s.stripe_subscription_product,
+            s.stripe_last_payment_status
         FROM 
             members m, stripe_cache s
         WHERE

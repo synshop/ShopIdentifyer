@@ -1,34 +1,11 @@
 import stripe, time
 from identity import app
 
-IN_GOOD_STANDING = "In Good Standing"
-PAST_DUE = "Past Due"
-DELINQUENT = "Delinquent"
-NOT_ACTIVE = "Not Active"
-NO_SUBSCRIPTION_PLAN = "No Subscription Plan"
+PAYMENT_SUCCEEDED = "succeeded"
+ACTIVE_SUBSCRIPTION = "active"
+PAUSE_MEMBERSHIP = "Pause Membership"
 
 STRIPE_VERSION = "2022-08-01"
-
-# Delinquent email template
-D_EMAIL_TEMPLATE = """
-
-<!DOCTYPE html>
-<html>
-
-<body>
-<img src="https://synshop.org/sites/default/files/logo290.png">
-<h2>Oops, it looks like your membership payments are failing.</h2>
-
-<p>We'll still let you in the door, but please correct this as soon as possible.</p>
-
-<p>You can modify / adjust your payment type by going here: <a href="#">https://synshop.org/user/%s/</a></p>
-
-<p>Also, if you have any questions, please reply back to this email and we will do our best to help you.</p>
-
-</body>
-</html>
-
-"""
 
 def _get_customer_attributes(subscription):
 
@@ -95,7 +72,15 @@ def get_realtime_stripe_info(subscription_id=None):
 
     return _get_customer_attributes(subscription)
 
+def member_is_in_good_standing(subscription_id=None):
+    member_stripe_info = get_realtime_stripe_info(subscription_id)
+    payment_status = member_stripe_info['stripe_last_payment_status']
+    subscription_status = member_stripe_info['stripe_subscription_status']
+    subscription_product = member_stripe_info['stripe_subscription_product']
 
-
-
-    
+    if payment_status == PAYMENT_SUCCEEDED and \
+        subscription_status == ACTIVE_SUBSCRIPTION and \
+        subscription_product != PAUSE_MEMBERSHIP:
+        return True
+    else:
+        return False
