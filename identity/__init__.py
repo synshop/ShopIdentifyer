@@ -200,9 +200,8 @@ def send_payment_alert_email(sub_id=None):
 # Send alert email about a rfid token swiping in
 # but is not assigned to a member in the system
 def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
-    log_message = "[EMAIL DISABLED] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
+    log_message = "[EMAIL DISABLED-TODO] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
     app.logger.info(log_message)
-
 
 # Check to see if a user is able to login and make changes to the system
 def member_is_admin(stripe_id=None):
