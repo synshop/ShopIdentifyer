@@ -167,7 +167,7 @@ def send_payment_alert_email(sub_id=None):
         stripe_info['stripe_last_payment_status']
     )
 
-    email_subject = "DOOR ACCESS ALERT: %s swiped in but has a Stripe issue"
+    email_subject = "DOOR ACCESS ALERT: %s swiped in but has a Stripe issue" % (member['full_name'],)
     email_body = """
     The following member swiped in but their Stripe status is delinquent
     or in a Paused membership state:
@@ -184,7 +184,7 @@ def send_payment_alert_email(sub_id=None):
     """  % email_body_data
 
     if config.SMTP_SEND_EMAIL:
-        app.logger.info("Sending alert email regading a delinquent door swipe")
+        app.logger.info("Sending alert email regarding a delinquent door swipe")
         msg = EmailMessage()
         msg["to"] = config.SMTP_ALERT_TO
         msg["from"] = config.SMTP_ALERT_FROM
