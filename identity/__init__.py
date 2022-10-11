@@ -488,7 +488,9 @@ def get_member(stripe_id=None):
     member["discord_handle"] = entry[13]
     member["locker_num"] = entry[14]
     member["led_color"] = entry[15]
-
+    member["door_access"] = member_has_authorized_rfid(stripe_id)
+    member["rfid_tokens"] = get_member_rfid_tokens(stripe_id)
+    
     return member
 
 # Update an existing member 'object'
@@ -697,9 +699,14 @@ def get_admin_view():
             s.stripe_email,
             s.stripe_subscription_status,
             s.stripe_subscription_product,
-            s.stripe_last_payment_status
+            s.stripe_last_payment_status,
+            r.rfid_token_hex
         FROM 
-            members m, stripe_cache s
+            members m
+        JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        LEFT JOIN
+            rfid_tokens r on m.stripe_id = r.stripe_id
         WHERE
             m.member_status = "ACTIVE"
         AND

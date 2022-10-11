@@ -99,8 +99,8 @@ body {
         {% else %}
         <tr><th>Payment Status:</th><td>{{ member.stripe_status }}</td></tr>
         {% endif %}
-        <tr><th style="width:200px;">Contact #</th><td>{{ member.mobile }}</td></tr>
-        <tr><th style="width:200px;">Door Access</th><td>{{ member.door_access }}</td></tr>
+        <tr><th style="width:200px;">Contact #:</th><td>{{ member.mobile }}</td></tr>
+        <tr><th style="width:200px;">Has RFID Tokens:</th><td>{{ member.door_access }}</td></tr>
       </table>
 
     </div>

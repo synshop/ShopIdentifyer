@@ -68,7 +68,13 @@
 <h2>There are currently {{entries|length}} Active Members at SYN Shop</h2>
 <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Full Name</th><th>Is Vetted?</th><th>Subscription Plan</th><th>Last Payment Status</th></tr>
+    <tr>
+      <th>Full Name</th>
+      <th>Is Vetted?</th>
+      <th>Subscription Plan</th>
+      <th>Last Payment Status</th>
+      <th>Has RFIDs</th>
+    </tr>
     </thead>
     <tbody>
     {% for entry in entries %}
@@ -96,6 +102,13 @@
         {% else %}
         <td>{{ entry[9].upper() }}</td>
         {% endif %}
+        <td>
+          {% if entry[10] != None %}
+          TRUE
+          {% else %}
+          FALSE
+          {% endif %}
+        </td>
 
     </tr>
     {% else %}
