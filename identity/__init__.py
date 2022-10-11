@@ -158,6 +158,7 @@ def login_required(f):
 # Send alert email about a member swiping in
 # but is not in good standing
 def send_payment_alert_email(sub_id=None):
+    
     stripe_info = identity.stripe.get_realtime_stripe_info(sub_id)
     member = get_member(stripe_info['stripe_id'])
     
@@ -167,7 +168,7 @@ def send_payment_alert_email(sub_id=None):
         stripe_info['stripe_last_payment_status']
     )
 
-    email_subject = "DOOR ACCESS ALERT: %s swiped in but has a Stripe issue" % (member['full_name'],)
+    email_subject = "[DOOR ACCESS ALERT] - %s swiped in but has a Stripe issue" % (member['full_name'],)
     email_body = """
     The following member swiped in but their Stripe status is delinquent
     or in a Paused membership state:
@@ -200,8 +201,24 @@ def send_payment_alert_email(sub_id=None):
 # Send alert email about a rfid token swiping in
 # but is not assigned to a member in the system
 def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
-    log_message = "[EMAIL DISABLED-TODO] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
-    app.logger.info(log_message)
+
+    if config.SMTP_SEND_EMAIL:
+        app.logger.info("Sending alert email regarding a delinquent door swipe")
+
+        email_subject = "[UNASSIGNED RFID ALERT] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
+        email_body = "NO STRIPE INFORMATION IS AVAILABLE FOR RFID TOKEN %s" % (rfid_id_token_hex,)
+
+        msg = EmailMessage()
+        msg["to"] = config.SMTP_ALERT_TO
+        msg["from"] = config.SMTP_ALERT_FROM
+        msg["Subject"] = email_subject
+        msg.set_content(email_body)
+        with smtplib.SMTP_SSL(config.SMTP_SERVER, config.SMTP_PORT) as smtp:
+            smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
+            smtp.send_message(msg)
+    else:
+        log_message = "[EMAIL DISABLED] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
+        app.logger.info(log_message)
 
 # Check to see if a user is able to login and make changes to the system
 def member_is_admin(stripe_id=None):
