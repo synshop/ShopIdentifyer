@@ -72,6 +72,7 @@
       <th>Full Name</th>
       <th>Is Vetted?</th>
       <th>Subscription Plan</th>
+      <th>Subscription Status</th>
       <th>Last Payment Status</th>
       <th>Has RFIDs</th>
     </tr>
@@ -96,7 +97,8 @@
           {% endif %}
         {% endif %}
 
-        <td>{{ entry[8] }}</td>
+        <td>{{ entry[8].upper() }}</td>
+        <td>{{ entry[7].upper() }}</td>
         {% if entry[9] == None %}
         <td>N / A</td>
         {% else %}
