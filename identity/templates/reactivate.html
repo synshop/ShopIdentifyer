@@ -49,7 +49,7 @@
 <div class="container">
 
   <div class="alert alert-info" role="alert">
-    Choose a user to reactivate.
+    Choose a user to reactivate. Please note that only members with active Stripe subscriptions can be reactivated. 
   </div>
   <form method="POST">
     
@@ -57,18 +57,35 @@
     <thead>
     <tr>
         <th>Reactivate</th>
-        <th>Name</th>
-        <th>Account Created</th>
-        <th>Account Last Updated</th>
+        <th>Full Name</th>
+        <th>Is Vetted?</th>
+        <th>Subscription Plan</th>
+        <th>Subscription Status</th>
+        <th>Last Payment Status</th>
+        <th>Has RFIDs</th>
     </tr>
     </thead>
     <tbody>
-    {% for entry in entries %}
+    {% for entry in inactive_members %}
     <tr>
+      {% if entry[4] == None and entry[5] == None %}
+      <td></td>
+      {% else %}
       <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
-      <td>{{ entry[1] }}</td>      
-      <td>{{ entry[2] }}</td>
+      {% endif %}
+      <td>{{ entry[2] }}</td>      
       <td>{{ entry[3] }}</td>
+      <td>{{ entry[4] | upper }}</td>
+      <td>{{ entry[5] | upper }}</td>
+      <td>{{ entry[6] | upper }}</td>
+      <td>
+        {% if entry[7] != None %}
+        TRUE
+        {% else %}
+        FALSE
+        {% endif %}
+      </td>
+
     </tr>
     {% endfor %}
 </tbody>

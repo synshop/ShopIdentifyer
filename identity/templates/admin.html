@@ -79,7 +79,7 @@
     </thead>
     <tbody>
     {% for entry in entries %}
-      {% if entry[7] == "past_due" %}
+      {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None %}
         <tr class="warning">
       {% else %}
         <tr>
@@ -96,9 +96,19 @@
             <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
           {% endif %}
         {% endif %}
-
+        
+        {% if entry[8] == None %}
+        <td>NO SUBSCRIPTION PLAN</td>
+        {% else %}
         <td>{{ entry[8].upper() }}</td>
+        {% endif %}
+        
+        {% if entry[7] == None %}
+        <td>NOT AVAILABLE</td>
+        {% else %}
         <td>{{ entry[7].upper() }}</td>
+        {% endif %}
+        
         {% if entry[9] == None %}
         <td>N / A</td>
         {% else %}

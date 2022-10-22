@@ -44,6 +44,7 @@ app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_P
 app.config['STRIPE_CACHE_REFRESH_CRON'] = config.STRIPE_CACHE_REFRESH_CRON
 app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] = config.STRIPE_CACHE_REFRESH_REACHBACK_MIN
 app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
+app.config['STRIPE_CACHE_DEACTIVATE_CRON'] = config.STRIPE_CACHE_DEACTIVATE_CRON
 app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME,ENCRYPTION_KEY)
 app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD,ENCRYPTION_KEY)
 
@@ -141,6 +142,30 @@ def rebuild_stripe_cache():
 
     app.logger.info("finished rebuilding stripe cache")
 
+# Archive (set m.status to INACTIVE) for members w/o a subscription
+# and send a nightly email report
+@s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_DEACTIVATE_CRON']))
+def archive_members_no_sub():
+    with app.app_context():
+        
+        app.logger.info("[ARCHIVE MEMBERS] - Starting archiving process...")
+        db = get_db()
+        cur = db.cursor()
+        sql_stmt = 'select stripe_id, full_name, discord_handle, created_on from members where stripe_id not in (select stripe_id from stripe_cache) and member_status = "ACTIVE"'
+        cur.execute(sql_stmt)
+        members = cur.fetchall()
+
+        if len(members) != 0:
+            for member in members:
+                send_member_deactivation_email(member)
+        else:
+            app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
+            
+            # Do the deactivation
+            sql_stmt = 'update members set member_status = "INACTIVE" where stripe_id not in (select stripe_id from stripe_cache)'
+            cur.execute(sql_stmt)
+            db.commit()
+            
 if config.SCHEDULER_ENABLED == True:
     s1.start()
 
@@ -154,6 +179,42 @@ def login_required(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated_function
+
+# Send a nightly report 
+def send_member_deactivation_email(member):
+
+    has_tokens = member_has_authorized_rfid(member[0])
+
+    email_subject = "[ARCHIVING MEMBER] - %s no longer has a Stripe subscription" % (member[1],)
+    email_body = """
+    
+    Name:
+    %s
+    
+    Discord Handle:
+    %s
+    
+    Account Created On:
+    %s
+
+    Has RFID Token(s)
+    %s
+
+    """  % (member[1],member[2],member[3], has_tokens)
+
+    if config.SMTP_SEND_EMAIL:
+        app.logger.info("Sending alert email about archiving a member")
+        msg = EmailMessage()
+        msg["to"] = config.SMTP_ALERT_TO
+        msg["from"] = config.SMTP_ALERT_FROM
+        msg["Subject"] = email_subject
+        msg.set_content(email_body)
+        with smtplib.SMTP_SSL(config.SMTP_SERVER, config.SMTP_PORT) as smtp:
+            smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
+            smtp.send_message(msg)
+    else:
+        log_message = "[ARCHIVING MEMBERS][EMAIL DISABLED] - Deactivating %s in the system, Has RFIDs = %s" % (member[0], has_tokens)
+        app.logger.info(log_message)
 
 # Send alert email about a member swiping in
 # but is not in good standing
@@ -374,12 +435,31 @@ def get_members_with_rfid_tokens():
 def get_inactive_members():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select stripe_id, full_name, created_on, changed_on from members where member_status = 'INACTIVE'"
+    sql_stmt = """
+            SELECT 
+            m.stripe_id,
+            s.stripe_subscription_id,
+            m.full_name,
+            m.is_vetted,
+            s.stripe_subscription_product,
+            s.stripe_subscription_status,
+            s.stripe_last_payment_status,
+            r.rfid_token_hex
+        FROM 
+            members m
+        LEFT JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        LEFT JOIN
+            rfid_tokens r on m.stripe_id = r.stripe_id
+        WHERE
+            m.member_status = "INACTIVE"
+        ORDER BY
+            m.is_vetted desc
+    """
     cur.execute(sql_stmt)
     return cur.fetchall() 
 
-# Get a list of members who are marked as inactive but have
-# an RFID attached to their account
+# NOT USED
 def get_inactive_members_with_rfid_tokens():
     db = get_db()
     cur = db.cursor()
@@ -714,6 +794,32 @@ def get_admin_view():
         ORDER BY
             m.is_vetted desc
     """
+
+    stmt = """
+                SELECT 
+            m.stripe_id,
+            s.stripe_subscription_id,
+            m.full_name,
+            m.is_vetted, 
+            m.liability_waiver, 
+            m.vetted_membership_form, 
+            s.stripe_email,
+            s.stripe_subscription_status,
+            s.stripe_subscription_product,
+            s.stripe_last_payment_status,
+            r.rfid_token_hex
+        FROM 
+            members m
+        LEFT JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        LEFT JOIN
+            rfid_tokens r on m.stripe_id = r.stripe_id
+        WHERE
+            m.member_status = "ACTIVE"
+        ORDER BY
+            m.is_vetted desc
+    """
+
     cur.execute(stmt)
     return cur.fetchall()
 
@@ -991,7 +1097,7 @@ def logout():
 @app.route('/admin')
 @login_required
 def admin():
-    return render_template('admin.html',entries=get_admin_view(), stats=get_public_stats())
+    return render_template('admin.html', entries=get_admin_view())
 
 @app.route('/admin/onboard')
 def admin_onboard():
@@ -1064,7 +1170,7 @@ def changepassword(stripe_id):
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
 def door_access_landing():
-    return render_template('door_access.html',entries=get_unassigned_rfid_tokens(), inactive_members=get_inactive_members_with_rfid_tokens())
+    return render_template('door_access.html',entries=get_unassigned_rfid_tokens())
 
 @app.route('/admin/dooraccess/newtoken', methods=['GET'])
 @login_required
@@ -1122,7 +1228,7 @@ def eventlog_landing():
 @app.route('/admin/reactivate', methods=['GET'])
 @login_required
 def reactivate_member():
-    return render_template('reactivate.html', entries=get_inactive_members())
+    return render_template('reactivate.html',inactive_members=get_inactive_members())
 
 @app.route('/admin/reactivate', methods=['POST'])
 @login_required
