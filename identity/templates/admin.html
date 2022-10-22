@@ -98,29 +98,24 @@
         {% endif %}
         
         {% if entry[8] == None %}
-        <td>NO SUBSCRIPTION PLAN</td>
+          <td>NO SUBSCRIPTION PLAN</td>
         {% else %}
-        <td>{{ entry[8].upper() }}</td>
+          <td>{{ entry[8].upper() }}</td>
         {% endif %}
         
         {% if entry[7] == None %}
-        <td>NOT AVAILABLE</td>
+          <td>NOT AVAILABLE</td>
         {% else %}
-        <td>{{ entry[7].upper() }}</td>
+          <td>{{ entry[7].upper() }}</td>
         {% endif %}
         
         {% if entry[9] == None %}
-        <td>N / A</td>
+          <td>N / A</td>
         {% else %}
-        <td>{{ entry[9].upper() }}</td>
+          <td>{{ entry[9].upper() }}</td>
         {% endif %}
-        <td>
-          {% if entry[10] != None %}
-          TRUE
-          {% else %}
-          FALSE
-          {% endif %}
-        </td>
+
+        <td>{{ entry[10] | upper }}</td>
 
     </tr>
     {% else %}

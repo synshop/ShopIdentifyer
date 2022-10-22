@@ -78,14 +78,7 @@
       <td>{{ entry[4] | upper }}</td>
       <td>{{ entry[5] | upper }}</td>
       <td>{{ entry[6] | upper }}</td>
-      <td>
-        {% if entry[7] != None %}
-        TRUE
-        {% else %}
-        FALSE
-        {% endif %}
-      </td>
-
+      <td>{{ entry[7] | upper }}</td>
     </tr>
     {% endfor %}
 </tbody>

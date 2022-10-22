@@ -445,21 +445,30 @@ def get_inactive_members():
             m.is_vetted,
             s.stripe_subscription_product,
             s.stripe_subscription_status,
-            s.stripe_last_payment_status,
-            r.rfid_token_hex
+            s.stripe_last_payment_status
         FROM 
             members m
         LEFT JOIN
             stripe_cache s on s.stripe_id = m.stripe_id
-        LEFT JOIN
-            rfid_tokens r on m.stripe_id = r.stripe_id
         WHERE
             m.member_status = "INACTIVE"
         ORDER BY
             m.is_vetted desc
     """
+    
     cur.execute(sql_stmt)
-    return cur.fetchall() 
+    members = cur.fetchall()
+
+    ret_members = []
+
+    for member in members:
+        x = list(member)
+        has_rfid = member_has_authorized_rfid(member[0])
+        x.append(has_rfid)
+        ret_members.append(x)
+        
+    return ret_members
+
 
 # NOT USED
 def get_inactive_members_with_rfid_tokens():
@@ -781,14 +790,11 @@ def get_admin_view():
             s.stripe_email,
             s.stripe_subscription_status,
             s.stripe_subscription_product,
-            s.stripe_last_payment_status,
-            r.rfid_token_hex
+            s.stripe_last_payment_status
         FROM 
             members m
         JOIN
             stripe_cache s on s.stripe_id = m.stripe_id
-        LEFT JOIN
-            rfid_tokens r on m.stripe_id = r.stripe_id
         WHERE
             m.member_status = "ACTIVE"
         AND
@@ -796,34 +802,18 @@ def get_admin_view():
         ORDER BY
             m.is_vetted desc
     """
-
-    stmt = """
-                SELECT 
-            m.stripe_id,
-            s.stripe_subscription_id,
-            m.full_name,
-            m.is_vetted, 
-            m.liability_waiver, 
-            m.vetted_membership_form, 
-            s.stripe_email,
-            s.stripe_subscription_status,
-            s.stripe_subscription_product,
-            s.stripe_last_payment_status,
-            r.rfid_token_hex
-        FROM 
-            members m
-        LEFT JOIN
-            stripe_cache s on s.stripe_id = m.stripe_id
-        LEFT JOIN
-            rfid_tokens r on m.stripe_id = r.stripe_id
-        WHERE
-            m.member_status = "ACTIVE"
-        ORDER BY
-            m.is_vetted desc
-    """
-
     cur.execute(stmt)
-    return cur.fetchall()
+    members = cur.fetchall()
+
+    ret_members = []
+
+    for member in members:
+        x = list(member)
+        has_rfid = member_has_authorized_rfid(member[0])
+        x.append(has_rfid)
+        ret_members.append(x)
+        
+    return ret_members
 
 # Onboarding process - this attempts to pre-populate some fields 
 # when setting up a new user.
