@@ -3,6 +3,5 @@
 cd /opt/ShopIdentifyer
 source /opt/ShopIdentifyer/activate
 
-export ENCRYPTION_KEY="MyVoiceIsMyPassport";
 gunicorn --bind 127.0.0.1:8000 --log-file /tmp/gunicorn.log --pid /tmp/gunicorn.pid identity:app
 
