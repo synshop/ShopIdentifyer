@@ -156,16 +156,18 @@ def archive_members_no_sub():
         members = cur.fetchall()
 
         if len(members) != 0:
+        
             for member in members:
                 send_member_deactivation_email(member)
-        else:
-            app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
-            
+                
             # Do the deactivation
             sql_stmt = 'update members set member_status = "INACTIVE" where stripe_id not in (select stripe_id from stripe_cache)'
             cur.execute(sql_stmt)
             db.commit()
-            
+
+        else:
+            app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
+                        
 if config.SCHEDULER_ENABLED == True:
     s1.start()
 
