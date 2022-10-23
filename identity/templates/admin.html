@@ -79,7 +79,7 @@
     </thead>
     <tbody>
     {% for entry in entries %}
-      {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None %}
+      {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None or entry[8] | upper == "PAUSE MEMBERSHIP" %}
         <tr class="warning">
       {% else %}
         <tr>
@@ -100,7 +100,7 @@
         {% if entry[8] == None %}
           <td>NO SUBSCRIPTION PLAN</td>
         {% else %}
-          <td>{{ entry[8].upper() }}</td>
+          <td>{{ entry[8] | upper }}</td>
         {% endif %}
         
         {% if entry[7] == None %}
