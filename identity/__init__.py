@@ -391,7 +391,7 @@ def assign_rfid_token_to_member(eb_id=None,stripe_id=None):
 def unassign_rfid_token_from_member(rfid_id_token_hex):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED' where rfid_token_hex = %s"
+    sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where rfid_token_hex = %s"
     cur.execute(sql_stmt, (rfid_id_token_hex,))
     db.commit()
 
@@ -429,7 +429,7 @@ def get_members_for_rfid_association():
 def get_members_with_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, r.rfid_token_hex from members m, rfid_tokens r where m.stripe_id = r.stripe_id order by m.full_name"
+    sql_stmt = "select m.stripe_id, m.full_name, r.rfid_token_hex, r.rfid_token_comment from members m, rfid_tokens r where m.stripe_id = r.stripe_id order by m.full_name"
     cur.execute(sql_stmt)
     return cur.fetchall()
 

@@ -57,16 +57,19 @@
     <thead>
     <tr>
         <th style="text-align:center;">Unassign</th>
-        <th>RFID Token</th>
         <th>Currently Assigned To</th>
+        <th>RFID Token</th>
+        <th>RFID Token Comment</th>
+        
     </tr>
     </thead>
     <tbody>
     {% for entry in entries %}
     <tr>
       <td style="text-align:center;"><input type="radio" name="rfid_id_token_hex" id="entry[2]" value="{{ entry[2] }}"</td>
-      <td>{{ entry[2] }}</td>      
       <td>{{ entry[1] }}</td>
+      <td>{{ entry[2] }}</td>
+      <td>{{ entry[3] }}</td>
     </tr>
     {% endfor %}
 </tbody>
