@@ -1157,7 +1157,7 @@ def changepassword(stripe_id):
 
     if request.method == "POST":
         x = admin_change_password(stripe_id,request.form.get('password1'),)
-        return redirect(url_for('index',_scheme='https',_external=True))
+        return redirect(url_for('index'))
 
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
