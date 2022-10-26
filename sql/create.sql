@@ -32,7 +32,8 @@ create table shopidentifyer.event_log (
   rfid_token_hex varchar(255) NOT NULL,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   event_type ENUM('DOOR_SWIPE','BADGE_SWIPE','MANUAL_SWIPE','ACCESS_ATTEMPT','ACCESS_GRANT','ACCESS_DENY','MISSING_BADGE','MISSING_ACCOUNT') DEFAULT 'BADGE_SWIPE',
-  reader_id int
+  reader_id int,
+  rfid_token_comment varchar(255)
 );
 
 create table shopidentifyer.stripe_cache (
@@ -59,5 +60,6 @@ CREATE TABLE shopidentifyer.rfid_tokens (
   stripe_id varchar(255),
   rfid_token_hex varchar(255) NOT NULL PRIMARY KEY,
   status ENUM('ASSIGNED','UNASSIGNED','LOST','BROKEN') NOT NULL DEFAULT "UNASSIGNED",
-  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  rfid_token_comment varchar(255)
 );

@@ -54,7 +54,14 @@
 
   <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr><th>Event ID</th><th>Timestamp</th><th>Member Name</th><th>Badge Hex</th><th>Event Status</th></tr>
+    <tr>
+      <th>Event ID</th>
+      <th>Timestamp</th>
+      <th>Member Name</th>
+      <th>Comment</th>
+      <th>Badge Hex</th>
+      <th>Event Status</th>
+    </tr>
     </thead>
     <tbody>
     
@@ -67,6 +74,7 @@
       {% else %}
       <td><a href="/member/{{ entry[1] }}">{{ entry[5] }}</a></td>
       {% endif %}
+      <td>{{ entry[6] | upper }}</td>
       <td>{{ entry[2]}}</td>
       <td>{{ entry[4] }}</td>
     </tr>

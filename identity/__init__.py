@@ -372,11 +372,11 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
 
 # Mnaully insert a new RFID token into the system 
-def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None):
+def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY"):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex) values (%s,%s)"
-    cur.execute(sql_stmt, (eb_id,rfid_token_hex))
+    sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex,rfid_token_comment) values (%s,%s,%s)"
+    cur.execute(sql_stmt, (eb_id,rfid_token_hex,rfid_token_comment))
     db.commit()
 
 # Attach a RFID token to a member
@@ -468,7 +468,6 @@ def get_inactive_members():
         ret_members.append(x)
         
     return ret_members
-
 
 # NOT USED
 def get_inactive_members_with_rfid_tokens():
@@ -681,9 +680,11 @@ def insert_log_event(request=None):
 
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select stripe_id from rfid_tokens where eb_id = %s"
+    sql_stmt = "select stripe_id, rfid_token_comment from rfid_tokens where eb_id = %s"
     cur.execute(sql_stmt,(id,))
     entries = cur.fetchall()
+
+    rfid_token_comment = entries[0][1]
 
     if len(entries) != 0:
         stripe_id = entries[0][0]
@@ -693,9 +694,9 @@ def insert_log_event(request=None):
     
     if (swipe_status == "denied"):
         event_type = "ACCESS_DENY"
-
-    sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type) values (%s,%s,%s)'
-    cur.execute(sql_stmt,(stripe_id,rfid_token_hex,event_type))
+    
+    sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
+    cur.execute(sql_stmt,(stripe_id,rfid_token_hex,event_type,rfid_token_comment))
     db.commit()
 
     if stripe_id == 'NA':
@@ -718,12 +719,15 @@ def get_event_log():
             event_log.rfid_token_hex,
             event_log.created_on,
             event_log.event_type,
-            members.full_name
+            members.full_name,
+            event_log.rfid_token_comment
         from 
             event_log
         LEFT JOIN members
-        ON event_log.stripe_id = members.stripe_id
-        ORDER BY event_log.event_id desc
+        ON
+            event_log.stripe_id = members.stripe_id
+        ORDER BY 
+            event_log.event_id desc
     """
     cur.execute(sql_stmt)
     return cur.fetchall()
@@ -1172,7 +1176,7 @@ def door_access_new_token():
 @app.route('/admin/dooraccess/newtoken', methods=['POST'])
 @login_required
 def door_access_new_token_post():
-    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'])
+    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'])
     return redirect(url_for('door_access_landing'))
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
