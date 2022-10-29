@@ -6,7 +6,7 @@ from functools import wraps
 from email.message import EmailMessage
 
 try:
-    import identity.config
+    import identity.config as config
 except Exception as e:
     config_error = """
         You need to create/install a <project-home>/identity/config.py file and populate it with some values.
@@ -582,6 +582,20 @@ def get_member(stripe_id=None):
     member["rfid_tokens"] = get_member_rfid_tokens(stripe_id)
     
     return member
+
+# NOT USED YET - Fetch a member's discord roles
+def get_member_discord_roles(stripe_id=None):
+    sql_stmt = """
+        select 
+        m.stripe_id, 
+        m.full_name, 
+        d.role_name 
+    from 
+        members m, discord_roles d, member_discord_roles mdr 
+    where 
+        (m.stripe_id = mdr.stripe_id and d.role_id = mdr.role_id) and m.stripe_id ="";
+    """
+    return False
 
 # Update an existing member 'object'
 def update_member(request=None):

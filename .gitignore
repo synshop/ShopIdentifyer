@@ -4,3 +4,6 @@
 config.py
 .venv*
 start_gunicorn.sh
+discord_testing/*
+discord-testing/discord_token.py
+discord-testing/tester.py

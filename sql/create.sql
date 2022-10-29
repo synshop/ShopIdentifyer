@@ -63,3 +63,13 @@ CREATE TABLE shopidentifyer.rfid_tokens (
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   rfid_token_comment varchar(255)
 );
+
+create table discord_roles (
+	role_id varchar(255),
+    role_name varchar(255)
+);
+
+create table member_discord_roles (
+	stripe_id varchar(255),
+    role_id varchar(255)
+);
