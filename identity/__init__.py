@@ -4,6 +4,7 @@ from PIL import Image as PILImage
 from PIL import ImageFilter, ImageEnhance
 from functools import wraps
 from email.message import EmailMessage
+import requests, urllib
 
 try:
     import identity.config as config
@@ -47,11 +48,13 @@ app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
 app.config['STRIPE_CACHE_DEACTIVATE_CRON'] = config.STRIPE_CACHE_DEACTIVATE_CRON
 app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME,ENCRYPTION_KEY)
 app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD,ENCRYPTION_KEY)
+app.config['DISCORD_BOT_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_DISCORD_BOT_TOKEN,ENCRYPTION_KEY)
 
 # Plaintext Configuration
 app.config['SMTP_SERVER'] = config.SMTP_SERVER
 app.config['SMTP_PORT'] = config.SMTP_PORT
 app.config['LOG_FILE'] = config.LOG_FILE
+app.config['DISCORD_GUILD_ID'] = config.DISCORD_GUILD_ID
 
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=12)
 
@@ -165,6 +168,11 @@ def archive_members_no_sub():
             cur.execute(sql_stmt)
             db.commit()
 
+            # Remove Vetted and Paid Member Discord Roles
+            if member[2] != None:
+                discord_id = get_member_discord_id(member['discord_handle'])
+                unassign_discord_role(config.DISCORD_ROLE_VETTED_MEMBER, member)
+                unassign_discord_role(config.DISCORD_ROLE_PAID_MEMBER, member)
         else:
             app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
                         
@@ -371,6 +379,19 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
 
     return cur.fetchall()[0][0]
 
+# Convert a given member's discord handle (username#discrimator) 
+# into their 18 digit discord id
+def get_member_discord_id(discord_handle=None):
+    (username, discriminator) = discord_handle.split("#")
+    encoded_name = urllib.parse.quote(username)
+
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+
+    url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/search?limit=10&query={encoded_name}'
+    result = requests.get(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    return result.json()[0]['user']['id']
+
 # Mnaully insert a new RFID token into the system 
 def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY"):
     db = get_db()
@@ -394,6 +415,14 @@ def unassign_rfid_token_from_member(rfid_id_token_hex):
     sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where rfid_token_hex = %s"
     cur.execute(sql_stmt, (rfid_id_token_hex,))
     db.commit()
+
+# Remove a discord role from a member
+def unassign_discord_role(role_id=None, discord_id=None):
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+    url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
+    result = requests.delete(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    return result
 
 # Get a list of unassigned tokens
 def get_unassigned_rfid_tokens():
@@ -1139,10 +1168,6 @@ def admin_onboard():
             cur.execute(sql_stmt)
             rows = cur.fetchall()
 
-            sql_stmt = "select count(*) from stripe_cache where stripe_subscription_product like '%pause%'"
-            cur.execute(sql_stmt)
-            paused = cur.fetchall()[0][0]
-
             for row in rows:
 
                 x = json.loads(row[3])
@@ -1160,7 +1185,8 @@ def admin_onboard():
                     stripe_subscription_status=row[6])
 
                 entries_x.append(entry_dict)
-            return render_template('onboard.html',entries=entries_x, paused_count=paused)
+                
+            return render_template('onboard.html',entries=entries_x)
         else:
             return redirect('/login?redirect_to=admin_onboard')
     except Exception as e:

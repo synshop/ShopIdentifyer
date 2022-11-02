@@ -65,11 +65,11 @@ CREATE TABLE shopidentifyer.rfid_tokens (
 );
 
 create table discord_roles (
-	role_id varchar(255),
-    role_name varchar(255)
+  role_id bigint primary key,
+  role_name varchar(255)
 );
 
 create table member_discord_roles (
 	stripe_id varchar(255),
-    role_id varchar(255)
+  role_id bigint
 );

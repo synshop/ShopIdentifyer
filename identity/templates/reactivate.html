@@ -68,7 +68,7 @@
     <tbody>
     {% for entry in inactive_members %}
     <tr>
-      {% if entry[4] == None and entry[5] == None %}
+      {% if (entry[4] == None and entry[5] == None) or entry[4] == "Pause Membership" %}
       <td></td>
       {% else %}
       <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
