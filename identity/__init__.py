@@ -53,9 +53,13 @@ app.config['DISCORD_BOT_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_DISCORD_BO
 # Plaintext Configuration
 app.config['SMTP_SERVER'] = config.SMTP_SERVER
 app.config['SMTP_PORT'] = config.SMTP_PORT
-app.config['LOG_FILE'] = config.LOG_FILE
-app.config['DISCORD_GUILD_ID'] = config.DISCORD_GUILD_ID
 
+app.config["DISCORD_MANAGE_ROLES"] = config.DISCORD_MANAGE_ROLES
+app.config['DISCORD_GUILD_ID'] = config.DISCORD_GUILD_ID
+app.config['DISCORD_ROLE_PAID_MEMBER'] = config.DISCORD_ROLE_PAID_MEMBER
+app.config['DISCORD_ROLE_VETTED_MEMBER'] = config.DISCORD_ROLE_VETTED_MEMBER
+
+app.config['LOG_FILE'] = config.LOG_FILE
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=12)
 
 # Logging
@@ -169,13 +173,13 @@ def archive_members_no_sub():
             db.commit()
 
             # Remove Vetted and Paid Member Discord Roles
-            if member[2] != None:
+            if member[2] != None and app.config["DISCORD_MANAGE_ROLES"]:
                 discord_id = get_member_discord_id(member['discord_handle'])
-                unassign_discord_role(config.DISCORD_ROLE_VETTED_MEMBER, member)
-                unassign_discord_role(config.DISCORD_ROLE_PAID_MEMBER, member)
+                unassign_discord_role(app.config['DISCORD_ROLE_PAID_MEMBER'], discord_id)
+                unassign_discord_role(app.config['DISCORD_ROLE_VETTED_MEMBER'], discord_id)
         else:
             app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
-                        
+
 if config.SCHEDULER_ENABLED == True:
     s1.start()
 
@@ -189,6 +193,47 @@ def login_required(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated_function
+
+# Allow admin users to change their passwords
+def admin_change_password(stripe_id=None,password=None):
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
+
+        stmt = "update admin_users set pwd = %s where stripe_id = %s"
+        cur.execute(stmt, (hashed_password, stripe_id,))
+        db.commit()
+        return True
+    except:
+        return False
+
+# Check the password for the user login
+def check_password(username=None, password=None):
+
+    with app.app_context():
+
+        try:
+            db = get_db()
+            cur = db.cursor()
+
+            stmt = "select a.pwd from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
+            cur.execute(stmt, (username,))
+            entries = cur.fetchall()
+            hashed_password = entries[0][0].encode('utf-8')
+
+            if bcrypt.hashpw(password.encode('utf-8'), hashed_password) == hashed_password:
+                passwords_match = True
+            else:
+                passwords_match = False
+
+        except Exception as e:
+            app.logger.info(e)
+            passwords_match = False
+
+        return passwords_match
 
 # Send a nightly report 
 def send_member_deactivation_email(member):
@@ -306,7 +351,12 @@ def member_is_admin(stripe_id=None):
             return False
     except:
         return False
-    
+
+# TODO - Returns True is onboarded member is ACTIVE
+# but has a Paused subscription
+def member_is_paused(stripe_id=None):
+    pass
+
 # Returns True if user has an RFID token in the access control system
 def member_has_authorized_rfid(stripe_id=None):
     try:
@@ -323,62 +373,6 @@ def member_has_authorized_rfid(stripe_id=None):
     except:
         return False
 
-# FOR TESTING -- Returns True if a user's payment status is OK
-def t_member_is_in_good_standing(stripe_id=None):
-    with app.app_context():
-        subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
-        print(identity.stripe.member_is_in_good_standing(subscription_id))
-
-# Allow admin users to change their passwords
-def admin_change_password(stripe_id=None,password=None):
-
-    try:
-        db = get_db()
-        cur = db.cursor()
-
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
-
-        stmt = "update admin_users set pwd = %s where stripe_id = %s"
-        cur.execute(stmt, (hashed_password, stripe_id,))
-        db.commit()
-        return True
-    except:
-        return False
-
-# Check the password for the user login
-def check_password(username=None, password=None):
-
-    with app.app_context():
-
-        try:
-            db = get_db()
-            cur = db.cursor()
-
-            stmt = "select a.pwd from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
-            cur.execute(stmt, (username,))
-            entries = cur.fetchall()
-            hashed_password = entries[0][0].encode('utf-8')
-
-            if bcrypt.hashpw(password.encode('utf-8'), hashed_password) == hashed_password:
-                passwords_match = True
-            else:
-                passwords_match = False
-
-        except Exception as e:
-            app.logger.info(e)
-            passwords_match = False
-
-        return passwords_match
-
-# Convert a given stripe_id to its current subscription_id
-def get_subscription_id_from_stripe_cache(stripe_id=None):
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = "select stripe_subscription_id from stripe_cache where stripe_id = %s"
-    cur.execute(sql_stmt, (stripe_id,))
-
-    return cur.fetchall()[0][0]
-
 # Convert a given member's discord handle (username#discrimator) 
 # into their 18 digit discord id
 def get_member_discord_id(discord_handle=None):
@@ -392,6 +386,74 @@ def get_member_discord_id(discord_handle=None):
     result = requests.get(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
     return result.json()[0]['user']['id']
 
+# Remove a discord role from a member
+def unassign_discord_role(role_id=None, discord_id=None):
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+    url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
+    result = requests.delete(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    return result
+
+# Assign a discord role to a member
+def assign_discord_role(role_id=None, discord_id=None):
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+    url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
+    result = requests.put(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    return result
+
+# Manual process to remove all Vetted and Paid discord roles
+# from ALL users
+def m_remove_all_discord_roles():
+
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+
+    url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members?limit=999'
+    result = requests.get(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+
+    for y in result.json():
+        unassign_discord_role(role_id=app.config["DISCORD_ROLE_PAID_MEMBER"], discord_id=y['user']['id'])
+        unassign_discord_role(role_id=app.config["DISCORD_ROLE_VETTED_MEMBER"], discord_id=y['user']['id'])
+        time.sleep(1)
+
+# Manual process to add Vetted and Paid discord roles
+# to correct users
+def m_add_all_discord_roles():
+    db = get_db()
+    cur = db.cursor()
+    
+    # Get discord handles for Vetted Members
+    stmt = 'select discord_handle from members where IS_VETTED = "VETTED" and discord_handle IS NOT NULL'
+    cur.execute(stmt)
+    for member in cur.fetchall():
+        discord_id = get_member_discord_id(member[0])
+        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],discord_id)
+        time.sleep(1)
+    
+    # Get discord handles for ACTIVE Members with valid Subscription Plans
+    stmt = 'select m.discord_handle, m.stripe_id, sc.stripe_subscription_product from members m, stripe_cache sc where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL'
+    cur.execute(stmt)
+    for member in cur.fetchall():
+        discord_id = get_member_discord_id(member[0])
+        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],discord_id)
+        time.sleep(1)
+
+# FOR TESTING -- Returns True if a user's payment status is OK
+def t_member_is_in_good_standing(stripe_id=None):
+    with app.app_context():
+        subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
+        print(identity.stripe.member_is_in_good_standing(subscription_id))
+
+# Convert a given stripe_id to its current subscription_id
+def get_subscription_id_from_stripe_cache(stripe_id=None):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = "select stripe_subscription_id from stripe_cache where stripe_id = %s"
+    cur.execute(sql_stmt, (stripe_id,))
+
+    return cur.fetchall()[0][0]
+
 # Mnaully insert a new RFID token into the system 
 def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY"):
     db = get_db()
@@ -401,7 +463,7 @@ def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comme
     db.commit()
 
 # Attach a RFID token to a member
-def assign_rfid_token_to_member(eb_id=None,stripe_id=None):
+def assign_rfid_token(eb_id=None,stripe_id=None):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = %s, status = 'ASSIGNED' where eb_id = %s"
@@ -409,20 +471,12 @@ def assign_rfid_token_to_member(eb_id=None,stripe_id=None):
     db.commit()
 
 # Detach a RFID token from a member
-def unassign_rfid_token_from_member(rfid_id_token_hex):
+def unassign_rfid_token(rfid_id_token_hex):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where rfid_token_hex = %s"
     cur.execute(sql_stmt, (rfid_id_token_hex,))
     db.commit()
-
-# Remove a discord role from a member
-def unassign_discord_role(role_id=None, discord_id=None):
-    GUILD_ID = app.config['DISCORD_GUILD_ID']
-    TOKEN = app.config['DISCORD_BOT_TOKEN']
-    url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
-    result = requests.delete(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
-    return result
 
 # Get a list of unassigned tokens
 def get_unassigned_rfid_tokens():
@@ -462,7 +516,7 @@ def get_members_with_rfid_tokens():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
-# Get a list of inactive members
+# Get a list of onboarded INACTIVE members
 def get_inactive_members():
     db = get_db()
     cur = db.cursor()
@@ -513,7 +567,7 @@ def get_inactive_members_with_rfid_tokens():
     return cur.fetchall()
 
 # Fetch the rfid_token(s) for a user
-def get_member_rfid_tokens(stripe_id):
+def get_member_rfid_tokens(stripe_id=None):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s and status = 'ASSIGNED'"
@@ -1230,7 +1284,7 @@ def door_access_assign():
 def door_access_assign_post():
     stripe_id = request.form.get('stripe_id')
     eb_id = request.form.get('eb_id')
-    assign_rfid_token_to_member(eb_id=eb_id,stripe_id=stripe_id)
+    assign_rfid_token(eb_id=eb_id,stripe_id=stripe_id)
     return redirect(url_for('door_access_landing'))
 
 @app.route('/admin/dooraccess/unassign', methods=['GET'])
@@ -1242,7 +1296,7 @@ def door_access_unassign():
 @login_required
 def door_access_unassign_post():
     rfid_token_hex = request.form.get('rfid_id_token_hex')
-    unassign_rfid_token_from_member(rfid_token_hex)
+    unassign_rfid_token(rfid_token_hex)
     flash('RFID Token has been unassigned')
     return redirect(url_for('door_access_landing'))
 
