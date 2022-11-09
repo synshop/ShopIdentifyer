@@ -168,11 +168,11 @@ def archive_members_no_sub():
                 send_member_deactivation_email(member)
                 
             # Do the deactivation
-            sql_stmt = 'update members set member_status = "INACTIVE" where stripe_id not in (select stripe_id from stripe_cache)'
+            sql_stmt = 'update members set member_status = "INACTIVE", is_vetted = "NOT VETTED" where stripe_id not in (select stripe_id from stripe_cache)'
             cur.execute(sql_stmt)
             db.commit()
 
-            # Remove Vetted and Paid Member Discord Roles
+            # Remove Vetted and Paid Member Discord Roles if member has a discord handle
             if member[2] != None and app.config["DISCORD_MANAGE_ROLES"]:
                 app.logger.info("[ARCHIVE MEMBERS] - Removing Discord Roles for " + member[0])
                 discord_id = get_member_discord_id(member['discord_handle'])
@@ -391,9 +391,9 @@ def get_member_discord_id(discord_handle=None):
 def unassign_discord_role(role_id=None, discord_id=None):
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
+    app.logger.info("[DISCORD] - unassigning role %s to user %s" % (role_id, discord_id))
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
     result = requests.delete(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
-    app.logger.info("[DISCORD] - unassigning role %s to user %s" % (role_id, discord_id))
     return result
 
 # Assign a discord role to a member
@@ -403,7 +403,6 @@ def assign_discord_role(role_id=None, discord_id=None):
     app.logger.info("[DISCORD] - adding role %s to user %s" % (role_id, discord_id))
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
     result = requests.put(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
-    print(result.headers["X-RateLimit-Remaining"] + " " + result.headers["X-RateLimit-Reset-After"])
     return result
 
 # Manual process to remove all Vetted and Paid discord roles
@@ -778,6 +777,11 @@ def update_member(request=None):
         request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
         assign_discord_role(app["DISCORD_VETTED_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
 
+    # Remove Vetted Member Role in if the member has a discord handle
+    if request.form.get('is_vetted') == "NOT VETTED" and \
+        request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
+        unassign_discord_role(app["DISCORD_VETTED_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
+
 # Push log event into database
 def insert_log_event(request=None):
     id = request.form['ID']
@@ -1057,7 +1061,11 @@ def onboard_new_member(stripe_id):
         # Add Paid Member Role in if the member has a discord handle
         if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
             assign_discord_role(app["DISCORD_PAID_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
-        
+
+        # Add Vetted Member Role in if the member has a discord handle
+        if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
+            assign_discord_role(app["DISCORD_PAID_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
+
         app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
         return redirect(url_for("admin_onboard",_scheme='https',_external=True))
 
