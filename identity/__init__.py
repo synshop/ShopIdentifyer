@@ -377,6 +377,10 @@ def member_has_authorized_rfid(stripe_id=None):
 # Convert a given member's discord handle (username#discrimator) 
 # into their 18 digit discord id
 def get_member_discord_id(discord_handle=None):
+
+    if discord_handle == "None":
+        return "000000000000000000"
+
     (username, discriminator) = discord_handle.split("#")
     encoded_name = urllib.parse.quote(username)
 
@@ -594,7 +598,7 @@ def get_member(stripe_id=None):
     subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
 
     # Check and update the stripe cache every time you view member details
-    app.logger.info("updating real-time stripe information for %s" % (stripe_id,))
+    app.logger.info("[STRIPE] - updating real-time stripe information for %s" % (stripe_id,))
     stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
     
     member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
