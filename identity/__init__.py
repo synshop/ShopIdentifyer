@@ -404,7 +404,7 @@ def assign_discord_role(role_id=None, discord_id=None):
 
 # Manual process to remove all Vetted and Paid discord roles
 # from ALL users
-def m_remove_all_discord_roles():
+def m_remove_discord_roles():
 
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
@@ -471,7 +471,7 @@ def assign_rfid_token(eb_id=None,stripe_id=None):
     db.commit()
 
 # Detach a RFID token from a member
-def unassign_rfid_token(rfid_id_token_hex):
+def unassign_rfid_token(rfid_id_token_hex=None):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where rfid_token_hex = %s"
@@ -680,6 +680,9 @@ def get_member_discord_roles(stripe_id=None):
     """
     return False
 
+def get_member_onboard_details():
+    pass
+
 # Update an existing member 'object'
 def update_member(request=None):
 
@@ -765,6 +768,11 @@ def update_member(request=None):
 
     db.commit()
     db.close()
+
+    # Add Vetted Member Role in if the member has a discord handle
+    if request.form.get('is_vetted') == "VETTED" and \
+        request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
+        assign_discord_role(app["DISCORD_VETTED_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
 
 # Push log event into database
 def insert_log_event(request=None):
@@ -1032,13 +1040,19 @@ def onboard_new_member(stripe_id):
             liability_wavier_form,
             vetted_membership_form,
             badge_photo,
+            request.form.get('discord_handle'),
+            request.form.get('locker_num')
         )
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo,discord_handle,locker_num) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
         db.commit()
         db.close()
+
+        # Add Paid Member Role in if the member has a discord handle
+        if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
+            assign_discord_role(app["DISCORD_PAID_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
         
         app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
         return redirect(url_for("admin_onboard",_scheme='https',_external=True))
