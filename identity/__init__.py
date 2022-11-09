@@ -400,7 +400,7 @@ def unassign_discord_role(role_id=None, discord_id=None):
 def assign_discord_role(role_id=None, discord_id=None):
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
-    app.logger.info("[DISCORD] - adding role %s to user %s" % (role_id, discord_id))
+    app.logger.info("[DISCORD] - assigning role %s to user %s" % (role_id, discord_id))
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
     result = requests.put(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
     return result
@@ -775,12 +775,12 @@ def update_member(request=None):
     # Add Vetted Member Role in if the member has a discord handle
     if request.form.get('is_vetted') == "VETTED" and \
         request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-        assign_discord_role(app["DISCORD_VETTED_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
+        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
     # Remove Vetted Member Role in if the member has a discord handle
     if request.form.get('is_vetted') == "NOT VETTED" and \
         request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-        unassign_discord_role(app["DISCORD_VETTED_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
+        unassign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
 # Push log event into database
 def insert_log_event(request=None):
@@ -1060,11 +1060,11 @@ def onboard_new_member(stripe_id):
 
         # Add Paid Member Role in if the member has a discord handle
         if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app["DISCORD_PAID_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
+            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
         # Add Vetted Member Role in if the member has a discord handle
         if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app["DISCORD_PAID_MEMBER_ROLE"],get_member_discord_id(request.form.get('discord_handle')))
+            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
         app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
         return redirect(url_for("admin_onboard",_scheme='https',_external=True))
