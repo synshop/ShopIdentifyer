@@ -393,14 +393,17 @@ def unassign_discord_role(role_id=None, discord_id=None):
     TOKEN = app.config['DISCORD_BOT_TOKEN']
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
     result = requests.delete(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    app.logger.info("[DISCORD] - unassigning role %s to user %s" % (role_id, discord_id))
     return result
 
 # Assign a discord role to a member
 def assign_discord_role(role_id=None, discord_id=None):
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
+    app.logger.info("[DISCORD] - adding role %s to user %s" % (role_id, discord_id))
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
     result = requests.put(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    print(result.headers["X-RateLimit-Remaining"] + " " + result.headers["X-RateLimit-Reset-After"])
     return result
 
 # Manual process to remove all Vetted and Paid discord roles
@@ -415,30 +418,33 @@ def m_remove_discord_roles():
 
     for y in result.json():
         unassign_discord_role(role_id=app.config["DISCORD_ROLE_PAID_MEMBER"], discord_id=y['user']['id'])
-        unassign_discord_role(role_id=app.config["DISCORD_ROLE_VETTED_MEMBER"], discord_id=y['user']['id'])
-        time.sleep(1)
+        
+        # Don't remove VegasVader 
+        if y['user']['id'] != "494679297215430657":
+            unassign_discord_role(role_id=app.config["DISCORD_ROLE_VETTED_MEMBER"], discord_id=y['user']['id'])
 
 # Manual process to add Vetted and Paid discord roles
 # to correct users
 def m_add_all_discord_roles():
-    db = get_db()
-    cur = db.cursor()
-    
-    # Get discord handles for Vetted Members
-    stmt = 'select discord_handle from members where IS_VETTED = "VETTED" and discord_handle IS NOT NULL'
-    cur.execute(stmt)
-    for member in cur.fetchall():
-        discord_id = get_member_discord_id(member[0])
-        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],discord_id)
-        time.sleep(1)
-    
-    # Get discord handles for ACTIVE Members with valid Subscription Plans
-    stmt = 'select m.discord_handle, m.stripe_id, sc.stripe_subscription_product from members m, stripe_cache sc where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL'
-    cur.execute(stmt)
-    for member in cur.fetchall():
-        discord_id = get_member_discord_id(member[0])
-        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],discord_id)
-        time.sleep(1)
+    with app.app_context():
+        db = get_db()
+        cur = db.cursor()
+        
+        # Get discord handles for Vetted Members
+        stmt = 'select discord_handle from members where IS_VETTED = "VETTED" and discord_handle IS NOT NULL'
+        cur.execute(stmt)
+        for member in cur.fetchall():
+            discord_id = get_member_discord_id(member[0])
+            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],discord_id)
+            time.sleep(5)
+        
+        # Get discord handles for ACTIVE Members with valid Subscription Plans
+        stmt = 'select m.discord_handle, m.stripe_id, sc.stripe_subscription_product from members m, stripe_cache sc where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL'
+        cur.execute(stmt)
+        for member in cur.fetchall():
+            discord_id = get_member_discord_id(member[0])
+            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],discord_id)
+            time.sleep(5)
 
 # FOR TESTING -- Returns True if a user's payment status is OK
 def t_member_is_in_good_standing(stripe_id=None):
