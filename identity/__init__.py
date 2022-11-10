@@ -170,7 +170,7 @@ def archive_members_no_sub():
                 # Remove Vetted and Paid Member Discord Roles if member has a discord handle
                 if member[2] != None and app.config["DISCORD_MANAGE_ROLES"]:
                     app.logger.info("[ARCHIVE MEMBERS] - Removing Discord Roles for " + member[0])
-                    discord_id = get_member_discord_id(member['discord_handle'])
+                    discord_id = get_member_discord_id(member[2])
                     unassign_discord_role(app.config['DISCORD_ROLE_PAID_MEMBER'], discord_id)
                     unassign_discord_role(app.config['DISCORD_ROLE_VETTED_MEMBER'], discord_id)
     
