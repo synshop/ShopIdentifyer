@@ -315,6 +315,47 @@ def send_payment_alert_email(sub_id=None):
         log_message = "[EMAIL DISABLED] - Logging swipe event for delinquent member %s" % (stripe_info['stripe_id'],)
         app.logger.info(log_message) 
 
+# Send an alert email about a valid door access event
+def send_door_access_alert_email(sub_id=None):
+    
+    stripe_info = identity.stripe.get_realtime_stripe_info(sub_id)
+    member = get_member(stripe_info['stripe_id'])
+    
+    email_body_data = (
+        member['full_name'], 
+        stripe_info['stripe_subscription_product'],
+        stripe_info['stripe_last_payment_status']
+    )
+
+    email_subject = "[DOOR ACCESS ALERT] - %s swiped in" % (member['full_name'],)
+    email_body = """
+    The following member swiped in:
+
+    Name:
+    %s
+    
+    Stripe Subscription:
+    %s
+    
+    Last Payment Status:
+    %s
+
+    """  % email_body_data
+
+    if config.SMTP_SEND_EMAIL:
+        app.logger.info("[DOOR ACCESS ALERT] - %s swiped in" % (member['full_name'],))
+        msg = EmailMessage()
+        msg["to"] = config.SMTP_ALERT_TO
+        msg["from"] = config.SMTP_ALERT_FROM
+        msg["Subject"] = email_subject
+        msg.set_content(email_body)
+        with smtplib.SMTP_SSL(config.SMTP_SERVER, config.SMTP_PORT) as smtp:
+            smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
+            smtp.send_message(msg)
+    else:
+        log_message = "[EMAIL DISABLED] - Logging swipe event for valid member %s" % (stripe_info['stripe_id'],)
+        app.logger.info(log_message)
+
 # Send alert email about a rfid token swiping in
 # but is not assigned to a member in the system
 def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
@@ -817,11 +858,18 @@ def insert_log_event(request=None):
     db.commit()
 
     if stripe_id == 'NA':
+        #
+        # Send alert email about a rfid token swiping in but is not assigned to a member in the system
+        #
         send_na_stripe_id_alert_email(rfid_token_hex)
     else:
         sub_id = get_subscription_id_from_stripe_cache(stripe_id)
 
-        if identity.stripe.member_is_in_good_standing(sub_id) == False:
+        if identity.stripe.member_is_in_good_standing(sub_id):
+            send_door_access_alert_email(sub_id)
+        else:
+            # Send alert email about a member swiping in
+            # but is not in good standing
             send_payment_alert_email(sub_id)
 
 # Get unbounded event logs

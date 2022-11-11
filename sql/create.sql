@@ -61,7 +61,8 @@ CREATE TABLE shopidentifyer.rfid_tokens (
   rfid_token_hex varchar(255) NOT NULL PRIMARY KEY,
   status ENUM('ASSIGNED','UNASSIGNED','LOST','BROKEN') NOT NULL DEFAULT "UNASSIGNED",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  rfid_token_comment varchar(255)
+  rfid_token_comment varchar(255),
+  eb_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE"
 );
 
 create table discord_roles (
