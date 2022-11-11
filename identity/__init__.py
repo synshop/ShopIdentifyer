@@ -288,7 +288,7 @@ def send_payment_alert_email(sub_id=None):
     email_subject = "[DOOR ACCESS ALERT] - %s swiped in but has a Stripe issue" % (member['full_name'],)
     email_body = """
     The following member swiped in but their Stripe status is delinquent
-    or in a Paused membership state:
+    or in a Paused membership state (or they have a Free membership):
 
     Name:
     %s
