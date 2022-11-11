@@ -191,7 +191,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get('logged_in') == None:
-            return redirect(url_for("login"))
+            return redirect(url_for("show_login"))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -546,7 +546,7 @@ def get_inactive_members():
         WHERE
             m.member_status = "INACTIVE"
         ORDER BY
-            m.is_vetted desc
+            s.stripe_subscription_product desc
     """
     
     cur.execute(sql_stmt)
@@ -940,7 +940,7 @@ def get_admin_view():
 # when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['GET','POST'])
 @login_required
-def onboard_new_member(stripe_id):
+def show_onboard_new_member(stripe_id):
     # Get a new form, or if a POST then save the data
     if request.method == "GET":
         app.logger.info("User %s is onboarding member %s" % (session['username'],stripe_id))
@@ -1071,7 +1071,7 @@ def onboard_new_member(stripe_id):
             assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
         app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
-        return redirect(url_for("admin_onboard",_scheme='https',_external=True))
+        return redirect(url_for("show_admin_onboard",_scheme='https',_external=True))
 
 # Show member details
 @app.route('/member/<stripe_id>')
@@ -1092,12 +1092,12 @@ def edit_member_details(stripe_id):
     if request.method == "POST":
         update_member(request)
         app.logger.info("User %s updated member %s" % (session['username'],stripe_id))
-        return redirect(url_for("admin",_scheme='https',_external=True))
+        return redirect(url_for("show_admin",_scheme='https',_external=True))
 
 # Get member badge photo
 @app.route('/member/<stripe_id>/files/photo.jpg')
 @login_required
-def member_photo(stripe_id):
+def show_member_photo(stripe_id):
     db = get_db()
     cur = db.cursor()
     cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
@@ -1122,7 +1122,7 @@ def member_photo(stripe_id):
 # Get member liability waiver
 @app.route("/member/<stripe_id>/files/liability-waiver.pdf")
 @login_required
-def member_wavier(stripe_id):
+def show_member_wavier(stripe_id):
 
     db = get_db()
     cur = db.cursor()
@@ -1149,7 +1149,7 @@ def member_wavier(stripe_id):
 # Get member vetted membership form
 @app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
 @login_required
-def member_vetted(stripe_id):
+def show_member_vetted(stripe_id):
 
     db = get_db()
     cur = db.cursor()
@@ -1174,20 +1174,20 @@ def member_vetted(stripe_id):
 
 # Door Access Event Webhook
 @app.route('/logevent', methods=['POST'])
-def event_log():
+def show_event_log():
     insert_log_event(request)
     return jsonify({"status":200})
 
 # Landing Page Routes
 @app.route('/')
-def index():
+def show_index():
     if session.get('logged_in') == None:
         return render_template('index.html',stats=get_public_stats())
     else:
-        return redirect(url_for('admin'))
+        return redirect(url_for('show_admin'))
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def show_login():
 
     error = ""
     r_to = request.referrer
@@ -1211,19 +1211,19 @@ def login():
     return render_template('login.html',r_to=r_to,errors=error)
 
 @app.route('/logout')
-def logout():
+def show_logout():
     session.pop('logged_in', None)
     session.pop('username', None)
     flash('You were logged out')
-    return redirect(url_for('index',_scheme='https',_external=True))
+    return redirect(url_for('show_index',_scheme='https',_external=True))
 
 @app.route('/admin')
 @login_required
-def admin():
+def show_admin():
     return render_template('admin.html', entries=get_admin_view())
 
 @app.route('/admin/onboard')
-def admin_onboard():
+def show_admin_onboard():
     try:
         if session.get('logged_in'):
 
@@ -1279,90 +1279,90 @@ def admin_onboard():
 
 @app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
 @login_required
-def changepassword(stripe_id):
+def show_changepassword(stripe_id):
     if request.method == "GET":
         return render_template('changepassword.html',stripe_id=stripe_id)
 
     if request.method == "POST":
         x = admin_change_password(stripe_id,request.form.get('password1'),)
-        return redirect(url_for('index'))
+        return redirect(url_for('show_index'))
 
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
-def door_access_landing():
+def show_door_access_landing():
     return render_template('door_access.html',entries=get_unassigned_rfid_tokens())
 
 @app.route('/admin/dooraccess/newtoken', methods=['GET'])
 @login_required
-def door_access_new_token():
+def show_door_access_new_token():
     return render_template('door_access_new_token.html')
 
 @app.route('/admin/dooraccess/newtoken', methods=['POST'])
 @login_required
-def door_access_new_token_post():
+def show_door_access_new_token_post():
     insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'])
-    return redirect(url_for('door_access_landing'))
+    return redirect(url_for('show_door_access_landing'))
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
 @login_required
-def door_access_assign():
+def show_door_access_assign():
     eb_id = request.args.get('eb_id')
     return render_template('door_access_assign.html',entries=get_members_for_rfid_association(),eb_id=eb_id)
 
 @app.route('/admin/dooraccess/assign', methods=['POST'])
 @login_required
-def door_access_assign_post():
+def show_door_access_assign_post():
     stripe_id = request.form.get('stripe_id')
     eb_id = request.form.get('eb_id')
     assign_rfid_token(eb_id=eb_id,stripe_id=stripe_id)
-    return redirect(url_for('door_access_landing'))
+    return redirect(url_for('show_door_access_landing'))
 
 @app.route('/admin/dooraccess/unassign', methods=['GET'])
 @login_required
-def door_access_unassign():
+def show_door_access_unassign():
     return render_template('door_access_unassign.html', entries=get_members_with_rfid_tokens())
 
 @app.route('/admin/dooraccess/unassign', methods=['POST'])
 @login_required
-def door_access_unassign_post():
+def show_door_access_unassign_post():
     rfid_token_hex = request.form.get('rfid_id_token_hex')
     unassign_rfid_token(rfid_token_hex)
     flash('RFID Token has been unassigned')
-    return redirect(url_for('door_access_landing'))
+    return redirect(url_for('show_door_access_landing'))
 
 @app.route('/admin/dooraccess/tokenattributes', methods=['GET'])
 @login_required
-def door_access_token_attributes():
+def show_door_access_token_attributes():
     return render_template('door_access_modify_attributes.html')  
 
 @app.route('/admin/dooraccess/scanlog', methods=['GET'])
 @login_required
-def door_access_scanlog():
+def show_door_access_scanlog():
     return render_template('door_access_scanlog.html')
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
-def eventlog_landing():
+def show_eventlog_landing():
     return render_template('event_log.html', entries=get_event_log())
 
 @app.route('/admin/reactivate', methods=['GET'])
 @login_required
-def reactivate_member():
+def show_reactivate_member():
     return render_template('reactivate.html',inactive_members=get_inactive_members())
 
 @app.route('/admin/reactivate', methods=['POST'])
 @login_required
-def reactivate_member_post():
+def show_reactivate_member_post():
     stripe_id = request.form.get('stripe_id')
     return redirect('/member/' + stripe_id + '/edit')
 
 @app.route('/admin/discordroles', methods=['GET'])
 @login_required
-def manage_discord_roles():
+def show_manage_discord_roles():
     return render_template('manage_discord_roles.html', entries=None)
 
 # Widget Testing
 @app.route('/widget', methods=['GET','POST'])
-def test_widget():
+def show_test_widget():
     return render_template('camera-widget.html')
 
