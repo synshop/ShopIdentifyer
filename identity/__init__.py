@@ -506,11 +506,11 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
 
 # Mnaully insert a new RFID token into the system 
-def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY"):
+def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY",eb_status=None):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex,rfid_token_comment) values (%s,%s,%s)"
-    cur.execute(sql_stmt, (eb_id,rfid_token_hex,rfid_token_comment))
+    sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex,rfid_token_comment,eb_status) values (%s,%s,%s,%s)"
+    cur.execute(sql_stmt, (eb_id,rfid_token_hex,rfid_token_comment,eb_status))
     db.commit()
 
 # Attach a RFID token to a member
@@ -533,7 +533,15 @@ def unassign_rfid_token(rfid_id_token_hex=None):
 def get_unassigned_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'select eb_id,rfid_token_hex,created_on from rfid_tokens where status = "UNASSIGNED"'
+    sql_stmt = 'select eb_id,rfid_token_hex,created_on,eb_status from rfid_tokens where status = "UNASSIGNED"'
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+# Get all the RFID Tokens in the system
+def get_all_rfid_tokens():
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = 'select eb_id,rfid_token_hex,created_on,eb_status from rfid_tokens'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
@@ -621,7 +629,7 @@ def get_inactive_members_with_rfid_tokens():
 def get_member_rfid_tokens(stripe_id=None):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s and status = 'ASSIGNED'"
+    sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s"
     cur.execute(sql_stmt, (stripe_id,))
     
     rfid_tokens = []
@@ -1348,7 +1356,7 @@ def show_door_access_new_token():
 @app.route('/admin/dooraccess/newtoken', methods=['POST'])
 @login_required
 def show_door_access_new_token_post():
-    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'])
+    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'],eb_status=request.form['eb_status'])
     return redirect(url_for('show_door_access_landing'))
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
