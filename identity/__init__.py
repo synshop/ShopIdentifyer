@@ -506,11 +506,11 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
 
 # Mnaully insert a new RFID token into the system 
-def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY",eb_status=None):
+def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY"):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex,rfid_token_comment,eb_status) values (%s,%s,%s,%s)"
-    cur.execute(sql_stmt, (eb_id,rfid_token_hex,rfid_token_comment,eb_status))
+    cur.execute(sql_stmt, (eb_id,rfid_token_hex,rfid_token_comment,"ACTIVE"))
     db.commit()
 
 # Attach a RFID token to a member
@@ -541,9 +541,37 @@ def get_unassigned_rfid_tokens():
 def get_all_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'select eb_id,rfid_token_hex,created_on,eb_status from rfid_tokens'
+    sql_stmt = 'select r.rfid_token_hex,r.eb_id,r.eb_status,m.full_name,r.status,r.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by m.full_name'
     cur.execute(sql_stmt)
     return cur.fetchall()
+
+# Get the attributes for a given token
+def get_rfid_token_attributes(rfid_token_hex=None):
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = 'select * from rfid_tokens where rfid_token_hex = %s'
+    cur.execute(sql_stmt, (rfid_token_hex,))
+    return cur.fetchone()
+
+def update_rfid_token_attributes(request=None):
+    eb_status = request.form.get("eb_status")
+    system_status = request.form.get("system_status")
+    rfid_token_comment = request.form.get("rfid_token_comment")
+    rfid_token_hex = request.form.get("rfid_token_hex")
+    eb_id = request.form.get("eb_id")
+
+    if eb_status == "INACTIVE":
+        eb_id = None
+    
+    if eb_id == "None":
+        eb_id = None
+
+    db = get_db()
+    cur = db.cursor()
+    sql_stmt = 'update rfid_tokens set eb_status = %s, status = %s, rfid_token_comment = %s, eb_id = %s where rfid_token_hex = %s'
+    cur.execute(sql_stmt, (eb_status,system_status,rfid_token_comment,eb_id,rfid_token_hex))
+
+    db.commit()
 
 # NOT USED YET
 def get_unassigned_rfid_tokens_from_event_log():
@@ -1356,7 +1384,7 @@ def show_door_access_new_token():
 @app.route('/admin/dooraccess/newtoken', methods=['POST'])
 @login_required
 def show_door_access_new_token_post():
-    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'],eb_status=request.form['eb_status'])
+    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'])
     return redirect(url_for('show_door_access_landing'))
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
@@ -1389,7 +1417,19 @@ def show_door_access_unassign_post():
 @app.route('/admin/dooraccess/tokenattributes', methods=['GET'])
 @login_required
 def show_door_access_token_attributes():
-    return render_template('door_access_modify_attributes.html')  
+    return render_template('door_access_modify_attributes.html', entries=get_all_rfid_tokens())
+
+@app.route('/admin/dooraccess/tokenattributes/edit', methods=['GET'])
+@login_required
+def show_door_access_token_attributes_post():
+    rfid_token_hex = request.args.get('rfid_token_hex')
+    return render_template('door_access_attributes_edit.html', entry=get_rfid_token_attributes(rfid_token_hex))
+
+@app.route('/admin/dooraccess/tokenattributes/edit', methods=['POST'])
+@login_required
+def show_access_attributes_edit():
+    update_rfid_token_attributes(request)
+    return redirect(url_for('show_door_access_landing'))
 
 @app.route('/admin/dooraccess/scanlog', methods=['GET'])
 @login_required

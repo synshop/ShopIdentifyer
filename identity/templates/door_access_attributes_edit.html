@@ -49,39 +49,85 @@
 <div class="container">
 
   <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
-
-  <div class="alert alert-info" role="alert">
-    Enter the Electric Badger Id and RFID Token Hex Value to add it into the system
-  </div>
+    
+    <div class="alert alert-info" role="alert">
+      Please note that the Electric Badger ID (EB ID) will be erased if you set the EB Status to INACTIVE.
+    </div>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 class="panel-title">Add a new RFID Token</h3>
+      <h3 class="panel-title">Modify an existing RFID Token</h3>
     </div>
     <div class="panel-body">
       
       <div class="form-group">
         <label for="eb_id" class="col-sm-2 control-label">EB ID:</label>
         <div class="col-sm-4">
-          <input type="text" class="form-control" id="eb_id" name="eb_id">
+          <input type="text" class="form-control" id="eb_id" name="eb_id" value="{{ entry[0] }}" readonly>
         </div>
       </div>
+
       <div class="form-group">
         <label for="rfid_token_hex" class="col-sm-2 control-label">RFID Token (Hex):</label>
         <div class="col-sm-4">
-          <input type="text" class="form-control" id="rfid_token_hex" name="rfid_token_hex">
+          <input type="text" class="form-control" id="rfid_token_hex" name="rfid_token_hex" value="{{ entry[2] }}" readonly>
         </div>
       </div>
+      
+      <div class="form-group">
+        <label for="rfid_token_comment" class="col-sm-2 control-label">Created On:</label>
+        <div class="col-sm-4">
+          <input type="text" class="form-control" value="{{ entry[4] }}" readonly>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="rfid_token_comment" class="col-sm-2 control-label">Last Updated:</label>
+        <div class="col-sm-4">
+          <input type="text" class="form-control" value="{{ entry[7] }}" readonly>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="EB Status" class="col-sm-2 control-label">EB Status:</label>
+        <div class="col-sm-4">
+          <select class="form-control" id="eb_status" name="eb_status">
+            {% for value in ["ACTIVE","INACTIVE"] %}
+              {% if value == entry[6] %}
+                <option value="{{ value }}" selected>{{ value }}</option>
+              {% else %}
+                <option value="{{ value }}">{{ value }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="EB Status" class="col-sm-2 control-label">Token Status:</label>
+        <div class="col-sm-4">
+          <select class="form-control" id="system_status" name="system_status">
+            {% for value in ["ASSIGNED","LOST","BROKEN"] %}
+              {% if value == entry[6] %}
+                <option value="{{ value }}" selected>{{ value }}</option>
+              {% else %}
+                <option value="{{ value }}">{{ value }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
       <div class="form-group">
         <label for="rfid_token_comment" class="col-sm-2 control-label">RFID Token Comment:</label>
         <div class="col-sm-4">
-          <input type="text" class="form-control" id="rfid_token_comment" name="rfid_token_comment" value="PRIMARY">
+          <input type="text" class="form-control" id="rfid_token_comment" name="rfid_token_comment" value="{{ entry[5] }}">
         </div>
       </div>
 
       <div class="form-group">
         <div class="col-sm-offset-2 col-sm-4">
-          <button type="submit" class="btn btn-primary btn-success">Add Token</button>
+          <button type="submit" class="btn btn-primary btn-success">Update Token</button>
           <button type="button" id="cancel" name="cancel" class="btn btn-secondary">Cancel</button>
         </div>
       </div>      

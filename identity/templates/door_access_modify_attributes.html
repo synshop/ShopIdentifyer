@@ -49,9 +49,9 @@
 <div class="container">
 
   <div class="alert alert-info" role="alert">
-    Choose a token to modify.
+    Choose a token to modify.</b>
   </div>
-  <form method="POST">
+  <form method="GET" action="/admin/dooraccess/tokenattributes/edit">
 
   <table class="table table-hover table-bordered" id="results">
     <thead>
@@ -59,9 +59,9 @@
         <th>Modify</th>
         <th>EB ID</th>
         <th>EB Status</th>
+        <th>Token Status</th>
         <th>RFID Hex</th>
         <th>Assigned To</th>
-        <th>Token Status</th>
     </tr>
     </thead>
     <tbody>
@@ -70,6 +70,8 @@
       <td style="text-align:center;"><input type="radio" name="rfid_token_hex" value="{{ entry[0] }}"</td>
       <td>{{ entry[1] }}</td>      
       <td>{{ entry[2] }}</td>
+      <td>{{ entry[4] }}</td>
+      <td>{{ entry[0] }}</td>
       <td>{{ entry[3] }}</td>
     </tr>
     {% endfor %}
