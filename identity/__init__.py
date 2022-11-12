@@ -419,7 +419,7 @@ def member_has_authorized_rfid(stripe_id=None):
 # into their 18 digit discord id
 def get_member_discord_id(discord_handle=None):
 
-    if discord_handle == "None":
+    if discord_handle == "None" or discord_handle == "":
         return "000000000000000000"
 
     (username, discriminator) = discord_handle.split("#")
