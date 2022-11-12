@@ -541,7 +541,7 @@ def get_unassigned_rfid_tokens():
 def get_all_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'select r.rfid_token_hex,r.eb_id,r.eb_status,m.full_name,r.status,r.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by m.full_name'
+    sql_stmt = 'select r.rfid_token_hex,r.eb_id,r.eb_status,m.full_name,r.status,r.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by r.eb_id, m.full_name'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
