@@ -853,12 +853,13 @@ def update_member(request=None):
     db.commit()
     db.close()
 
-    # Add Vetted Member Role in if the member has a discord handle
-    if request.form.get('is_vetted') == "VETTED" and \
-        request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
+    # Add Vetted Member Role if the member has a discord handle
+    if app.config["DISCORD_MANAGE_ROLES"] and \
+        request.form.get('is_vetted') == "VETTED" and \
+        request.form.get('discord_handle') != None:
         assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
-    # Remove Vetted Member Role in if the member has a discord handle
+    # Remove Vetted Member Role if the member has a discord handle
     if request.form.get('is_vetted') == "NOT VETTED" and \
         request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
         unassign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
@@ -869,20 +870,20 @@ def insert_log_event(request=None):
     rfid_token_hex =  request.form['badge']
     swipe_status = request.form['result']
     
-    # Default Stripe Id
+    # Default log values
     stripe_id = "NA"
+    rfid_token_comment = "NONE"
 
     db = get_db()
     cur = db.cursor()
     sql_stmt = "select stripe_id, rfid_token_comment from rfid_tokens where eb_id = %s"
     cur.execute(sql_stmt,(id,))
-    entries = cur.fetchall()
+    entry = cur.fetchone()
 
-    rfid_token_comment = entries[0][1]
-
-    if len(entries) != 0:
-        stripe_id = entries[0][0]
-
+    if entry:
+        stripe_id = entry[0]
+        rfid_token_comment = entry[1]
+        
     if (swipe_status == "granted"):
         event_type = "ACCESS_GRANT"
     
@@ -894,18 +895,16 @@ def insert_log_event(request=None):
     db.commit()
 
     if stripe_id == 'NA':
-        #
         # Send alert email about a rfid token swiping in but is not assigned to a member in the system
-        #
         send_na_stripe_id_alert_email(rfid_token_hex)
     else:
         sub_id = get_subscription_id_from_stripe_cache(stripe_id)
 
         if identity.stripe.member_is_in_good_standing(sub_id):
+            # Send alert email about a member in good standing
             send_door_access_alert_email(sub_id)
         else:
-            # Send alert email about a member swiping in
-            # but is not in good standing
+            # Send alert email about a member swiping in but is not in good standing
             send_payment_alert_email(sub_id)
 
 # Get unbounded event logs
