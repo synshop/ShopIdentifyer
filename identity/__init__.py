@@ -864,6 +864,12 @@ def update_member(request=None):
         request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
         unassign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
+    # Add Paid Member Role if the member has a discord handle
+    if app.config["DISCORD_MANAGE_ROLES"] and \
+        request.form.get('stripe_plan') != "Pause Membership" and \
+        request.form.get('discord_handle') != None:
+        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
+
 # Push log event into database
 def insert_log_event(request=None):
     id = request.form['ID']
