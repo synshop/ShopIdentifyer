@@ -394,11 +394,6 @@ def member_is_admin(stripe_id=None):
     except:
         return False
 
-# TODO - Returns True is onboarded member is ACTIVE
-# but has a Paused subscription
-def member_is_paused(stripe_id=None):
-    pass
-
 # Returns True if user has an RFID token in the access control system
 def member_has_authorized_rfid(stripe_id=None):
     try:
@@ -490,12 +485,6 @@ def m_add_all_discord_roles():
             assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],discord_id)
             time.sleep(5)
 
-# FOR TESTING -- Returns True if a user's payment status is OK
-def t_member_is_in_good_standing(stripe_id=None):
-    with app.app_context():
-        subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
-        print(identity.stripe.member_is_in_good_standing(subscription_id))
-
 # Convert a given stripe_id to its current subscription_id
 def get_subscription_id_from_stripe_cache(stripe_id=None):
     db = get_db()
@@ -553,6 +542,7 @@ def get_rfid_token_attributes(rfid_token_hex=None):
     cur.execute(sql_stmt, (rfid_token_hex,))
     return cur.fetchone()
 
+# Update RFID Token Attributes
 def update_rfid_token_attributes(request=None):
     eb_status = request.form.get("eb_status")
     system_status = request.form.get("system_status")
@@ -603,6 +593,53 @@ def get_members_with_rfid_tokens():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+# Return the list of members who need onboarding
+def get_members_to_onboard():
+    entries_x = []
+
+    db = get_db()
+    cur = db.cursor()
+
+    sql_stmt = """
+        SELECT
+            stripe_id, 
+            stripe_created_on, 
+            stripe_email, 
+            stripe_description,
+            stripe_last_payment_status,
+            stripe_subscription_product,
+            stripe_subscription_status
+        FROM 
+            stripe_cache 
+        WHERE
+            stripe_id 
+        NOT IN
+            (SELECT stripe_id FROM members) 
+        ORDER BY 
+            stripe_created_on desc
+    """
+    cur.execute(sql_stmt)
+    rows = cur.fetchall()
+
+    for row in rows:
+        x = json.loads(row[3])
+        if 'drupal_legal_name' in x:
+            drupal_legal_name = x['drupal_legal_name']
+        else:
+            drupal_legal_name = "No Legal Name Provided"
+
+        entry_dict = dict(
+            stripe_id=row[0],
+            stripe_email=row[2],
+            drupal_legal_name=drupal_legal_name,
+            stripe_last_payment_status=row[4],
+            stripe_subscription_product=row[5],
+            stripe_subscription_status=row[6])
+
+        entries_x.append(entry_dict)
+        
+    return entries_x
+
 # Get a list of onboarded INACTIVE members
 def get_inactive_members():
     db = get_db()
@@ -638,20 +675,6 @@ def get_inactive_members():
         ret_members.append(x)
         
     return ret_members
-
-# NOT USED
-def get_inactive_members_with_rfid_tokens():
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = """
-        SELECT members.stripe_id,members.full_name, stripe_cache.stripe_email,rfid_tokens.rfid_token_hex
-        FROM members JOIN stripe_cache ON members.stripe_id = stripe_cache.stripe_id 
-        JOIN rfid_tokens ON members.stripe_id = rfid_tokens.stripe_id 
-        WHERE (members.member_status = 'INACTIVE' OR stripe_cache.stripe_last_payment_status <> 'succeeded') 
-        AND members.stripe_id = rfid_tokens.stripe_id;
-    """
-    cur.execute(sql_stmt)
-    return cur.fetchall()
 
 # Fetch the rfid_token(s) for a user
 def get_member_rfid_tokens(stripe_id=None):
@@ -752,20 +775,6 @@ def get_member(stripe_id=None):
     member["rfid_tokens"] = get_member_rfid_tokens(stripe_id)
     
     return member
-
-# NOT USED YET - Fetch a member's discord roles
-def get_member_discord_roles(stripe_id=None):
-    sql_stmt = """
-        select 
-        m.stripe_id, 
-        m.full_name, 
-        d.role_name 
-    from 
-        members m, discord_roles d, member_discord_roles mdr 
-    where 
-        (m.stripe_id = mdr.stripe_id and d.role_id = mdr.role_id) and m.stripe_id ="";
-    """
-    return False
 
 # Update an existing member 'object'
 def update_member(request=None):
@@ -952,7 +961,7 @@ def get_public_stats():
         },
         'total_need_onboarding': {
             'count':0,
-            'sql':'select count(*) FROM stripe_cache WHERE stripe_id NOT IN (SELECT stripe_id FROM members)'
+            'sql':'select count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and stripe_id NOT IN (SELECT stripe_id FROM members)'
         },
         'total_vetted': {
             'count':0,
@@ -1312,59 +1321,9 @@ def show_admin():
     return render_template('admin.html', entries=get_admin_view())
 
 @app.route('/admin/onboard')
+@login_required
 def show_admin_onboard():
-    try:
-        if session.get('logged_in'):
-
-            entries_x = []
-
-            db = get_db()
-            cur = db.cursor()
-
-            sql_stmt = """
-                SELECT
-                    stripe_id, 
-                    stripe_created_on, 
-                    stripe_email, 
-                    stripe_description,
-                    stripe_last_payment_status,
-                    stripe_subscription_product,
-                    stripe_subscription_status
-                FROM 
-                    stripe_cache 
-                WHERE
-                    stripe_id 
-                NOT IN
-                    (SELECT stripe_id FROM members) 
-                ORDER BY stripe_created_on
-            """
-            cur.execute(sql_stmt)
-            rows = cur.fetchall()
-
-            for row in rows:
-
-                x = json.loads(row[3])
-                if 'drupal_legal_name' in x:
-                    drupal_legal_name = x['drupal_legal_name']
-                else:
-                    drupal_legal_name = "No Legal Name Provided"
-
-                entry_dict = dict(
-                    stripe_id=row[0],
-                    stripe_email=row[2],
-                    drupal_legal_name=drupal_legal_name,
-                    stripe_last_payment_status=row[4],
-                    stripe_subscription_product=row[5],
-                    stripe_subscription_status=row[6])
-
-                entries_x.append(entry_dict)
-                
-            return render_template('onboard.html',entries=entries_x)
-        else:
-            return redirect('/login?redirect_to=admin_onboard')
-    except Exception as e:
-        app.logger.info(e)
-        return redirect('/login?redirect_to=admin_onboard')
+    return render_template('onboard.html',entries=get_members_to_onboard())
 
 @app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
 @login_required

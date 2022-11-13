@@ -53,7 +53,7 @@
     <a href="#" class="alert-link">brian@synshop.org</a> and he will look into it.
     </p>
     <p>
-      <b>Also, please don't onboard members who have a paused membership.  Ask them to correct that first.</b>
+      <b>Members must have an active subscription (non-paused membership) to onboard.  Ask them to correct that first.</b>
     </p>
 </div>
 
@@ -73,13 +73,18 @@
     <tbody>
     {% for entry in entries %}
 
-    {% if entry['stripe_subscription_product'] | upper == "PAUSE MEMBERSHIP" %}
-    <tr class="warning">
-    {% else %}
-    <tr>
-    {% endif %}
+      {% if entry['stripe_subscription_product'] | upper == "PAUSE MEMBERSHIP" %}
+        <tr class="warning">
+      {% else %}
+        <tr>
+      {% endif %}
 
-      <td><a href="/member/new/{{ entry['stripe_id'] }}">{{ entry['stripe_id'] }}</a></td>
+      {% if entry['stripe_subscription_product'] | upper == "PAUSE MEMBERSHIP" %}
+        <td>{{ entry['stripe_id'] }}</td>
+      {% else %}
+        <td><a href="/member/new/{{ entry['stripe_id'] }}">{{ entry['stripe_id'] }}</a></td>
+      {% endif %}
+      
       <td>{{ entry['drupal_legal_name'] }}</td>
       <td>{{ entry['stripe_email'] }}</td>
       <td>{{ entry['stripe_subscription_product'] | upper }}</td>

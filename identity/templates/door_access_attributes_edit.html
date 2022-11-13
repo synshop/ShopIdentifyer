@@ -55,18 +55,12 @@
     </div>
 
   <div class="panel panel-default">
+
     <div class="panel-heading">
       <h3 class="panel-title">Modify an existing RFID Token</h3>
     </div>
     <div class="panel-body">
       
-      <div class="form-group">
-        <label for="eb_id" class="col-sm-2 control-label">EB ID:</label>
-        <div class="col-sm-4">
-          <input type="text" class="form-control" id="eb_id" name="eb_id" value="{{ entry[0] }}" readonly>
-        </div>
-      </div>
-
       <div class="form-group">
         <label for="rfid_token_hex" class="col-sm-2 control-label">RFID Token (Hex):</label>
         <div class="col-sm-4">
@@ -85,6 +79,13 @@
         <label for="rfid_token_comment" class="col-sm-2 control-label">Last Updated:</label>
         <div class="col-sm-4">
           <input type="text" class="form-control" value="{{ entry[7] }}" readonly>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="eb_id" class="col-sm-2 control-label">EB ID:</label>
+        <div class="col-sm-4">
+          <input type="text" class="form-control" id="eb_id" name="eb_id" value="{{ entry[0] }}">
         </div>
       </div>
 
