@@ -1323,7 +1323,7 @@ def show_admin():
 @app.route('/admin/onboard')
 @login_required
 def show_admin_onboard():
-    return render_template('onboard.html',entries=get_members_to_onboard())
+    return render_template('onboard.html',entries=get_members_to_onboard(),stats=get_public_stats())
 
 @app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
 @login_required
