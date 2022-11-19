@@ -891,13 +891,15 @@ def insert_log_event(request=None):
 
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select stripe_id, rfid_token_comment from rfid_tokens where eb_id = %s"
-    cur.execute(sql_stmt,(id,))
+    sql_stmt = "select stripe_id, rfid_token_comment, eb_id from rfid_tokens where rfid_token_hex = %s"
+    cur.execute(sql_stmt,(rfid_token_hex,))
     entry = cur.fetchone()
+    print(entry)
 
     if entry:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
+        id = entry[2]
         
     if (swipe_status == "granted"):
         event_type = "ACCESS_GRANT"
