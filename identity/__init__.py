@@ -10,9 +10,12 @@ try:
     import identity.config as config
 except Exception as e:
     config_error = """
-        You need to create/install a <project-home>/identity/config.py file and populate it with some values.
-        Please see https://github.com/synshop/ShopIdentifyer/blob/master/README.md for more information."""
-    app.logger.info(e)
+Your "config.py" file is missing. You need to 
+create and populate it with some values. Please  
+see https://github.com/synshop/ShopIdentifyer/  
+for more information.
+"""
+    print(config_error)
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
