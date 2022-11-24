@@ -996,6 +996,53 @@ def get_public_stats():
 
     return stats
 
+# Get member usage statistics 
+def get_usage_report():
+
+    stats = {
+        'active_membership': {
+            'count':0, 
+            'sql':'select count(*) from members where member_status = "ACTIVE"'
+        },
+        'inactive_membership': {
+            'count':0,
+            'sql':'select count(*) from members where member_status = "INACTIVE"'
+        },
+        'paused_not_onboarded': {
+            'count':0,
+            'sql':'SELECT count(stripe_id) from stripe_cache where stripe_subscription_product = "Pause Membership" AND stripe_id NOT IN (SELECT stripe_id FROM members)'
+        },
+        'paused_onboarded': {
+            'count':0,
+            'sql':'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND s.stripe_subscription_product = "Pause Membership"'
+        },
+        'need_onboarding': {
+            'count':0,
+            'sql':'SELECT count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and stripe_id NOT IN (SELECT stripe_id FROM members)'
+        },
+        'door_swipes' : {
+            'count':0,
+            'sql': 'select count(*) from event_log where created_on >="2022-11-01"'
+        },
+        'door_access_deny': {
+            'count':0,
+            'sql':'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_DENY"'
+        },
+        'door_accss_granted': {
+            'count':0,
+            'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_GRANT"'
+        }
+    }
+
+    db = get_db()
+    cur = db.cursor()
+    
+    for key in stats:
+        cur.execute(stats[key]['sql'])
+        stats[key]['count'] = cur.fetchall()[0][0]
+
+    return stats
+
 # Build the /admin view
 def get_admin_view():
     db = get_db()
