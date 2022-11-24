@@ -28,27 +28,43 @@ Some of the features included are:
         cd ShopIdentifyer
         pip install -r requirements.txt
 
-3. To get started, copy the `config.dist.py` file to `config.py` in the `identify` folder. Modify it to have the specific values for your environment (see below about  `ENCRYPTED_` values) :
+3. To get started, copy the `config.dist.py` file to `config.py` in the `identify` folder. Modify it to have the specific values for your environment (see below about  `ENCRYPTED_` values). In this example all ciphertexts (encrypted values) are `foo` and have been encrypted the password also of `foo`:
 
-        ENCRYPTED_STRIPE_TOKEN = 'encrypted-token'
-        ENCRYPTED_DATABASE_PASSWORD = 'encrypted-password'
-        ENCRYPTED_MAIL_USERNAME = 'encrypted-mail-username'
-        ENCRYPTED_MAIL_PASSWORD = 'encrypted-mail-password'
+        ENCRYPTED_STRIPE_TOKEN = '+uBiga/44gMDfr6UXFllIA=='
+        ENCRYPTED_DATABASE_PASSWORD = '+uBiga/44gMDfr6UXFllIA=='
+        ENCRYPTED_MAIL_USERNAME = '+uBiga/44gMDfr6UXFllIA=='
+        ENCRYPTED_MAIL_PASSWORD = '+uBiga/44gMDfr6UXFllIA=='
 
-        ENCRYPTED_SESSION_KEY = 'session-key-salt'
-        ENCRYPTED_ADMIN_PASSPHRASE = "encrypted-admin-password"
+        ENCRYPTED_SMTP_USERNAME = '+uBiga/44gMDfr6UXFllIA=='
+        ENCRYPTED_SMTP_PASSWORD = '+uBiga/44gMDfr6UXFllIA=='
+
+        ENCRYPTED_DISCORD_BOT_TOKEN = '+uBiga/44gMDfr6UXFllIA=='
+        DISCORD_MANAGE_ROLES = 'foo'
+        DISCORD_GUILD_ID = 'foo'
+        DISCORD_ROLE_PAID_MEMBER = 'foo'
+        DISCORD_ROLE_VETTED_MEMBER = 'foo'
+
+        ENCRYPTED_SESSION_KEY = '+uBiga/44gMDfr6UXFllIA=='
+        ENCRYPTED_ADMIN_PASSPHRASE = "+uBiga/44gMDfr6UXFllIA=="
+
+        SMTP_SERVER = 'foo.com'
+        SMTP_PORT = 587
 
         DATABASE_USER = 'root'
         DATABASE_HOST = 'localhost'
         DATABASE_PORT = 3306
         DATABASE_SCHEMA = "shopidentifyer"
 
+        LOG_FILE = "/tmp/gunicorn.log"
+
         SCHEDULER_ENABLED = False
 
         STRIPE_CACHE_REFRESH_MINUTES = 60
-        STRIPE_CACHE_REFRESH_MINUTES = 13
         STRIPE_CACHE_REBUILD_MINUTES = 1440
+        STRIPE_CACHE_REBUILD_CRON = '46 23 * * *'
+        STRIPE_CACHE_REFRESH_CRON = '15 * * * *'
         STRIPE_CACHE_REFRESH_REACHBACK_MIN = 15
+        STRIPE_CACHE_DEACTIVATE_CRON = '55 23 * * *'
 
         MAIL_SERVER = 'localhost'
         MAIL_PORT = 22
