@@ -17,8 +17,8 @@ Some of the features included are:
 
    For Ubuntu, this looks like:
    
-       $ apt-get install python3-dev python3.10-venv  mysql-server build-essential \
-              libmysqlclient-dev git gh nginx libffi-dev
+       $ apt-get install python3-dev python3.10-venv mysql-server build-essential \
+              python3-pip libmysqlclient-dev git gh nginx libffi-dev
 
 2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/), clone or download the source for ShopIdentifyer and pip install the requirements.txt file included:
 
