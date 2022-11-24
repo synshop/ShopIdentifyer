@@ -9,13 +9,7 @@ import requests, urllib
 try:
     import identity.config as config
 except Exception as e:
-    config_error = """
-Your "config.py" file is missing. You need to 
-create and populate it with some values. Please  
-see https://github.com/synshop/ShopIdentifyer/  
-for more information.
-"""
-    print(config_error)
+    print('ERROR','Missing "config.py" file. See https://github.com/synshop/ShopIdentifyer/ for info')
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -40,7 +34,11 @@ ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 
 app = Flask(__name__)
 
-app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
+try:
+    app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
+except Exception as e:
+    print('ERROR', 'Failed to decrypt "ENCRYPTED_" config variables in "config.py".  Error was:', e)
+    quit()
 
 # Encrypted Configuration
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
