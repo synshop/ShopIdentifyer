@@ -8,7 +8,11 @@ from CryptoUtil import KeyLengthError
 
 def main(args):
 
-    op = args[1]
+    if len(args) > 1 or args[0] == './identity/crypto/crypt.py':
+        print('Do not call this directly, use symlinks. See https://github.com/synshop/ShopIdentifyer')
+        quit()
+
+    op = args[0]
 
     if 'encrypt' in op:
         key = getpass.getpass('Please enter the encryption key: ')

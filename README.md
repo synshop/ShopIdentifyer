@@ -17,7 +17,7 @@ Some of the features included are:
 
    For Ubuntu, this looks like:
    
-       $ apt-get install python3-dev python3.10-venv mysql-server build-essential \
+       apt-get install python3-dev python3.10-venv mysql-server build-essential \
               python3-pip libmysqlclient-dev git gh nginx libffi-dev
 
 2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/), clone or download the source for ShopIdentifyer and pip install the requirements.txt file included:
@@ -67,16 +67,11 @@ You can access the server at http://localhost:8000
 
 ### Encrypted values
 
-Please note that all of the properties starting with `ENCRYPTED_` are encrypted.  When the application starts up, it will prompt you for a single decryption password.  This is the same password that you will use to encrypt the properties using the cli tool `./identity/crypto/crypt.py`.  The instructions for use are pretty straightforward:
+Please note that all of the properties starting with `ENCRYPTED_` are encrypted.  When the application starts up, it will prompt you for a single decryption password.  This is the same password that you will use to encrypt the properties using the cli tool `./identity/crypto/encrypt` and `./identity/crypto/decrypt`.
 
-    $ python crypt.py
+In order for the decryption to work, you need to use the same password to encrypt all of the 6 values. Here's an example of encrypting the string `foo` with the password of also `foo`:
 
-    Usage: crypt.py encrypt
-           crypt.py decrypt
-
-In order for the decryption to work, you need to use the same password to encrypt all of the 6 values. Here's an example of encrypting the string "foo"
-
-    $ python identity/crypto/crypt.py encrypt
+    python3 identity/crypto/encrypt
     Please enter the encryption key:
     Please enter the plaintext you wish to encrypt:
     Encrypted Value: +uBiga/44gMDfr6UXFllIA==
@@ -84,6 +79,13 @@ In order for the decryption to work, you need to use the same password to encryp
 So, if you wanted `foo` to be the value for the `ENCRYPTED_DATABASE_PASSWORD` you would define it like this in `config.py`:
 
     ENCRYPTED_DATABASE_PASSWORD = '+uBiga/44gMDfr6UXFllIA=='
+
+If you need to decrypt, it's the same process, but in reverse:
+
+    python3 ./identity/crypto/decrypt
+    Please enter the decryption key: 
+    Please enter the ciphertext you wish to decrypt: 
+    Plaintext Value: foo
 
 Again, you need to use the same password for each of the 6 encrypted strings in your config file.
 
