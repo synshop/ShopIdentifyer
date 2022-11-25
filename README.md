@@ -18,7 +18,7 @@ Some of the features included are:
    For Ubuntu, this looks like:
    
        apt-get install python3-dev python3.10-venv mysql-server build-essential \
-             python3-pip libmysqlclient-dev git gh nginx libffi-dev
+             python3-pip libmysqlclient-dev git gh nginx libffi-dev apache2-utils
 
 2. Set up a [python virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/), clone or download the source for ShopIdentifyer and pip install the requirements.txt file included:
 
@@ -47,7 +47,7 @@ Some of the features included are:
        ENCRYPTED_SMTP_PASSWORD = 'aSy9t6N2sxEDN+WzPyXKVA=='
 
        ENCRYPTED_DISCORD_BOT_TOKEN = 'aSy9t6N2sxEDN+WzPyXKVA=='
-       DISCORD_MANAGE_ROLES = 'foo'
+       DISCORD_MANAGE_ROLES = False
        DISCORD_GUILD_ID = 'foo'
        DISCORD_ROLE_PAID_MEMBER = 'foo'
        DISCORD_ROLE_VETTED_MEMBER = 'foo'
@@ -87,7 +87,30 @@ Some of the features included are:
 
        ./localserver.py 
 
-You can access the server at http://localhost:8000
+You can access the server at http://localhost:8000 and it should look like this:
+
+![](first-run.png)
+
+### Adding admin users
+
+In order to log into the system as an admin you need to have an entry in the `members` and the `admin_users` table for your user.  Here's how to set up your first user:
+
+1. Create a bcrypt hash of your password.  This is the hash for `CHANGEME` using the `htpasswd` util we installed during setup (the `USER` input is discarded):
+
+       htpasswd -nbBC 10 USER changeme |cut -f2 -d:
+       $2y$12$anHyBEtJbDrpSg1sEtgGa.vya.v2aqTu8V.eu624MGn5Umy2v9qse
+
+2. We can create the two records needed then with this sql:
+   ```sql
+   insert into shopidentifyer.admin_users values ('test_stripe_id','$2y$12$anHyBEtJbDrpSg1sEtgGa.vya.v2aqTu8V.eu624MGn5Umy2v9qse');
+   insert into shopidentifyer.members values ('test_stripe_id', 'test_drupal_id', 'N/A', 
+       'ACTIVE', 'VETTED', 'the first user', 'first_admin', NULL, NULL, NULL, NULL, NULL, 
+       NULL, NULL, NULL, NULL, NULL, NOW(), NOW()  );
+   ```
+   
+3. Set this user to have a secure password by logging in at http://localhost:8000 and then going to http://localhost:8000/admin/changepassword/test_stripe_id . You should see a change password screen: 
+
+   ![](change.password.png)
 
 ### Encrypted values
 
