@@ -30,30 +30,30 @@ Some of the features included are:
 
 3. Assuming your MySQL database is secure (`sudo mysql_secure_installation` is a great start), using a privileged MySQL user (aka `root`) create a `synshop` MySQL user with a good password. In this example use the insecure password of `CHANGEME`:
    
-       CREATE USER 'synshop'@'localhost' IDENTIFIED BY 'CHANGME';
+       CREATE USER 'synshop'@'localhost' IDENTIFIED BY 'CHANGEME';
 
 4. Now we need to create the app database, grant access to it and create all the tables.  Assuming your privileged user is `root`, run 
 
        mysql -u root -p  < sql/create.sql
 
-6. To get started, copy the `config.dist.py` file to `config.py` in the `identify` folder. Modify it to have the specific values for your environment (see below about  `ENCRYPTED_` values). In this example all ciphertexts (encrypted values) are `CHANGME` and have been encrypted with the password also of `CHANGME`:
+6. To get started, copy the `config.dist.py` file to `config.py` in the `identify` folder. Modify it to have the specific values for your environment (see below about  `ENCRYPTED_` values). In this example all ciphertexts (encrypted values) are `CHANGEME` and have been encrypted with the password also of `CHANGEME`:
 
-       ENCRYPTED_STRIPE_TOKEN = 'dnXDedbvwdoqWda8ICv3eA=='
-       ENCRYPTED_DATABASE_PASSWORD = 'dnXDedbvwdoqWda8ICv3eA=='
-       ENCRYPTED_MAIL_USERNAME = 'dnXDedbvwdoqWda8ICv3eA=='
-       ENCRYPTED_MAIL_PASSWORD = 'dnXDedbvwdoqWda8ICv3eA=='
+       ENCRYPTED_STRIPE_TOKEN = 'aSy9t6N2sxEDN+WzPyXKVA=='
+       ENCRYPTED_DATABASE_PASSWORD = 'aSy9t6N2sxEDN+WzPyXKVA=='
+       ENCRYPTED_MAIL_USERNAME = 'aSy9t6N2sxEDN+WzPyXKVA=='
+       ENCRYPTED_MAIL_PASSWORD = 'aSy9t6N2sxEDN+WzPyXKVA=='
 
-       ENCRYPTED_SMTP_USERNAME = 'dnXDedbvwdoqWda8ICv3eA=='
-       ENCRYPTED_SMTP_PASSWORD = 'dnXDedbvwdoqWda8ICv3eA=='
+       ENCRYPTED_SMTP_USERNAME = 'aSy9t6N2sxEDN+WzPyXKVA=='
+       ENCRYPTED_SMTP_PASSWORD = 'aSy9t6N2sxEDN+WzPyXKVA=='
 
-       ENCRYPTED_DISCORD_BOT_TOKEN = 'dnXDedbvwdoqWda8ICv3eA=='
+       ENCRYPTED_DISCORD_BOT_TOKEN = 'aSy9t6N2sxEDN+WzPyXKVA=='
        DISCORD_MANAGE_ROLES = 'foo'
        DISCORD_GUILD_ID = 'foo'
        DISCORD_ROLE_PAID_MEMBER = 'foo'
        DISCORD_ROLE_VETTED_MEMBER = 'foo'
 
-       ENCRYPTED_SESSION_KEY = 'dnXDedbvwdoqWda8ICv3eA=='
-       ENCRYPTED_ADMIN_PASSPHRASE = "dnXDedbvwdoqWda8ICv3eA=="
+       ENCRYPTED_SESSION_KEY = 'aSy9t6N2sxEDN+WzPyXKVA=='
+       ENCRYPTED_ADMIN_PASSPHRASE = "aSy9t6N2sxEDN+WzPyXKVA=="
 
        SMTP_SERVER = 'foo.com'
        SMTP_PORT = 587
@@ -83,7 +83,7 @@ Some of the features included are:
        ACCESS_CONTROL_HOSTNAME = 'localhost'
        ACCESS_CONTROL_SSH_PORT = 22
 
-7. You're now ready to start your local dev instance. When prompted for `Please enter the enryption key`, use `CHANGME`:
+7. You're now ready to start your local dev instance. When prompted for `Please enter the enryption key`, use `CHANGEME`:
 
        ./localserver.py 
 
@@ -98,11 +98,11 @@ In order for the decryption to work, you need to use the same password to encryp
     python3 identity/crypto/encrypt
     Please enter the encryption key:
     Please enter the plaintext you wish to encrypt:
-    Encrypted Value: dnXDedbvwdoqWda8ICv3eA==
+    Encrypted Value: aSy9t6N2sxEDN+WzPyXKVA==
 
 So, if you wanted `foo` to be the value for the `ENCRYPTED_DATABASE_PASSWORD` you would define it like this in `config.py`:
 
-    ENCRYPTED_DATABASE_PASSWORD = 'dnXDedbvwdoqWda8ICv3eA=='
+    ENCRYPTED_DATABASE_PASSWORD = 'aSy9t6N2sxEDN+WzPyXKVA=='
 
 If you need to decrypt, it's the same process, but in reverse:
 
