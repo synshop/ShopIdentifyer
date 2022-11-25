@@ -49,7 +49,7 @@ create table shopidentifyer.stripe_cache (
 );
 
 create table shopidentifyer.admin_users (
-	stripe_id varchar(255) NOT NULL PRIMARY KEY,
+  stripe_id varchar(255) NOT NULL PRIMARY KEY,
   pwd varchar(2048)
 );
 
@@ -66,12 +66,12 @@ CREATE TABLE shopidentifyer.rfid_tokens (
   eb_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE"
 );
 
-create table discord_roles (
+create table shopidentifyer.discord_roles (
   role_id bigint primary key,
   role_name varchar(255)
 );
 
-create table member_discord_roles (
-	stripe_id varchar(255),
+create table shopidentifyer.member_discord_roles (
+  stripe_id varchar(255),
   role_id bigint
 );

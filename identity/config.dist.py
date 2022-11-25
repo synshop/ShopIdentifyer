@@ -20,7 +20,7 @@ SMTP_SEND_EMAIL = False
 SMTP_ALERT_TO = "foo@example.org"
 SMTP_ALERT_FROM = "smang@example.org"
 
-DATABASE_USER = 'root'
+DATABASE_USER = 'synshop'
 DATABASE_HOST = 'localhost'
 DATABASE_PORT = 3306
 DATABASE_SCHEMA = "shopidentifyer"
