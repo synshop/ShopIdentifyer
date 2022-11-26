@@ -73,6 +73,7 @@ Some of the features included are:
        STRIPE_CACHE_REFRESH_CRON = '15 * * * *'
        STRIPE_CACHE_REFRESH_REACHBACK_MIN = 15
        STRIPE_CACHE_DEACTIVATE_CRON = '55 23 * * *'
+       STRIPE_FETCH_REALTIME_UPDATES = False  # False means no emails sent during swipes
 
        MAIL_SERVER = 'localhost'
        MAIL_PORT = 22
