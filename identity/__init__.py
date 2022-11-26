@@ -698,15 +698,6 @@ def get_member(stripe_id=None):
     member = {}
 
     subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
-
-    # Check and update the stripe cache every time you view member details
-    app.logger.info("[STRIPE] - updating real-time stripe information for %s" % (stripe_id,))
-    stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
-    
-    member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
-    member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
-    member['stripe_email'] = stripe_info['stripe_email']
-
     member['rfid_tokens'] = get_member_rfid_tokens(stripe_id)
 
     db = get_db()
@@ -893,6 +884,7 @@ def update_member(request=None):
         request.form.get('discord_handle') != None:
         assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
+
 # Push log event into database
 def insert_log_event(request=None):
     rfid_token_hex = request.form['badge']
@@ -919,19 +911,18 @@ def insert_log_event(request=None):
     cur.execute(sql_stmt,(rfid_token_hex,))
     entry = cur.fetchone()
 
-    member = {'name': 'NA', 'nickname': 'NA', 'led': 'NA', 'event_type': event_type}
+    member = {'name': 'NA', 'nickname': 'unknown-' + swipe_status, 'led': '#ffffff', 'event_type': event_type}
     if entry:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
         sql_stmt = "select full_name, nick_name, led_color from members where stripe_id = %s"
         cur.execute(sql_stmt,(stripe_id,))
-        memberTmp = cur.fetchone()
-        if len(memberTmp) > 0:
-            # todo - put better data in here, check for failed swipes
-            member['name'] = memberTmp[0]
-            member['nickname'] = memberTmp[1]
-            member['led'] = memberTmp[2]
+        member_tmp = cur.fetchone()
+        if len(member_tmp) > 0:
+            member['name'] = member_tmp[0]
+            member['nickname'] = member_tmp[1]
+            member['led'] = member_tmp[2]
 
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
