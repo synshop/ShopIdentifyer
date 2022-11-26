@@ -95,7 +95,7 @@ You can access the server at http://localhost:8000 and it should look like this:
 
 In order to log into the system as an admin you need to have an entry in the `members` and the `admin_users` table for your user.  Here's how to set up your first user:
 
-1. Create a bcrypt hash of your password.  This is the hash for `CHANGEME` using the `htpasswd` util we installed during setup (the `USER` input is discarded):
+1. Create a bcrypt hash of your password.  This is the hash for `changeme` using the `htpasswd` util we installed during setup (the `USER` input is discarded):
 
        htpasswd -nbBC 10 USER changeme |cut -f2 -d:
        $2y$12$anHyBEtJbDrpSg1sEtgGa.vya.v2aqTu8V.eu624MGn5Umy2v9qse
