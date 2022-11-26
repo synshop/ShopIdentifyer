@@ -93,20 +93,21 @@ You can access the server at http://localhost:8000 and it should look like this:
 
 ### Adding admin users
 
-In order to log into the system as an admin you need to have entries in the `members`, `stripe_cache` and the `admin_users` table for your user.  Here's how to set up your first user:
+In order to log into the system as an admin you need to have entries in the `members`, `stripe_cache`, `rfid_tokens` and the `admin_users` table for your user.  Here's how to set up your first user:
 
 1. Create a bcrypt hash of your password.  This is the hash for `changeme` using the `htpasswd` util we installed during setup (the `USER` input is discarded):
 
        htpasswd -nbBC 10 USER changeme |cut -f2 -d:
        $2y$12$anHyBEtJbDrpSg1sEtgGa.vya.v2aqTu8V.eu624MGn5Umy2v9qse
 
-2. We can create the three records needed then with this sql:
+2. We can create the four records needed then with this sql:
    ```sql
    insert into shopidentifyer.admin_users values ('test_stripe_id','$2y$12$anHyBEtJbDrpSg1sEtgGa.vya.v2aqTu8V.eu624MGn5Umy2v9qse');
    insert into shopidentifyer.members values ('test_stripe_id', 'test_drupal_id', 'N/A', 
        'ACTIVE', 'VETTED', 'the first user', 'first_admin', NULL, NULL, NULL, NULL, NULL, 
        NULL, NULL, NULL, NULL, NULL, NOW(), NOW()  );
    insert into shopidentifyer.stripe_cache values ( 'test_stripe_id',NOW(),'test_admin@example.com',NULL,NULL,NULL,NULL,NULL,NOW());
+   insert into shopidentifyer.rfid_tokens values ( NULL,'test_stripe_id','test-hex','ASSIGNED',NOW(),NOW(),'test','ACTIVE');
    ```
    
 3. Set this user to have a secure password by logging in with username `first_admin` and password `changeme` at http://localhost:8000 and then going to http://localhost:8000/admin/changepassword/test_stripe_id . You should see a change password screen: 
