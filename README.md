@@ -84,6 +84,11 @@ Some of the features included are:
        ACCESS_CONTROL_HOSTNAME = 'localhost'
        ACCESS_CONTROL_SSH_PORT = 22
 
+       ALERT_URLS = {  # leave as an empty object if you don't want to send any POSTs
+           'kiosk': 'http://10.0.40.219/member_fobbing/',
+           'blinkenlights': 'https://10.0.40.10'
+       }
+
 7. You're now ready to start your local dev instance. When prompted for `Please enter the enryption key`, use `CHANGEME`:
 
        ./localserver.py 

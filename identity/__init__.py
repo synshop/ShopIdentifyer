@@ -6,6 +6,7 @@ from functools import wraps
 from email.message import EmailMessage
 import requests, urllib
 
+
 try:
     import identity.config as config
 except Exception as e:
@@ -913,17 +914,30 @@ def insert_log_event(request=None):
 
     db = get_db()
     cur = db.cursor()
+
     sql_stmt = "select stripe_id, rfid_token_comment, eb_id from rfid_tokens where rfid_token_hex = %s"
     cur.execute(sql_stmt,(rfid_token_hex,))
     entry = cur.fetchone()
 
+    member = {'name': 'NA', 'nickname': 'NA', 'led': 'NA', 'event_type': event_type}
     if entry:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
+        sql_stmt = "select full_name, nick_name, led_color from members where stripe_id = %s"
+        cur.execute(sql_stmt,(stripe_id,))
+        memberTmp = cur.fetchone()
+        if len(memberTmp) > 0:
+            # todo - put better data in here, check for failed swipes
+            member['name'] = memberTmp[0]
+            member['nickname'] = memberTmp[1]
+            member['led'] = memberTmp[2]
+
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
     db.commit()
+
+    post_alert(member, config.ALERT_URLS)
 
     if stripe_id == 'NA':
         # Send alert email about a rfid token swiping in but is not assigned to a member in the system
@@ -940,6 +954,19 @@ def insert_log_event(request=None):
                 send_payment_alert_email(sub_id)
         else:
             app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
+
+
+def post_alert(data, urls):
+    # todo - remove debug print here
+    print('post_alert data', data, 'urls:', urls)
+    if len(urls) > 0:
+        for url in urls:
+            try:
+                http_result = requests.post(urls[url], data=data, verify=False)
+                app.logger.info("Success posted to " + str(urls[url]) + "response was " + str(http_result))
+            except Exception as e:
+                app.logger.info("ERROR: POST to " + str(url) + " Error was: " + str(e))
+
 
 # Get unbounded event logs
 def get_event_log():
