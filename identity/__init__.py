@@ -723,6 +723,8 @@ def get_member(stripe_id=None):
         cur.execute(sql_stmt,
                     (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
         db.commit()
+    else:
+        app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, user Stripe status not updated.')
 
     sql_stmt = '''select
          member_status,
@@ -936,6 +938,8 @@ def insert_log_event(request=None):
             else:
                 # Send alert email about a member swiping in but is not in good standing
                 send_payment_alert_email(sub_id)
+        else:
+            app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
 
 # Get unbounded event logs
 def get_event_log():
