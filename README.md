@@ -108,7 +108,7 @@ In order to log into the system as an admin you need to have an entry in the `me
        NULL, NULL, NULL, NULL, NULL, NOW(), NOW()  );
    ```
    
-3. Set this user to have a secure password by logging in at http://localhost:8000 and then going to http://localhost:8000/admin/changepassword/test_stripe_id . You should see a change password screen: 
+3. Set this user to have a secure password by logging in with username `first_admin` and password `changeme` at http://localhost:8000 and then going to http://localhost:8000/admin/changepassword/test_stripe_id . You should see a change password screen: 
 
    ![](change.password.png)
 
