@@ -710,9 +710,19 @@ def get_member(stripe_id=None):
 
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'update stripe_cache set stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE stripe_id = %s'
-    cur.execute(sql_stmt, (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
-    db.commit()
+    if config.STRIPE_FETCH_REALTIME_UPDATES:
+        app.logger.info("[STRIPE] - updating real-time stripe information for %s" % (stripe_id,))
+        # Check and update the stripe cache every time you view member details
+        stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
+
+        member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
+        member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
+        member['stripe_email'] = stripe_info['stripe_email']
+
+        sql_stmt = 'update stripe_cache set stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE stripe_id = %s'
+        cur.execute(sql_stmt,
+                    (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
+        db.commit()
 
     sql_stmt = '''select
          member_status,
@@ -733,11 +743,11 @@ def get_member(stripe_id=None):
          led_color 
          from members where stripe_id = %s'''
 
-    cur.execute(sql_stmt, (stripe_info['stripe_id'],))
+    cur.execute(sql_stmt, (stripe_id,))
     entries = cur.fetchall()
     entry = entries[0]
 
-    member["stripe_id"] = stripe_info['stripe_id']
+    member["stripe_id"] = stripe_id
     member["member_status"] = entry[0]
     member["created_on"] = entry[1]
     member["changed_on"] = entry[2]
@@ -763,7 +773,7 @@ def get_member(stripe_id=None):
     else:
         member['has_vetted'] = True
 
-    if member_is_admin(stripe_info['stripe_id']):
+    if member_is_admin(stripe_id):
         member['is_admin'] = True
     else:
         member['is_admin'] = False
@@ -882,10 +892,19 @@ def update_member(request=None):
 
 # Push log event into database
 def insert_log_event(request=None):
-    id = request.form['ID']
-    rfid_token_hex =  request.form['badge']
+    rfid_token_hex = request.form['badge']
     swipe_status = request.form['result']
-    
+
+    if swipe_status == "granted":
+        event_type = "ACCESS_GRANT"
+    elif swipe_status == "denied":
+        event_type = "ACCESS_DENY"
+    else:
+        # be defensive, only granted or denied will be processed, all others rejected
+        app.logger.info('insert_log_event() received invalid event type. Got "' + swipe_status +
+                        '", expecting "granted" or "denied"')
+        quit()
+
     # Default log values
     stripe_id = "NA"
     rfid_token_comment = "NONE"
@@ -895,21 +914,13 @@ def insert_log_event(request=None):
     sql_stmt = "select stripe_id, rfid_token_comment, eb_id from rfid_tokens where rfid_token_hex = %s"
     cur.execute(sql_stmt,(rfid_token_hex,))
     entry = cur.fetchone()
-    print(entry)
 
     if entry:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
-        id = entry[2]
-        
-    if (swipe_status == "granted"):
-        event_type = "ACCESS_GRANT"
-    
-    if (swipe_status == "denied"):
-        event_type = "ACCESS_DENY"
-    
+
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
-    cur.execute(sql_stmt,(stripe_id,rfid_token_hex,event_type,rfid_token_comment))
+    cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
     db.commit()
 
     if stripe_id == 'NA':
@@ -918,12 +929,13 @@ def insert_log_event(request=None):
     else:
         sub_id = get_subscription_id_from_stripe_cache(stripe_id)
 
-        if identity.stripe.member_is_in_good_standing(sub_id):
-            # Send alert email about a member in good standing
-            send_door_access_alert_email(sub_id)
-        else:
-            # Send alert email about a member swiping in but is not in good standing
-            send_payment_alert_email(sub_id)
+        if config.STRIPE_FETCH_REALTIME_UPDATES:
+            if identity.stripe.member_is_in_good_standing(sub_id):
+                # Send alert email about a member in good standing
+                send_door_access_alert_email(sub_id)
+            else:
+                # Send alert email about a member swiping in but is not in good standing
+                send_payment_alert_email(sub_id)
 
 # Get unbounded event logs
 def get_event_log():
