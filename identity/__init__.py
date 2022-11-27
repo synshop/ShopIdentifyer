@@ -932,7 +932,7 @@ def insert_log_event(request=None):
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
     db.commit()
 
-    post_alert(member, config.ALERT_URLS)
+    post_alert(member)
 
     if stripe_id == 'NA':
         # Send alert email about a rfid token swiping in but is not assigned to a member in the system
@@ -951,24 +951,17 @@ def insert_log_event(request=None):
             app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
 
 
-def post_alert(data, urls):
-    if len(urls) > 0:
-        for url in urls:
+def post_alert(data):
+    if hasattr(config, 'ALERT_URLS'):
+        for url in config.ALERT_URLS:
             try:
-                http_result = requests.post(urls[url], data=data, verify=False)
-                app.logger.info('Success posted to "' + str(urls[url]) + '", got response: ' + str(http_result))
+                http_result = requests.post(config.ALERT_URLS[url], data=data, verify=False)
+                app.logger.info('Success posted to' + str(url) + ' at "' + str(config.ALERT_URLS[url]) +
+                                '", got response: ' + str(http_result))
             except Exception as e:
                 app.logger.info("ERROR: POST to " + str(url) + " Error was: " + str(e))
-
-        if config.STRIPE_FETCH_REALTIME_UPDATES:
-            if identity.stripe.member_is_in_good_standing(sub_id):
-                # Send alert email about a member in good standing
-                send_door_access_alert_email(sub_id)
-            else:
-                # Send alert email about a member swiping in but is not in good standing
-                send_payment_alert_email(sub_id)
-        else:
-            app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
+    else:
+        app.logger.info('post_alert() called, but no URLs declared in ALERT_URLS in config.')
 
 # Get unbounded event logs
 def get_event_log():
