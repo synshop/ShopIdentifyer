@@ -884,7 +884,6 @@ def update_member(request=None):
         request.form.get('discord_handle') != None:
         assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
 
-
 # Push log event into database
 def insert_log_event(request=None):
     rfid_token_hex = request.form['badge']
@@ -961,6 +960,15 @@ def post_alert(data, urls):
             except Exception as e:
                 app.logger.info("ERROR: POST to " + str(url) + " Error was: " + str(e))
 
+        if config.STRIPE_FETCH_REALTIME_UPDATES:
+            if identity.stripe.member_is_in_good_standing(sub_id):
+                # Send alert email about a member in good standing
+                send_door_access_alert_email(sub_id)
+            else:
+                # Send alert email about a member swiping in but is not in good standing
+                send_payment_alert_email(sub_id)
+        else:
+            app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
 
 # Get unbounded event logs
 def get_event_log():
