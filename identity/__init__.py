@@ -911,7 +911,7 @@ def insert_log_event(request=None):
     cur.execute(sql_stmt,(rfid_token_hex,))
     entry = cur.fetchone()
 
-    member = {'name': 'NA', 'nickname': 'unknown-' + swipe_status, 'led': '#ffffff', 'event_type': event_type}
+    member = {'name': 'NA', 'handle': 'unknown ' + swipe_status, 'color': 'red', 'event_type': event_type}
     if entry:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
@@ -920,9 +920,14 @@ def insert_log_event(request=None):
         cur.execute(sql_stmt,(stripe_id,))
         member_tmp = cur.fetchone()
         if len(member_tmp) > 0:
+            if member_tmp[2] is None:
+                color = 'yellow'
+            else:
+                color = member_tmp[2]
             member['name'] = member_tmp[0]
-            member['nickname'] = member_tmp[1]
-            member['led'] = member_tmp[2]
+            member['handle'] = member_tmp[1]
+            member['color'] = color
+            member['badge'] = rfid_token_hex
 
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
@@ -948,13 +953,11 @@ def insert_log_event(request=None):
 
 
 def post_alert(data, urls):
-    # todo - remove debug print here
-    print('post_alert data', data, 'urls:', urls)
     if len(urls) > 0:
         for url in urls:
             try:
                 http_result = requests.post(urls[url], data=data, verify=False)
-                app.logger.info("Success posted to " + str(urls[url]) + "response was " + str(http_result))
+                app.logger.info('Success posted to "' + str(urls[url]) + '", got response: ' + str(http_result))
             except Exception as e:
                 app.logger.info("ERROR: POST to " + str(url) + " Error was: " + str(e))
 
