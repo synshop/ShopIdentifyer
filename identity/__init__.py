@@ -6,6 +6,7 @@ from functools import wraps
 from email.message import EmailMessage
 import requests, urllib
 
+
 try:
     import identity.config as config
 except Exception as e:
@@ -697,15 +698,6 @@ def get_member(stripe_id=None):
     member = {}
 
     subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
-
-    # Check and update the stripe cache every time you view member details
-    app.logger.info("[STRIPE] - updating real-time stripe information for %s" % (stripe_id,))
-    stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
-    
-    member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
-    member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
-    member['stripe_email'] = stripe_info['stripe_email']
-
     member['rfid_tokens'] = get_member_rfid_tokens(stripe_id)
 
     db = get_db()
@@ -913,17 +905,34 @@ def insert_log_event(request=None):
 
     db = get_db()
     cur = db.cursor()
+
     sql_stmt = "select stripe_id, rfid_token_comment, eb_id from rfid_tokens where rfid_token_hex = %s"
     cur.execute(sql_stmt,(rfid_token_hex,))
     entry = cur.fetchone()
 
+    member = {'name': 'NA', 'handle': 'unknown ' + swipe_status, 'color': 'red', 'event_type': event_type}
     if entry:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
+        sql_stmt = "select full_name, nick_name, led_color from members where stripe_id = %s"
+        cur.execute(sql_stmt,(stripe_id,))
+        member_tmp = cur.fetchone()
+        if len(member_tmp) > 0:
+            if member_tmp[2] is None:
+                color = 'yellow'
+            else:
+                color = member_tmp[2]
+            member['name'] = member_tmp[0]
+            member['handle'] = member_tmp[1]
+            member['color'] = color
+            member['badge'] = rfid_token_hex
+
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
     db.commit()
+
+    post_alert(member)
 
     if stripe_id == 'NA':
         # Send alert email about a rfid token swiping in but is not assigned to a member in the system
@@ -940,6 +949,19 @@ def insert_log_event(request=None):
                 send_payment_alert_email(sub_id)
         else:
             app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
+
+
+def post_alert(data):
+    if hasattr(config, 'ALERT_URLS'):
+        for url in config.ALERT_URLS:
+            try:
+                http_result = requests.post(config.ALERT_URLS[url], data=data, verify=False)
+                app.logger.info('Success posted to' + str(url) + ' at "' + str(config.ALERT_URLS[url]) +
+                                '", got response: ' + str(http_result))
+            except Exception as e:
+                app.logger.info("ERROR: POST to " + str(url) + " Error was: " + str(e))
+    else:
+        app.logger.info('post_alert() called, but no URLs declared in ALERT_URLS in config.')
 
 # Get unbounded event logs
 def get_event_log():
