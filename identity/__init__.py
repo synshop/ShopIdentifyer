@@ -6,11 +6,10 @@ from functools import wraps
 from email.message import EmailMessage
 import requests, urllib
 
-
 try:
     import identity.config as config
 except Exception as e:
-    print('ERROR','Missing "config.py" file. See https://github.com/synshop/ShopIdentifyer/ for info')
+    print('ERROR', 'Missing "config.py" file. See https://github.com/synshop/ShopIdentifyer/ for info')
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -24,10 +23,9 @@ from apscheduler.triggers.cron import CronTrigger
 import MySQLdb as mysql
 
 from flask import Flask, request, g, flash
-from flask import redirect,  make_response
+from flask import redirect, make_response
 from flask import render_template, jsonify
 from flask import session, escape, url_for
-from flask import send_file
 
 RUN_MODE = 'development'
 
@@ -36,7 +34,7 @@ ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
 app = Flask(__name__)
 
 try:
-    app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY,ENCRYPTION_KEY)
+    app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY, ENCRYPTION_KEY)
 except Exception as e:
     print('ERROR', 'Failed to decrypt "ENCRYPTED_" config variables in "config.py".  Error was:', e)
     quit()
@@ -48,9 +46,9 @@ app.config['STRIPE_CACHE_REFRESH_CRON'] = config.STRIPE_CACHE_REFRESH_CRON
 app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] = config.STRIPE_CACHE_REFRESH_REACHBACK_MIN
 app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
 app.config['STRIPE_CACHE_DEACTIVATE_CRON'] = config.STRIPE_CACHE_DEACTIVATE_CRON
-app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME,ENCRYPTION_KEY)
-app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD,ENCRYPTION_KEY)
-app.config['DISCORD_BOT_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_DISCORD_BOT_TOKEN,ENCRYPTION_KEY)
+app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME, ENCRYPTION_KEY)
+app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD, ENCRYPTION_KEY)
+app.config['DISCORD_BOT_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_DISCORD_BOT_TOKEN, ENCRYPTION_KEY)
 
 # Plaintext Configuration
 app.config['SMTP_SERVER'] = config.SMTP_SERVER
@@ -78,6 +76,7 @@ app.logger.info("------------------------------")
 # Imports down here so that they can see the app.config elements
 import identity.stripe
 
+
 def connect_db():
     return mysql.connect(
         host=config.DATABASE_HOST,
@@ -86,25 +85,28 @@ def connect_db():
         db=config.DATABASE_SCHEMA
     )
 
+
 def get_db():
     if not hasattr(g, 'mysql_db'):
         g.mysql_db = connect_db()
     return g.mysql_db
+
 
 @app.teardown_appcontext
 def close_db(error):
     if hasattr(g, 'mysql_db'):
         g.mysql_db.close()
 
+
 # Start cron tasks
 s1 = BackgroundScheduler()
+
 
 # This helps with stripe information lookup performance
 # Currently it runs every ~15 minutes and grabs
 # the last 15 minutes of data
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REFRESH_CRON']))
 def refresh_stripe_cache():
-
     app.logger.info("refreshing stripe cache")
     member_array = identity.stripe.get_stripe_customers(incremental=True)
 
@@ -114,19 +116,19 @@ def refresh_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
-            (member['stripe_id'], member['stripe_created_on'], member['stripe_email'], \
-             member['stripe_description'], member['stripe_last_payment_status'],\
-             member['stripe_subscription_id'], member['stripe_subscription_product'],\
-             member['stripe_subscription_status'], member['stripe_subscription_created_on']))
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (member['stripe_id'], member['stripe_created_on'], member['stripe_email'],
+                         member['stripe_description'], member['stripe_last_payment_status'],
+                         member['stripe_subscription_id'], member['stripe_subscription_product'],
+                         member['stripe_subscription_status'], member['stripe_subscription_created_on']))
 
         db.commit()
 
     app.logger.info("finished refreshing stripe cache")
 
+
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REBUILD_CRON']))
 def rebuild_stripe_cache():
-
     app.logger.info("nightly stripe cache rebuild")
 
     member_array = identity.stripe.get_stripe_customers()
@@ -141,31 +143,33 @@ def rebuild_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",\
-            (member['stripe_id'], member['stripe_created_on'], member['stripe_email'], \
-             member['stripe_description'], member['stripe_last_payment_status'],\
-             member['stripe_subscription_id'], member['stripe_subscription_product'],\
-             member['stripe_subscription_status'], member['stripe_subscription_created_on']))
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (member['stripe_id'], member['stripe_created_on'], member['stripe_email'],
+                         member['stripe_description'], member['stripe_last_payment_status'],
+                         member['stripe_subscription_id'], member['stripe_subscription_product'],
+                         member['stripe_subscription_status'], member['stripe_subscription_created_on']))
 
         db.commit()
 
     app.logger.info("finished rebuilding stripe cache")
+
 
 # Archive (set m.status to INACTIVE) for members w/o a subscription
 # and send a nightly email report
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_DEACTIVATE_CRON']))
 def archive_members_no_sub():
     with app.app_context():
-        
+
         app.logger.info("[ARCHIVE MEMBERS] - Starting archiving process...")
         db = get_db()
         cur = db.cursor()
-        sql_stmt = 'select stripe_id, full_name, discord_handle, created_on from members where stripe_id not in (select stripe_id from stripe_cache) and member_status = "ACTIVE"'
+        sql_stmt = 'select stripe_id, full_name, discord_handle, created_on from members where stripe_id not in (' \
+                   'select stripe_id from stripe_cache) and member_status = "ACTIVE" '
         cur.execute(sql_stmt)
         members = cur.fetchall()
 
         if len(members) != 0:
-        
+
             for member in members:
                 send_member_deactivation_email(member)
 
@@ -175,16 +179,19 @@ def archive_members_no_sub():
                     discord_id = get_member_discord_id(member[2])
                     unassign_discord_role(app.config['DISCORD_ROLE_PAID_MEMBER'], discord_id)
                     unassign_discord_role(app.config['DISCORD_ROLE_VETTED_MEMBER'], discord_id)
-    
+
             # Do the deactivation
-            sql_stmt = 'update members set member_status = "INACTIVE", is_vetted = "NOT VETTED" where stripe_id not in (select stripe_id from stripe_cache)'
+            sql_stmt = 'update members set member_status = "INACTIVE", is_vetted = "NOT VETTED" where stripe_id not ' \
+                       'in (select stripe_id from stripe_cache) '
             cur.execute(sql_stmt)
             db.commit()
         else:
             app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
 
+
 if config.SCHEDULER_ENABLED == True:
     s1.start()
+
 
 # End cron tasks
 
@@ -192,19 +199,20 @@ if config.SCHEDULER_ENABLED == True:
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get('logged_in') == None:
+        if session.get('logged_in') is None:
             return redirect(url_for("show_login"))
         return f(*args, **kwargs)
+
     return decorated_function
 
-# Allow admin users to change their passwords
-def admin_change_password(stripe_id=None,password=None):
 
+# Allow admin users to change their passwords
+def admin_change_password(stripe_id=None, password=None):
     try:
         db = get_db()
         cur = db.cursor()
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
         stmt = "update admin_users set pwd = %s where stripe_id = %s"
         cur.execute(stmt, (hashed_password, stripe_id,))
@@ -213,16 +221,17 @@ def admin_change_password(stripe_id=None,password=None):
     except:
         return False
 
+
 # Check the password for the user login
 def check_password(username=None, password=None):
-
     with app.app_context():
 
         try:
             db = get_db()
             cur = db.cursor()
 
-            stmt = "select a.pwd from admin_users a where a.stripe_id = (select m.stripe_id from members m where nick_name = %s)"
+            stmt = "select a.pwd from admin_users a where a.stripe_id = (select m.stripe_id from members m where " \
+                   "nick_name = %s) "
             cur.execute(stmt, (username,))
             entries = cur.fetchall()
             hashed_password = entries[0][0].encode('utf-8')
@@ -238,9 +247,9 @@ def check_password(username=None, password=None):
 
         return passwords_match
 
-# Send a nightly report 
-def send_member_deactivation_email(member):
 
+# Send a nightly report
+def send_member_deactivation_email(member):
     has_tokens = member_has_authorized_rfid(member[0])
 
     email_subject = "[ARCHIVING MEMBER] - %s no longer has a Stripe subscription" % (member[1],)
@@ -258,7 +267,7 @@ def send_member_deactivation_email(member):
     Has RFID Token(s)
     %s
 
-    """  % (member[1],member[2],member[3], has_tokens)
+    """ % (member[1], member[2], member[3], has_tokens)
 
     if config.SMTP_SEND_EMAIL:
         app.logger.info("Sending alert email about archiving a member")
@@ -271,18 +280,19 @@ def send_member_deactivation_email(member):
             smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             smtp.send_message(msg)
     else:
-        log_message = "[ARCHIVING MEMBERS][EMAIL DISABLED] - Deactivating %s in the system, Has RFIDs = %s" % (member[0], has_tokens)
+        log_message = "[ARCHIVING MEMBERS][EMAIL DISABLED] - Deactivating %s in the system, Has RFIDs = %s" % (
+            member[0], has_tokens)
         app.logger.info(log_message)
+
 
 # Send alert email about a member swiping in
 # but is not in good standing
 def send_payment_alert_email(sub_id=None):
-    
     stripe_info = identity.stripe.get_realtime_stripe_info(sub_id)
     member = get_member(stripe_info['stripe_id'])
-    
+
     email_body_data = (
-        member['full_name'], 
+        member['full_name'],
         stripe_info['stripe_subscription_product'],
         stripe_info['stripe_last_payment_status']
     )
@@ -301,7 +311,7 @@ def send_payment_alert_email(sub_id=None):
     Last Payment Status:
     %s
 
-    """  % email_body_data
+    """ % email_body_data
 
     if config.SMTP_SEND_EMAIL:
         app.logger.info("Sending alert email regarding a delinquent door swipe")
@@ -315,16 +325,17 @@ def send_payment_alert_email(sub_id=None):
             smtp.send_message(msg)
     else:
         log_message = "[EMAIL DISABLED] - Logging swipe event for delinquent member %s" % (stripe_info['stripe_id'],)
-        app.logger.info(log_message) 
+        app.logger.info(log_message)
 
-# Send an alert email about a valid door access event
+    # Send an alert email about a valid door access event
+
+
 def send_door_access_alert_email(sub_id=None):
-    
     stripe_info = identity.stripe.get_realtime_stripe_info(sub_id)
     member = get_member(stripe_info['stripe_id'])
-    
+
     email_body_data = (
-        member['full_name'], 
+        member['full_name'],
         stripe_info['stripe_subscription_product'],
         stripe_info['stripe_last_payment_status']
     )
@@ -342,7 +353,7 @@ def send_door_access_alert_email(sub_id=None):
     Last Payment Status:
     %s
 
-    """  % email_body_data
+    """ % email_body_data
 
     if config.SMTP_SEND_EMAIL:
         app.logger.info("[DOOR ACCESS ALERT] - %s swiped in" % (member['full_name'],))
@@ -358,14 +369,15 @@ def send_door_access_alert_email(sub_id=None):
         log_message = "[EMAIL DISABLED] - Logging swipe event for valid member %s" % (stripe_info['stripe_id'],)
         app.logger.info(log_message)
 
+
 # Send alert email about a rfid token swiping in
 # but is not assigned to a member in the system
 def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
-
     if config.SMTP_SEND_EMAIL:
         app.logger.info("Sending alert email regarding a delinquent door swipe")
 
-        email_subject = "[UNASSIGNED RFID ALERT] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
+        email_subject = "[UNASSIGNED RFID ALERT] - The token %s is being used to swipe in but is not attached to a member" % (
+            rfid_id_token_hex,)
         email_body = "NO STRIPE INFORMATION IS AVAILABLE FOR RFID TOKEN %s" % (rfid_id_token_hex,)
 
         msg = EmailMessage()
@@ -377,12 +389,13 @@ def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
             smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             smtp.send_message(msg)
     else:
-        log_message = "[EMAIL DISABLED] - The token %s is being used to swipe in but is not attached to a member" % (rfid_id_token_hex,)
+        log_message = "[EMAIL DISABLED] - The token %s is being used to swipe in but is not attached to a member" % (
+            rfid_id_token_hex,)
         app.logger.info(log_message)
+
 
 # Check to see if a user is able to login and make changes to the system
 def member_is_admin(stripe_id=None):
-
     try:
         db = get_db()
         cur = db.cursor()
@@ -395,6 +408,7 @@ def member_is_admin(stripe_id=None):
             return False
     except:
         return False
+
 
 # Returns True if user has an RFID token in the access control system
 def member_has_authorized_rfid(stripe_id=None):
@@ -412,10 +426,10 @@ def member_has_authorized_rfid(stripe_id=None):
     except:
         return False
 
-# Convert a given member's discord handle (username#discrimator) 
+
+# Convert a given member's discord handle (username#discrimator)
 # into their 18 digit discord id
 def get_member_discord_id(discord_handle=None):
-
     if discord_handle == "None" or discord_handle == "":
         return "000000000000000000"
 
@@ -426,8 +440,9 @@ def get_member_discord_id(discord_handle=None):
     TOKEN = app.config['DISCORD_BOT_TOKEN']
 
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/search?limit=10&query={encoded_name}'
-    result = requests.get(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    result = requests.get(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
     return result.json()[0]['user']['id']
+
 
 # Remove a discord role from a member
 def unassign_discord_role(role_id=None, discord_id=None):
@@ -435,8 +450,9 @@ def unassign_discord_role(role_id=None, discord_id=None):
     TOKEN = app.config['DISCORD_BOT_TOKEN']
     app.logger.info("[DISCORD] - unassigning role %s to user %s" % (role_id, discord_id))
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
-    result = requests.delete(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    result = requests.delete(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
     return result
+
 
 # Assign a discord role to a member
 def assign_discord_role(role_id=None, discord_id=None):
@@ -444,25 +460,26 @@ def assign_discord_role(role_id=None, discord_id=None):
     TOKEN = app.config['DISCORD_BOT_TOKEN']
     app.logger.info("[DISCORD] - assigning role %s to user %s" % (role_id, discord_id))
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
-    result = requests.put(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    result = requests.put(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
     return result
+
 
 # Manual process to remove all Vetted and Paid discord roles
 # from ALL users
 def m_remove_discord_roles():
-
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
 
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members?limit=999'
-    result = requests.get(url,headers={'Authorization': f'Bot {TOKEN}','Content-Type': 'application/json'})
+    result = requests.get(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
 
     for y in result.json():
         unassign_discord_role(role_id=app.config["DISCORD_ROLE_PAID_MEMBER"], discord_id=y['user']['id'])
-        
+
         # Don't remove VegasVader 
         if y['user']['id'] != "494679297215430657":
             unassign_discord_role(role_id=app.config["DISCORD_ROLE_VETTED_MEMBER"], discord_id=y['user']['id'])
+
 
 # Manual process to add Vetted and Paid discord roles
 # to correct users
@@ -470,22 +487,24 @@ def m_add_all_discord_roles():
     with app.app_context():
         db = get_db()
         cur = db.cursor()
-        
+
         # Get discord handles for Vetted Members
         stmt = 'select discord_handle from members where IS_VETTED = "VETTED" and discord_handle IS NOT NULL'
         cur.execute(stmt)
         for member in cur.fetchall():
             discord_id = get_member_discord_id(member[0])
-            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],discord_id)
+            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"], discord_id)
             time.sleep(5)
-        
+
         # Get discord handles for ACTIVE Members with valid Subscription Plans
-        stmt = 'select m.discord_handle, m.stripe_id, sc.stripe_subscription_product from members m, stripe_cache sc where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL'
+        stmt = 'select m.discord_handle, m.stripe_id, sc.stripe_subscription_product from members m, stripe_cache sc ' \
+               'where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL '
         cur.execute(stmt)
         for member in cur.fetchall():
             discord_id = get_member_discord_id(member[0])
-            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],discord_id)
+            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"], discord_id)
             time.sleep(5)
+
 
 # Convert a given stripe_id to its current subscription_id
 def get_subscription_id_from_stripe_cache(stripe_id=None):
@@ -496,29 +515,34 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
 
     return cur.fetchall()[0][0]
 
-# Mnaully insert a new RFID token into the system 
-def insert_new_rfid_token_record(eb_id=None,rfid_token_hex=None,rfid_token_comment="PRIMARY"):
+
+# Mnaully insert a new RFID token into the system
+def insert_new_rfid_token_record(eb_id=None, rfid_token_hex=None, rfid_token_comment="PRIMARY"):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "insert into rfid_tokens (eb_id,rfid_token_hex,rfid_token_comment,eb_status) values (%s,%s,%s,%s)"
-    cur.execute(sql_stmt, (eb_id,rfid_token_hex,rfid_token_comment,"ACTIVE"))
+    cur.execute(sql_stmt, (eb_id, rfid_token_hex, rfid_token_comment, "ACTIVE"))
     db.commit()
 
+
 # Attach a RFID token to a member
-def assign_rfid_token(eb_id=None,stripe_id=None):
+def assign_rfid_token(eb_id=None, stripe_id=None):
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = %s, status = 'ASSIGNED' where eb_id = %s"
-    cur.execute(sql_stmt, (stripe_id,eb_id))
+    cur.execute(sql_stmt, (stripe_id, eb_id))
     db.commit()
+
 
 # Detach a RFID token from a member
 def unassign_rfid_token(rfid_id_token_hex=None):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where rfid_token_hex = %s"
+    sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where " \
+               "rfid_token_hex = %s "
     cur.execute(sql_stmt, (rfid_id_token_hex,))
     db.commit()
+
 
 # Get a list of unassigned tokens
 def get_unassigned_rfid_tokens():
@@ -528,13 +552,16 @@ def get_unassigned_rfid_tokens():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+
 # Get all the RFID Tokens in the system
 def get_all_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'select r.rfid_token_hex,r.eb_id,r.eb_status,m.full_name,r.status,r.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by r.eb_id, m.full_name'
+    sql_stmt = 'select r.rfid_token_hex,r.eb_id,r.eb_status,m.full_name,r.status,r.stripe_id from rfid_tokens r, ' \
+               'members m where r.stripe_id = m.stripe_id order by r.eb_id, m.full_name '
     cur.execute(sql_stmt)
     return cur.fetchall()
+
 
 # Get the attributes for a given token
 def get_rfid_token_attributes(rfid_token_hex=None):
@@ -543,6 +570,7 @@ def get_rfid_token_attributes(rfid_token_hex=None):
     sql_stmt = 'select * from rfid_tokens where rfid_token_hex = %s'
     cur.execute(sql_stmt, (rfid_token_hex,))
     return cur.fetchone()
+
 
 # Update RFID Token Attributes
 def update_rfid_token_attributes(request=None):
@@ -554,16 +582,18 @@ def update_rfid_token_attributes(request=None):
 
     if eb_status == "INACTIVE":
         eb_id = None
-    
+
     if eb_id == "None":
         eb_id = None
 
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'update rfid_tokens set eb_status = %s, status = %s, rfid_token_comment = %s, eb_id = %s where rfid_token_hex = %s'
-    cur.execute(sql_stmt, (eb_status,system_status,rfid_token_comment,eb_id,rfid_token_hex))
+    sql_stmt = 'update rfid_tokens set eb_status = %s, status = %s, rfid_token_comment = %s, eb_id = %s where ' \
+               'rfid_token_hex = %s '
+    cur.execute(sql_stmt, (eb_status, system_status, rfid_token_comment, eb_id, rfid_token_hex))
 
     db.commit()
+
 
 # NOT USED YET
 def get_unassigned_rfid_tokens_from_event_log():
@@ -579,21 +609,26 @@ def get_unassigned_rfid_tokens_from_event_log():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+
 # Get a list of users to assign a RFID (need to be VETTED and ACTIVE)
 def get_members_for_rfid_association():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where m.stripe_id = sc.stripe_id and member_status = 'ACTIVE' and is_vetted = 'VETTED'"
+    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where " \
+               "m.stripe_id = sc.stripe_id and member_status = 'ACTIVE' and is_vetted = 'VETTED' "
     cur.execute(sql_stmt)
     return cur.fetchall()
+
 
 # Get a list of members with RFID Tokens assigned to them
 def get_members_with_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, r.rfid_token_hex, r.rfid_token_comment from members m, rfid_tokens r where m.stripe_id = r.stripe_id order by m.full_name"
+    sql_stmt = "select m.stripe_id, m.full_name, r.rfid_token_hex, r.rfid_token_comment from members m, rfid_tokens r " \
+               "where m.stripe_id = r.stripe_id order by m.full_name "
     cur.execute(sql_stmt)
     return cur.fetchall()
+
 
 # Return the list of members who need onboarding
 def get_members_to_onboard():
@@ -639,8 +674,9 @@ def get_members_to_onboard():
             stripe_subscription_status=row[6])
 
         entries_x.append(entry_dict)
-        
+
     return entries_x
+
 
 # Get a list of onboarded INACTIVE members
 def get_inactive_members():
@@ -664,7 +700,7 @@ def get_inactive_members():
         ORDER BY
             s.stripe_subscription_product desc
     """
-    
+
     cur.execute(sql_stmt)
     members = cur.fetchall()
 
@@ -675,8 +711,9 @@ def get_inactive_members():
         has_rfid = member_has_authorized_rfid(member[0])
         x.append(has_rfid)
         ret_members.append(x)
-        
+
     return ret_members
+
 
 # Fetch the rfid_token(s) for a user
 def get_member_rfid_tokens(stripe_id=None):
@@ -684,17 +721,17 @@ def get_member_rfid_tokens(stripe_id=None):
     cur = db.cursor()
     sql_stmt = "select rfid_token_hex from rfid_tokens where stripe_id = %s"
     cur.execute(sql_stmt, (stripe_id,))
-    
+
     rfid_tokens = []
 
     for entry in cur.fetchall():
         rfid_tokens.append(entry[0])
-    
+
     return ", ".join(rfid_tokens)
+
 
 # Fetch a member 'object'
 def get_member(stripe_id=None):
-
     member = {}
 
     subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
@@ -711,7 +748,8 @@ def get_member(stripe_id=None):
         member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
         member['stripe_email'] = stripe_info['stripe_email']
 
-        sql_stmt = 'update stripe_cache set stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE stripe_id = %s'
+        sql_stmt = 'update stripe_cache set stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE ' \
+                   'stripe_id = %s '
         cur.execute(sql_stmt,
                     (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
         db.commit()
@@ -778,28 +816,28 @@ def get_member(stripe_id=None):
     member["led_color"] = entry[15]
     member["door_access"] = member_has_authorized_rfid(stripe_id)
     member["rfid_tokens"] = get_member_rfid_tokens(stripe_id)
-    
+
     return member
+
 
 # Update an existing member 'object'
 def update_member(request=None):
-
     db = connect_db()
     cur = db.cursor()
 
     if request.files['badge_file'].filename != "":
         badge_photo = request.files['badge_file'].read()
     else:
-        badge_base64 = request.form.get('badge_base64_data',default=None)
+        badge_base64 = request.form.get('badge_base64_data', default=None)
         if len(badge_base64) != 0:
             badge_photo = base64.b64decode(badge_base64)
         else:
             badge_photo = None
-    
+
     if request.files['liability_file'].filename != "":
         liability_wavier_form = request.files['liability_file'].read()
     else:
-        liability_base64 = request.form.get('liability_base64_data',default=None)
+        liability_base64 = request.form.get('liability_base64_data', default=None)
         if len(liability_base64) != 0:
             liability_wavier_form = base64.b64decode(liability_base64)
             liability_wavier_form = io.BytesIO(liability_wavier_form)
@@ -808,7 +846,7 @@ def update_member(request=None):
             enh = ImageEnhance.Contrast(image)
             image = enh.enhance(1.8)
             liability_wavier_form = io.BytesIO()
-            image.save(liability_wavier_form,format='PDF')
+            image.save(liability_wavier_form, format='PDF')
             liability_wavier_form = liability_wavier_form.getvalue()
         else:
             liability_wavier_form = None
@@ -816,7 +854,7 @@ def update_member(request=None):
     if request.files['vetted_file'].filename != "":
         vetted_membership_form = request.files['vetted_file'].read()
     else:
-        vetted_base64 = request.form.get('vetted_base64_data',default=None)
+        vetted_base64 = request.form.get('vetted_base64_data', default=None)
         if len(vetted_base64) != 0:
             vetted_membership_form = base64.b64decode(vetted_base64)
             vetted_membership_form = io.BytesIO(vetted_membership_form)
@@ -825,25 +863,26 @@ def update_member(request=None):
             enh = ImageEnhance.Contrast(image)
             image = enh.enhance(1.8)
             vetted_membership_form = io.BytesIO()
-            image.save(vetted_membership_form,format='PDF')
-            vetted_membership_form = vetted_membership_form.getvalue()            
+            image.save(vetted_membership_form, format='PDF')
+            vetted_membership_form = vetted_membership_form.getvalue()
         else:
             vetted_membership_form = None
 
     # Do any image / document updates separately, otherwise you will clobber the existing blobs
-    
+
     stripe_id = request.form.get('stripe_id')
 
     if vetted_membership_form != None:
-        cur.execute('update members set vetted_membership_form=%s where stripe_id=%s', (vetted_membership_form,stripe_id))
+        cur.execute('update members set vetted_membership_form=%s where stripe_id=%s',
+                    (vetted_membership_form, stripe_id))
         db.commit()
-    
+
     if liability_wavier_form != None:
-        cur.execute('update members set liability_waiver=%s where stripe_id=%s', (liability_wavier_form,stripe_id))
+        cur.execute('update members set liability_waiver=%s where stripe_id=%s', (liability_wavier_form, stripe_id))
         db.commit()
-    
+
     if badge_photo != None:
-        cur.execute('update members set badge_photo=%s where stripe_id=%s', (badge_photo,stripe_id))
+        cur.execute('update members set badge_photo=%s where stripe_id=%s', (badge_photo, stripe_id))
         db.commit()
 
     insert_data = (
@@ -854,14 +893,16 @@ def update_member(request=None):
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted','NOT VETTED'),
+        request.form.get('is_vetted', 'NOT VETTED'),
         request.form.get('discord_handle'),
         request.form.get('locker_num'),
         request.form.get('led_color'),
         stripe_id
     )
-    
-    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,led_color=%s where stripe_id=%s'
+
+    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,' \
+               'emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,' \
+               'led_color=%s where stripe_id=%s '
     cur.execute(sql_stmt, insert_data)
 
     db.commit()
@@ -869,20 +910,24 @@ def update_member(request=None):
 
     # Add Vetted Member Role if the member has a discord handle
     if app.config["DISCORD_MANAGE_ROLES"] and \
-        request.form.get('is_vetted') == "VETTED" and \
-        request.form.get('discord_handle') != None:
-        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
+            request.form.get('is_vetted') == "VETTED" and \
+            request.form.get('discord_handle') is not None:
+        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
+                            get_member_discord_id(request.form.get('discord_handle')))
 
     # Remove Vetted Member Role if the member has a discord handle
     if request.form.get('is_vetted') == "NOT VETTED" and \
-        request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-        unassign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
+            request.form.get('discord_handle') is not None and app.config["DISCORD_MANAGE_ROLES"]:
+        unassign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
+                              get_member_discord_id(request.form.get('discord_handle')))
 
     # Add Paid Member Role if the member has a discord handle
     if app.config["DISCORD_MANAGE_ROLES"] and \
-        request.form.get('stripe_plan') != "Pause Membership" and \
-        request.form.get('discord_handle') != None:
-        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
+            request.form.get('stripe_plan') != "Pause Membership" and \
+            request.form.get('discord_handle') is not None:
+        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
+                            get_member_discord_id(request.form.get('discord_handle')))
+
 
 # Push log event into database
 def insert_log_event(request=None):
@@ -907,7 +952,7 @@ def insert_log_event(request=None):
     cur = db.cursor()
 
     sql_stmt = "select stripe_id, rfid_token_comment, eb_id from rfid_tokens where rfid_token_hex = %s"
-    cur.execute(sql_stmt,(rfid_token_hex,))
+    cur.execute(sql_stmt, (rfid_token_hex,))
     entry = cur.fetchone()
 
     member = {'name': 'NA', 'handle': 'unknown ' + swipe_status, 'color': 'red', 'event_type': event_type}
@@ -916,7 +961,7 @@ def insert_log_event(request=None):
         rfid_token_comment = entry[1]
 
         sql_stmt = "select full_name, nick_name, led_color from members where stripe_id = %s"
-        cur.execute(sql_stmt,(stripe_id,))
+        cur.execute(sql_stmt, (stripe_id,))
         member_tmp = cur.fetchone()
         if len(member_tmp) > 0:
             if member_tmp[2] is None:
@@ -963,9 +1008,9 @@ def post_alert(data):
     else:
         app.logger.info('post_alert() called, but no URLs declared in ALERT_URLS in config.')
 
+
 # Get unbounded event logs
 def get_event_log():
-
     db = get_db()
     cur = db.cursor()
     sql_stmt = """
@@ -988,99 +1033,104 @@ def get_event_log():
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+
 # Get public membership statistics for the front page
 def get_public_stats():
-
     stats = {
         'total_membership': {
-            'count':0, 
-            'sql':'select count(*) from stripe_cache'
+            'count': 0,
+            'sql': 'select count(*) from stripe_cache'
         },
         'total_paused': {
-            'count':0,
+            'count': 0,
             'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Pause Membership"'
         },
         'total_need_onboarding': {
-            'count':0,
-            'sql':'select count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and stripe_id NOT IN (SELECT stripe_id FROM members)'
+            'count': 0,
+            'sql': 'select count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and '
+                   'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'total_vetted': {
-            'count':0,
-            'sql':'select count(*) from members where IS_VETTED = "VETTED"'
+            'count': 0,
+            'sql': 'select count(*) from members where IS_VETTED = "VETTED"'
         },
         'total_not_vetted': {
-            'count':0,
-            'sql':'select count(*) from members where IS_VETTED = "NOT VETTED"'
+            'count': 0,
+            'sql': 'select count(*) from members where IS_VETTED = "NOT VETTED"'
         },
         'total_have_waivers': {
-            'count':0,
-            'sql':'select count(*) from members where liability_waiver is NOT NULL'
+            'count': 0,
+            'sql': 'select count(*) from members where liability_waiver is NOT NULL'
         },
         'total_no_waivers': {
-            'count':0,
-            'sql':'select count(*) from members where liability_waiver is NULL'
+            'count': 0,
+            'sql': 'select count(*) from members where liability_waiver is NULL'
         },
         'total_door_access': {
-            'count':0,
-            'sql':'select count(*) from members'
+            'count': 0,
+            'sql': 'select count(*) from members'
         }
     }
 
     db = get_db()
     cur = db.cursor()
-    
+
     for key in stats:
         cur.execute(stats[key]['sql'])
         stats[key]['count'] = cur.fetchall()[0][0]
 
     return stats
 
-# Get member usage statistics 
-def get_usage_report():
 
+# Get member usage statistics
+def get_usage_report():
     stats = {
         'active_membership': {
-            'count':0, 
-            'sql':'select count(*) from members where member_status = "ACTIVE"'
+            'count': 0,
+            'sql': 'select count(*) from members where member_status = "ACTIVE"'
         },
         'inactive_membership': {
-            'count':0,
-            'sql':'select count(*) from members where member_status = "INACTIVE"'
+            'count': 0,
+            'sql': 'select count(*) from members where member_status = "INACTIVE"'
         },
         'paused_not_onboarded': {
-            'count':0,
-            'sql':'SELECT count(stripe_id) from stripe_cache where stripe_subscription_product = "Pause Membership" AND stripe_id NOT IN (SELECT stripe_id FROM members)'
+            'count': 0,
+            'sql': 'SELECT count(stripe_id) from stripe_cache where stripe_subscription_product = "Pause Membership" '
+                   'AND stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'paused_onboarded': {
-            'count':0,
-            'sql':'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND s.stripe_subscription_product = "Pause Membership"'
+            'count': 0,
+            'sql': 'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND '
+                   's.stripe_subscription_product = "Pause Membership" '
         },
         'need_onboarding': {
-            'count':0,
-            'sql':'SELECT count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and stripe_id NOT IN (SELECT stripe_id FROM members)'
+            'count': 0,
+            'sql': 'SELECT count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and '
+                   'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
-        'door_swipes' : {
-            'count':0,
+        'door_swipes': {
+            'count': 0,
             'sql': 'select count(*) from event_log where created_on >="2022-11-01"'
         },
         'door_access_deny': {
-            'count':0,
-            'sql':'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_DENY"'
+            'count': 0,
+            'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_DENY"'
         },
         'door_accss_granted': {
-            'count':0,
+            'count': 0,
             'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_GRANT"'
         }
     }
 
     db = get_db()
     cur = db.cursor()
-    
+
     for key in stats:
         cur.execute(stats[key]['sql'])
         stats[key]['count'] = cur.fetchall()[0][0]
 
     return stats
+
 
 # Build the /admin view
 def get_admin_view():
@@ -1119,21 +1169,23 @@ def get_admin_view():
         has_rfid = member_has_authorized_rfid(member[0])
         x.append(has_rfid)
         ret_members.append(x)
-        
+
     return ret_members
 
-# Onboarding process - this attempts to pre-populate some fields 
+
+# Onboarding process - this attempts to pre-populate some fields
 # when setting up a new user.
-@app.route('/member/new/<stripe_id>', methods=['GET','POST'])
+@app.route('/member/new/<stripe_id>', methods=['GET', 'POST'])
 @login_required
 def show_onboard_new_member(stripe_id):
     # Get a new form, or if a POST then save the data
     if request.method == "GET":
-        app.logger.info("User %s is onboarding member %s" % (session['username'],stripe_id))
+        app.logger.info("User %s is onboarding member %s" % (session['username'], stripe_id))
 
         db = connect_db()
         cur = db.cursor()
-        sql_stmt = 'select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, stripe_subscription_status from stripe_cache where stripe_id = %s'
+        sql_stmt = 'select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, ' \
+                   'stripe_subscription_status from stripe_cache where stripe_id = %s '
         cur.execute(sql_stmt, (stripe_id,))
         rows = cur.fetchall()
         member = rows[0]
@@ -1177,23 +1229,23 @@ def show_onboard_new_member(stripe_id):
         return render_template('new_member.html', member=user)
 
     if request.method == "POST":
-        
+
         # Need to determine if this is a file upload or an webcam image capture
         # for badge photos, liability waivers, and vetted membership forms
 
         if request.files['badge_file'].filename != "":
             badge_photo = request.files['badge_file'].read()
         else:
-            badge_base64 = request.form.get('badge_base64_data',default=None)
+            badge_base64 = request.form.get('badge_base64_data', default=None)
             if len(badge_base64) != 0:
                 badge_photo = base64.b64decode(badge_base64)
             else:
                 badge_photo = None
-        
+
         if request.files['liability_file'].filename != "":
             liability_wavier_form = request.files['liability_file'].read()
         else:
-            liability_base64 = request.form.get('liability_base64_data',default=None)
+            liability_base64 = request.form.get('liability_base64_data', default=None)
             if len(liability_base64) != 0:
                 liability_wavier_form = base64.b64decode(liability_base64)
                 liability_wavier_form = io.BytesIO(liability_wavier_form)
@@ -1202,7 +1254,7 @@ def show_onboard_new_member(stripe_id):
                 enh = ImageEnhance.Contrast(image)
                 image = enh.enhance(1.8)
                 liability_wavier_form = io.BytesIO()
-                image.save(liability_wavier_form,format='PDF')
+                image.save(liability_wavier_form, format='PDF')
                 liability_wavier_form = liability_wavier_form.getvalue()
             else:
                 liability_wavier_form = None
@@ -1210,7 +1262,7 @@ def show_onboard_new_member(stripe_id):
         if request.files['vetted_file'].filename != "":
             vetted_membership_form = request.files['vetted_file'].read()
         else:
-            vetted_base64 = request.form.get('vetted_base64_data',default=None)
+            vetted_base64 = request.form.get('vetted_base64_data', default=None)
             if len(vetted_base64) != 0:
                 vetted_membership_form = base64.b64decode(vetted_base64)
                 vetted_membership_form = io.BytesIO(vetted_membership_form)
@@ -1219,8 +1271,8 @@ def show_onboard_new_member(stripe_id):
                 enh = ImageEnhance.Contrast(image)
                 image = enh.enhance(1.8)
                 vetted_membership_form = io.BytesIO()
-                image.save(vetted_membership_form,format='PDF')
-                vetted_membership_form = vetted_membership_form.getvalue()            
+                image.save(vetted_membership_form, format='PDF')
+                vetted_membership_form = vetted_membership_form.getvalue()
             else:
                 vetted_membership_form = None
 
@@ -1234,7 +1286,7 @@ def show_onboard_new_member(stripe_id):
             request.form.get('mobile'),
             request.form.get('emergency_contact_name'),
             request.form.get('emergency_contact_mobile'),
-            request.form.get('is_vetted','NOT VETTED'),
+            request.form.get('is_vetted', 'NOT VETTED'),
             liability_wavier_form,
             vetted_membership_form,
             badge_photo,
@@ -1244,20 +1296,28 @@ def show_onboard_new_member(stripe_id):
 
         db = connect_db()
         cur = db.cursor()
-        cur.execute('insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,badge_photo,discord_handle,locker_num) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', insert_data)
+        cur.execute(
+            'insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,'
+            'emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,'
+            'badge_photo,discord_handle,locker_num) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+            insert_data)
         db.commit()
         db.close()
 
         # Add Paid Member Role in if the member has a discord handle
         if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
+            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
+                                get_member_discord_id(request.form.get('discord_handle')))
 
         # Add Vetted Member Role in if the member has a discord handle
-        if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],get_member_discord_id(request.form.get('discord_handle')))
+        if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config[
+            "DISCORD_MANAGE_ROLES"]:
+            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
+                                get_member_discord_id(request.form.get('discord_handle')))
 
-        app.logger.info("User %s successfully onboarded member %s" % (session['username'],stripe_id))
-        return redirect(url_for("show_admin_onboard",_scheme='https',_external=True))
+        app.logger.info("User %s successfully onboarded member %s" % (session['username'], stripe_id))
+        return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
+
 
 # Show member details
 @app.route('/member/<stripe_id>')
@@ -1265,20 +1325,21 @@ def show_onboard_new_member(stripe_id):
 def show_member(stripe_id):
     return render_template('show_member.html', member=get_member(stripe_id))
 
+
 # Edit member details
-@app.route('/member/<stripe_id>/edit', methods=['GET','POST'])
+@app.route('/member/<stripe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_member_details(stripe_id):
-
     if request.method == "GET":
         user = get_member(stripe_id)
-        app.logger.info("User %s is editing member %s " % (session['username'],stripe_id))
+        app.logger.info("User %s is editing member %s " % (session['username'], stripe_id))
         return render_template('edit_member.html', member=user)
 
     if request.method == "POST":
         update_member(request)
-        app.logger.info("User %s updated member %s" % (session['username'],stripe_id))
-        return redirect(url_for("show_admin",_scheme='https',_external=True))
+        app.logger.info("User %s updated member %s" % (session['username'], stripe_id))
+        return redirect(url_for("show_admin", _scheme='https', _external=True))
+
 
 # Get member badge photo
 @app.route('/member/<stripe_id>/files/photo.jpg')
@@ -1297,7 +1358,7 @@ def show_member_photo(stripe_id):
     except Exception as e:
         with open("./identity/static/images/syn_shop_badge_logo.png", mode='rb') as file:
             photo = file.read()
-        
+
         response = make_response(photo)
         response.headers['Content-Description'] = 'Badge Photo'
         response.headers['Content-Type'] = 'image/jpeg'
@@ -1305,11 +1366,11 @@ def show_member_photo(stripe_id):
 
     return response
 
+
 # Get member liability waiver
 @app.route("/member/<stripe_id>/files/liability-waiver.pdf")
 @login_required
 def show_member_wavier(stripe_id):
-
     db = get_db()
     cur = db.cursor()
     cur.execute("select liability_waiver from members where stripe_id = %s", (stripe_id,))
@@ -1332,11 +1393,11 @@ def show_member_wavier(stripe_id):
 
     return response
 
+
 # Get member vetted membership form
 @app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
 @login_required
 def show_member_vetted(stripe_id):
-
     db = get_db()
     cur = db.cursor()
     cur.execute("select vetted_membership_form from members where stripe_id = %s", (stripe_id,))
@@ -1358,23 +1419,25 @@ def show_member_vetted(stripe_id):
 
     return response
 
+
 # Door Access Event Webhook
 @app.route('/logevent', methods=['POST'])
 def show_event_log():
     insert_log_event(request)
-    return jsonify({"status":200})
+    return jsonify({"status": 200})
+
 
 # Landing Page Routes
 @app.route('/')
 def show_index():
     if session.get('logged_in') == None:
-        return render_template('index.html',stats=get_public_stats())
+        return render_template('index.html', stats=get_public_stats())
     else:
         return redirect(url_for('show_admin'))
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def show_login():
-
     error = ""
     r_to = request.referrer
 
@@ -1383,7 +1446,7 @@ def show_login():
         password = request.form['password']
         url = "/admin"
 
-        if check_password(username,password):
+        if check_password(username, password):
             session['logged_in'] = True
             session['username'] = username
             session.permanent = True
@@ -1392,71 +1455,83 @@ def show_login():
         else:
             error = 'Invalid credentials'
             app.logger.info("User %s failed login attempt" % (username))
-            r_to=url
+            r_to = url
 
-    return render_template('login.html',r_to=r_to,errors=error)
+    return render_template('login.html', r_to=r_to, errors=error)
+
 
 @app.route('/logout')
 def show_logout():
     session.pop('logged_in', None)
     session.pop('username', None)
     flash('You were logged out')
-    return redirect(url_for('show_index',_scheme='https',_external=True))
+    return redirect(url_for('show_index', _scheme='https', _external=True))
+
 
 @app.route('/admin')
 @login_required
 def show_admin():
     return render_template('admin.html', entries=get_admin_view())
 
+
 @app.route('/admin/onboard')
 @login_required
 def show_admin_onboard():
-    return render_template('onboard.html',entries=get_members_to_onboard(),stats=get_public_stats())
+    return render_template('onboard.html', entries=get_members_to_onboard(), stats=get_public_stats())
 
-@app.route('/admin/changepassword/<stripe_id>', methods=['GET','POST'])
+
+@app.route('/admin/changepassword/<stripe_id>', methods=['GET', 'POST'])
 @login_required
 def show_changepassword(stripe_id):
     if request.method == "GET":
-        return render_template('changepassword.html',stripe_id=stripe_id)
+        return render_template('changepassword.html', stripe_id=stripe_id)
 
     if request.method == "POST":
-        x = admin_change_password(stripe_id,request.form.get('password1'),)
+        x = admin_change_password(stripe_id, request.form.get('password1'), )
         return redirect(url_for('show_index'))
+
 
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
 def show_door_access_landing():
-    return render_template('door_access.html',entries=get_unassigned_rfid_tokens())
+    return render_template('door_access.html', entries=get_unassigned_rfid_tokens())
+
 
 @app.route('/admin/dooraccess/newtoken', methods=['GET'])
 @login_required
 def show_door_access_new_token():
     return render_template('door_access_new_token.html')
 
+
 @app.route('/admin/dooraccess/newtoken', methods=['POST'])
 @login_required
 def show_door_access_new_token_post():
-    insert_new_rfid_token_record(eb_id=request.form['eb_id'],rfid_token_hex=request.form['rfid_token_hex'],rfid_token_comment=request.form['rfid_token_comment'])
+    insert_new_rfid_token_record(eb_id=request.form['eb_id'], rfid_token_hex=request.form['rfid_token_hex'],
+                                 rfid_token_comment=request.form['rfid_token_comment'])
     return redirect(url_for('show_door_access_landing'))
+
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
 @login_required
 def show_door_access_assign():
     eb_id = request.args.get('eb_id')
-    return render_template('door_access_assign.html',entries=get_members_for_rfid_association(),eb_id=eb_id)
+    return render_template('door_access_assign.html', entries=get_members_for_rfid_association(), eb_id=eb_id)
+
 
 @app.route('/admin/dooraccess/assign', methods=['POST'])
 @login_required
 def show_door_access_assign_post():
     stripe_id = request.form.get('stripe_id')
     eb_id = request.form.get('eb_id')
-    assign_rfid_token(eb_id=eb_id,stripe_id=stripe_id)
+    assign_rfid_token(eb_id=eb_id, stripe_id=stripe_id)
     return redirect(url_for('show_door_access_landing'))
+
 
 @app.route('/admin/dooraccess/unassign', methods=['GET'])
 @login_required
 def show_door_access_unassign():
     return render_template('door_access_unassign.html', entries=get_members_with_rfid_tokens())
+
 
 @app.route('/admin/dooraccess/unassign', methods=['POST'])
 @login_required
@@ -1466,10 +1541,12 @@ def show_door_access_unassign_post():
     flash('RFID Token has been unassigned')
     return redirect(url_for('show_door_access_landing'))
 
+
 @app.route('/admin/dooraccess/tokenattributes', methods=['GET'])
 @login_required
 def show_door_access_token_attributes():
     return render_template('door_access_modify_attributes.html', entries=get_all_rfid_tokens())
+
 
 @app.route('/admin/dooraccess/tokenattributes/edit', methods=['GET'])
 @login_required
@@ -1477,26 +1554,31 @@ def show_door_access_token_attributes_post():
     rfid_token_hex = request.args.get('rfid_token_hex')
     return render_template('door_access_attributes_edit.html', entry=get_rfid_token_attributes(rfid_token_hex))
 
+
 @app.route('/admin/dooraccess/tokenattributes/edit', methods=['POST'])
 @login_required
 def show_access_attributes_edit():
     update_rfid_token_attributes(request)
     return redirect(url_for('show_door_access_landing'))
 
+
 @app.route('/admin/dooraccess/scanlog', methods=['GET'])
 @login_required
 def show_door_access_scanlog():
     return render_template('door_access_scanlog.html')
+
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
 def show_eventlog_landing():
     return render_template('event_log.html', entries=get_event_log())
 
+
 @app.route('/admin/reactivate', methods=['GET'])
 @login_required
 def show_reactivate_member():
-    return render_template('reactivate.html',inactive_members=get_inactive_members())
+    return render_template('reactivate.html', inactive_members=get_inactive_members())
+
 
 @app.route('/admin/reactivate', methods=['POST'])
 @login_required
@@ -1504,13 +1586,14 @@ def show_reactivate_member_post():
     stripe_id = request.form.get('stripe_id')
     return redirect('/member/' + stripe_id + '/edit')
 
+
 @app.route('/admin/discordroles', methods=['GET'])
 @login_required
 def show_manage_discord_roles():
     return render_template('manage_discord_roles.html', entries=None)
 
+
 # Widget Testing
-@app.route('/widget', methods=['GET','POST'])
+@app.route('/widget', methods=['GET', 'POST'])
 def show_test_widget():
     return render_template('camera-widget.html')
-
