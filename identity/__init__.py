@@ -29,10 +29,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 import MySQLdb as mysql
 
-from flask import Flask, request, g, flash
-from flask import redirect, make_response
-from flask import render_template, jsonify
-from flask import session, url_for
+from flask import Flask, request, g, flash, redirect, make_response, render_template, jsonify, session, url_for
 
 RUN_MODE = 'development'
 
