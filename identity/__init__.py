@@ -1,7 +1,7 @@
 from .crypto import SettingsUtil, CryptoUtil
 import base64, logging, time, bcrypt, io, datetime, json, smtplib
 from PIL import Image as PILImage
-from PIL import ImageFilter, ImageEnhance
+from PIL import ImageEnhance
 from functools import wraps
 from email.message import EmailMessage
 import requests, urllib
@@ -25,7 +25,7 @@ import MySQLdb as mysql
 from flask import Flask, request, g, flash
 from flask import redirect, make_response
 from flask import render_template, jsonify
-from flask import session, escape, url_for
+from flask import session, url_for
 
 RUN_MODE = 'development'
 
