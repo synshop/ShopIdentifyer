@@ -1,10 +1,19 @@
-from .crypto import SettingsUtil, CryptoUtil
-import base64, logging, time, bcrypt, io, datetime, json, smtplib
+import base64
+import bcrypt
+import datetime
+import io
+import json
+import logging
+import smtplib
+import time
+import requests
+import urllib
+
+from email.message import EmailMessage
+from functools import wraps
 from PIL import Image as PILImage
 from PIL import ImageEnhance
-from functools import wraps
-from email.message import EmailMessage
-import requests, urllib
+from .crypto import SettingsUtil, CryptoUtil
 
 try:
     import identity.config as config
@@ -18,8 +27,6 @@ from apscheduler.triggers.cron import CronTrigger
 # TODO: Move to svglib
 # TODO: Look at using CursorDictRowsMixIn for db operations
 
-# from svgwrite.image import Image
-# from svgwrite.shapes import Rect
 import MySQLdb as mysql
 
 from flask import Flask, request, g, flash
