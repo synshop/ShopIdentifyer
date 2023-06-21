@@ -960,7 +960,7 @@ def insert_log_event(request=None):
     entry = cur.fetchone()
 
     member = {'name': 'NA', 'handle': 'unknown ' + swipe_status, 'color': 'red', 'event_type': event_type}
-    if entry:
+    if entry[0] != None:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
