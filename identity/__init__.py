@@ -437,8 +437,11 @@ def get_member_discord_id(discord_handle=None):
     if discord_handle == "None" or discord_handle == "":
         return "000000000000000000"
 
-    (username, discriminator) = discord_handle.split("#")
-    encoded_name = urllib.parse.quote(username)
+    try:
+        (username, discriminator) = discord_handle.split("#")
+        encoded_name = urllib.parse.quote(username)
+    except ValueError:
+        encoded_name = urllib.parse.quote(discord_handle)
 
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
