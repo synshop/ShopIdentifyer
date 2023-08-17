@@ -24,7 +24,7 @@ pycryptodome-test-vectors==1.0.10
 pyOpenSSL==22.0.0
 pytz==2022.1
 pytz-deprecation-shim==0.1.0.post0
-requests==2.28.1
+requests==2.31.0
 six==1.16.0
 stripe==4.0.2
 svgwrite==1.4.3
