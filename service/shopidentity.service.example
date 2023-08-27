@@ -1,0 +1,15 @@
+[Unit]
+Description=SYN Shop Member Managment System
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Environment="ENCRYPTION_KEY=ChangeMe"
+WorkingDirectory=/opt/ShopIdentifyer
+ExecStart=/opt/ShopIdentifyer/service/gunicorn.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
