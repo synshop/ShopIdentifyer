@@ -1443,6 +1443,15 @@ def show_index():
         return redirect(url_for('show_admin'))
 
 
+# API for public stats, JSON
+@app.route('/api/public_stats')
+def api_public_stats():
+    statsClean = {}
+    for k, v in get_public_stats().items():
+        statsClean[k] = v['count']
+    return jsonify(statsClean)
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def show_login():
     error = ""
