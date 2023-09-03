@@ -49,11 +49,13 @@
 <div class="container">
   <div class="jumbotron">
   <h1>
-  SYN Shop currently has <span class="text-primary">{{ stats['total_membership']['count'] }}</span> members, 
-  <span class="text-primary">{{ stats['total_paused']['count'] }}</span> of which are in a paused state.
-  </h1>
-  <h1>
-  <span class="text-primary">{{ stats['total_need_onboarding']['count'] }}</span> need onboarding.
+    SYN Shop currently has <span class="text-primary">{{ stats['total_membership']['count'] }}</span> total members:
+    <ul>
+      <li><span class="text-primary">{{ stats['total_vetted']['count'] }}</span> vetted </li>
+      <li><span class="text-primary">{{ stats['total_not_vetted']['count'] }}</span> regular </li>
+      <li><span class="text-primary">{{ stats['total_paused']['count'] }}</span> paused </li>
+      <li><span class="text-primary">{{ stats['total_need_onboarding']['count'] }}</span> needing onboarding</li>
+    </ul>
   </h1>
 </div>
 
