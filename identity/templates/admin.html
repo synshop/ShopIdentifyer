@@ -8,11 +8,13 @@
 
   <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/jasny-bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/tablesorter.theme.default.css') }}" rel="stylesheet">
 
   <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/jasny-bootstrap.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/jquery.tablesorter.min.js') }}"></script>
 
 <style>
     body {
@@ -65,7 +67,7 @@
 <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr>
-      <th>Full Name</th>
+      <th>Full Name "Discord"</th>
       <th>Is Vetted?</th>
       <th>Subscription Plan</th>
       <th>Subscription Status</th>
@@ -80,7 +82,13 @@
       {% else %}
         <tr>
       {% endif %}
-        <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td>
+
+          <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}
+          {% if entry[10] != None and entry[10] != NULL %}
+            <!-- Member is vetted but no vetted form on file -->
+            "{{ entry[10] }}"
+          {% endif %}
+          </a></td>
 
         {% if entry[3] == "NOT VETTED" %}
           <td>{{ entry[3] }}</td>
@@ -120,7 +128,11 @@
 
 </tbody>
 </table>
-
+<script>
+$(function() {
+  $("#results").tablesorter();
+});
+</script>
 </div>
 
 </div>

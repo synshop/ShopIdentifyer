@@ -1154,7 +1154,8 @@ def get_admin_view():
             s.stripe_email,
             s.stripe_subscription_status,
             s.stripe_subscription_product,
-            s.stripe_last_payment_status
+            s.stripe_last_payment_status,
+            m.discord_handle
         FROM 
             members m
         JOIN
@@ -1345,7 +1346,7 @@ def edit_member_details(stripe_id):
     if request.method == "POST":
         update_member(request)
         app.logger.info("User %s updated member %s" % (session['username'], stripe_id))
-        return redirect(url_for("show_admin", _scheme='https', _external=True))
+        return redirect(url_for("show_admin", _scheme='http', _external=True))
 
 
 # Get member badge photo
