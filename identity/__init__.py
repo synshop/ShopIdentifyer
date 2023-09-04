@@ -967,7 +967,7 @@ def insert_log_event(request=None):
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
-        sql_stmt = "select full_name, nick_name, led_color from members where stripe_id = %s"
+        sql_stmt = "select full_name, discord_handle, led_color from members where stripe_id = %s"
         cur.execute(sql_stmt, (stripe_id,))
         member_tmp = cur.fetchone()
         if len(member_tmp) > 0:
