@@ -27,7 +27,7 @@ def _get_customer_attributes(subscription):
     user["stripe_id"] = customer.id
     user["stripe_email"] = customer.email.lower()
     user["stripe_created_on"] = customer.created
-    user["stripe_description"] = customer.description
+    user["stripe_description"] = customer.name
     user["stripe_subscription_status"] = subscription.status
     user["stripe_subscription_created_on"] = subscription.created
     user["stripe_subscription_id"] = subscription.id

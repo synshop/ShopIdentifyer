@@ -523,7 +523,7 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
 
 
-# Mnaully insert a new RFID token into the system
+# Manually insert a new RFID token into the system
 def insert_new_rfid_token_record(eb_id=None, rfid_token_hex=None, rfid_token_comment="PRIMARY"):
     db = get_db()
     cur = db.cursor()
@@ -666,16 +666,11 @@ def get_members_to_onboard():
     rows = cur.fetchall()
 
     for row in rows:
-        x = json.loads(row[3])
-        if 'drupal_legal_name' in x:
-            drupal_legal_name = x['drupal_legal_name']
-        else:
-            drupal_legal_name = "No Legal Name Provided"
 
         entry_dict = dict(
             stripe_id=row[0],
             stripe_email=row[2],
-            drupal_legal_name=drupal_legal_name,
+            drupal_legal_name=row[3],
             stripe_last_payment_status=row[4],
             stripe_subscription_product=row[5],
             stripe_subscription_status=row[6])
