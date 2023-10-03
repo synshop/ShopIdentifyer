@@ -8,8 +8,21 @@ PAUSE_MEMBERSHIP = "Pause Membership"
 STRIPE_VERSION = "2022-08-01"
 
 def inspect_user(email=None):
+    stripe.api_version = STRIPE_VERSION
+    stripe.api_key = app.config['STRIPE_TOKEN']
     c = stripe.Customer.search(query='email: "' + email + '"', limit=1)['data'][0]
-    print(c)
+
+    subs = stripe.Subscription.retrieve("sub_12asGcCEk4tLAE")
+    for s in subs['items']['data']:
+        print(s.plan.nickname)
+
+    return True
+
+    x = stripe.Subscription.list(customer=c.id, limit=3)
+    for s in x['data'][0]['items']:
+        print(s.plan.nickname)
+
+        # print(s.plan.nickname)
 
 def _get_customer_attributes(subscription):
 
@@ -46,10 +59,13 @@ def _get_customer_attributes(subscription):
     for last_payment_intent in stripe.PaymentIntent.list(customer=subscription.customer, limit=1):
         user["stripe_last_payment_status"] = last_payment_intent.status
 
-    for x in iter(subscription.items()):
-        if x[0] == "items":
-            product = x[1].data[0].plan.product
-            user["stripe_subscription_product"] = stripe.Product.retrieve(product).name
+    sub_array = []
+    subs = stripe.Subscription.retrieve(subscription.id)
+    for s in subs['items']['data']:
+        sub_array.append(s.plan.nickname)
+    
+    subs_string = ' + '.join(sub_array)
+    user["stripe_subscription_product"] = subs_string
 
     return user
 

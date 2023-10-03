@@ -211,6 +211,10 @@ def login_required(f):
     return decorated_function
 
 
+def inspect_user(email=None):
+
+    member_array = identity.stripe.inspect_user(email)
+
 # Allow admin users to change their passwords
 def admin_change_password(stripe_id=None, password=None):
     try:
@@ -450,7 +454,6 @@ def get_member_discord_id(discord_handle=None):
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/search?limit=10&query={encoded_name}'
     result = requests.get(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
 
-    print(result.json())
     if result.json() != []:
         return result.json()[0]['user']['id']
     else:
@@ -1165,7 +1168,7 @@ def get_admin_view():
         AND
             m.stripe_id = s.stripe_id
         ORDER BY
-            m.is_vetted desc
+            m.is_vetted asc, s.stripe_subscription_product, m.full_name
     """
     cur.execute(stmt)
     members = cur.fetchall()
