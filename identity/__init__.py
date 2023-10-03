@@ -1052,13 +1052,17 @@ def get_public_stats():
             'count': 0,
             'sql': 'select count(*) from stripe_cache'
         },
+        'total_free': {
+            'count': 0,
+            'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Free Membership"'
+        },
         'total_paused': {
             'count': 0,
-            'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Pause Membership"'
+            'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Paused Membership"'
         },
         'total_need_onboarding': {
             'count': 0,
-            'sql': 'select count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and '
+            'sql': 'select count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'total_vetted': {
@@ -1067,7 +1071,7 @@ def get_public_stats():
         },
         'total_not_vetted': {
             'count': 0,
-            'sql': 'select count(*) from members where IS_VETTED = "NOT VETTED"'
+            'sql': 'select count(*) from members where IS_VETTED = "NOT VETTED" and member_status = "ACTIVE"'
         },
         'total_have_waivers': {
             'count': 0,
@@ -1106,17 +1110,17 @@ def get_usage_report():
         },
         'paused_not_onboarded': {
             'count': 0,
-            'sql': 'SELECT count(stripe_id) from stripe_cache where stripe_subscription_product = "Pause Membership" '
+            'sql': 'SELECT count(stripe_id) from stripe_cache where stripe_subscription_product = "Paused Membership" '
                    'AND stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'paused_onboarded': {
             'count': 0,
             'sql': 'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND '
-                   's.stripe_subscription_product = "Pause Membership" '
+                   's.stripe_subscription_product = "Paused Membership" '
         },
         'need_onboarding': {
             'count': 0,
-            'sql': 'SELECT count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Pause Membership" and '
+            'sql': 'SELECT count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'door_swipes': {
