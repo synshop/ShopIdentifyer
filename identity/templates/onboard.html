@@ -73,7 +73,7 @@
     <tbody>
     {% for entry in entries %}
 
-      {% if entry['stripe_subscription_product'] | upper == "PAUSE MEMBERSHIP" %}
+      {% if entry['stripe_subscription_product'] | upper == "PAUSED MEMBERSHIP" %}
         <tr class="warning">
       {% else %}
         <tr>
