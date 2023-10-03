@@ -7,6 +7,10 @@ PAUSE_MEMBERSHIP = "Pause Membership"
 
 STRIPE_VERSION = "2022-08-01"
 
+def inspect_user(email=None):
+    c = stripe.Customer.search(query='email: "' + email + '"', limit=1)['data'][0]
+    print(c)
+
 def _get_customer_attributes(subscription):
 
     # User Model
@@ -19,7 +23,8 @@ def _get_customer_attributes(subscription):
         "stripe_subscription_id": None,
         "stripe_subscription_product": None,
         "stripe_subscription_status": None,
-        "stripe_subscription_created_on": None
+        "stripe_subscription_created_on": None,
+        "stripe_discord_id": None
     }
 
     customer = stripe.Customer.retrieve(subscription.customer)
@@ -27,10 +32,15 @@ def _get_customer_attributes(subscription):
     user["stripe_id"] = customer.id
     user["stripe_email"] = customer.email.lower()
     user["stripe_created_on"] = customer.created
-    user["stripe_description"] = customer.description
+    user["stripe_description"] = customer.name
     user["stripe_subscription_status"] = subscription.status
     user["stripe_subscription_created_on"] = subscription.created
     user["stripe_subscription_id"] = subscription.id
+    
+    if customer["metadata"]:
+        user["stripe_discord_id"] = customer["metadata"]["discord_id"]
+    else:
+        user["stripe_discord_id"] = ""
 
     # Determine if member is in good standing 
     for last_payment_intent in stripe.PaymentIntent.list(customer=subscription.customer, limit=1):

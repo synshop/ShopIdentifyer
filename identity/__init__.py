@@ -147,11 +147,12 @@ def rebuild_stripe_cache():
         for member in member_array:
             cur = db.cursor()
 
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
                         (member['stripe_id'], member['stripe_created_on'], member['stripe_email'],
                          member['stripe_description'], member['stripe_last_payment_status'],
                          member['stripe_subscription_id'], member['stripe_subscription_product'],
-                         member['stripe_subscription_status'], member['stripe_subscription_created_on']))
+                         member['stripe_subscription_status'], member['stripe_subscription_created_on'],
+                         member['stripe_discord_id']))
 
         db.commit()
 
@@ -448,7 +449,12 @@ def get_member_discord_id(discord_handle=None):
 
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/search?limit=10&query={encoded_name}'
     result = requests.get(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
-    return result.json()[0]['user']['id']
+
+    print(result.json())
+    if result.json() != []:
+        return result.json()[0]['user']['id']
+    else:
+        return "000000000000000000"
 
 
 # Remove a discord role from a member
@@ -523,7 +529,7 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     return cur.fetchall()[0][0]
 
 
-# Mnaully insert a new RFID token into the system
+# Manually insert a new RFID token into the system
 def insert_new_rfid_token_record(eb_id=None, rfid_token_hex=None, rfid_token_comment="PRIMARY"):
     db = get_db()
     cur = db.cursor()
@@ -666,16 +672,11 @@ def get_members_to_onboard():
     rows = cur.fetchall()
 
     for row in rows:
-        x = json.loads(row[3])
-        if 'drupal_legal_name' in x:
-            drupal_legal_name = x['drupal_legal_name']
-        else:
-            drupal_legal_name = "No Legal Name Provided"
 
         entry_dict = dict(
             stripe_id=row[0],
             stripe_email=row[2],
-            drupal_legal_name=drupal_legal_name,
+            drupal_legal_name=row[3],
             stripe_last_payment_status=row[4],
             stripe_subscription_product=row[5],
             stripe_subscription_status=row[6])
@@ -967,7 +968,7 @@ def insert_log_event(request=None):
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
-        sql_stmt = "select full_name, nick_name, led_color from members where stripe_id = %s"
+        sql_stmt = "select full_name, discord_handle, led_color from members where stripe_id = %s"
         cur.execute(sql_stmt, (stripe_id,))
         member_tmp = cur.fetchone()
         if len(member_tmp) > 0:
@@ -1192,35 +1193,19 @@ def show_onboard_new_member(stripe_id):
         db = connect_db()
         cur = db.cursor()
         sql_stmt = 'select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, ' \
-                   'stripe_subscription_status from stripe_cache where stripe_id = %s '
+                   'stripe_subscription_status, stripe_discord_id from stripe_cache where stripe_id = %s '
         cur.execute(sql_stmt, (stripe_id,))
         rows = cur.fetchall()
         member = rows[0]
 
-        x = json.loads(member[1])
-
-        if 'drupal_id' in x:
-            drupal_id = x['drupal_id']
-        else:
-            drupal_id = "-1"
-
-        if 'drupal_legal_name' in x:
-            drupal_legal_name = x['drupal_legal_name']
-        else:
-            drupal_legal_name = "No Legal Name Provided"
-
-        if 'drupal_name' in x:
-            drupal_name = x['drupal_name']
-        else:
-            drupal_name = "Not Provided"
-
         user = {}
 
         user["stripe_id"] = stripe_id
-        user["full_name"] = drupal_legal_name
-        user["drupal_name"] = drupal_name
-        user["drupal_id"] = drupal_id
+        user["full_name"] = member[1]
+        user["drupal_name"] = member[1]
+        user["drupal_id"] = member[1]
         user["stripe_email"] = member[0]
+        user["discord_id"] = member[5]
 
         if member[2] != None:
             user["stripe_last_payment_status"] = member[2].upper()
