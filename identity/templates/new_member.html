@@ -233,7 +233,7 @@
       <div class="form-group">
         <label for="nick_name" class="col-sm-2 control-label">Nickname:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.drupal_name }}">
+          <input type="text" class="form-control" id="nick_name" name="nick_name" value="">
         </div>
       </div>
 
@@ -247,7 +247,7 @@
       <div class="form-group">
         <label for="meetup_email" class="col-sm-2 control-label">Discord Handle:</label>
         <div class="col-sm-10">
-          <input type="text" class="form-control" id="discord_handle" name="discord_handle" placeholder="">
+          <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_id }}">
         </div>
       </div>
 
