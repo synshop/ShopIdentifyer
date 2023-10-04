@@ -73,7 +73,7 @@
     </thead>
     <tbody>
     {% for entry in entries %}
-      {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None or entry[8] | upper == "PAUSE MEMBERSHIP" %}
+      {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None or entry[8] | upper == "PAUSED MEMBERSHIP" %}
         <tr class="warning">
       {% else %}
         <tr>
