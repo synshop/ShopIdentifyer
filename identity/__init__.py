@@ -1067,7 +1067,7 @@ def get_public_stats():
         },
         'total_vetted': {
             'count': 0,
-            'sql': 'select count(*) from members where IS_VETTED = "VETTED"'
+            'sql': 'select count(*) from members where IS_VETTED = "VETTED" and member_status = "ACTIVE"'
         },
         'total_not_vetted': {
             'count': 0,
