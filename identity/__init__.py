@@ -1067,11 +1067,11 @@ def get_public_stats():
         },
         'total_vetted': {
             'count': 0,
-            'sql': 'select count(*) from members where IS_VETTED = "VETTED" and member_status = "ACTIVE"'
+            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "VETTED" AND member_status = "ACTIVE");'
         },
         'total_not_vetted': {
             'count': 0,
-            'sql': 'select count(*) from members where IS_VETTED = "NOT VETTED" and member_status = "ACTIVE"'
+            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
         },
         'total_have_waivers': {
             'count': 0,
