@@ -211,9 +211,10 @@ def login_required(f):
     return decorated_function
 
 
+# Testing Only
 def inspect_user(email=None):
-
     member_array = identity.stripe.inspect_user(email)
+
 
 # Allow admin users to change their passwords
 def admin_change_password(stripe_id=None, password=None):
@@ -346,7 +347,7 @@ def send_door_access_alert_email(sub_id=None):
     email_body_data = (
         member['full_name'],
         stripe_info['stripe_subscription_product'],
-        stripe_info['stripe_last_payment_status']
+        stripe_info['stripe_last_payment_status'],
     )
 
     email_subject = "[DOOR ACCESS ALERT] - %s swiped in" % (member['full_name'],)
@@ -827,6 +828,7 @@ def get_member(stripe_id=None):
     member["led_color"] = entry[15]
     member["door_access"] = member_has_authorized_rfid(stripe_id)
     member["rfid_tokens"] = get_member_rfid_tokens(stripe_id)
+    
 
     return member
 

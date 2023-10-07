@@ -119,11 +119,11 @@ In order to log into the system as an admin you need to have entries in the `mem
    
 3. Set this user to have a secure password by logging in with username `first_admin` and password `changeme` at http://localhost:8000 and then going to http://localhost:8000/admin/changepassword/test_stripe_id . You should see a change password screen: 
 
-   ![](change.password.png)
+   ![](docs/change.password.png)
 
-4. After securing your passwor, you should now see a list of exactly one user in the system:
+4. After securing your password, you should now see a list of exactly one user in the system:
 
-   ![](list-of-users.png)
+   ![](docs/list-of-users.png)
 
 ### Encrypted values
 
