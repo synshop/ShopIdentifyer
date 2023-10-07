@@ -11,9 +11,10 @@ import urllib
 
 from email.message import EmailMessage
 from functools import wraps
-from PIL import Image as PILImage
-from PIL import ImageEnhance
 from .crypto import SettingsUtil, CryptoUtil
+
+from authlib.integrations.flask_client import OAuth
+from authlib.integrations.base_client.errors import OAuthError
 
 try:
     import identity.config as config
@@ -53,6 +54,7 @@ app.config['STRIPE_CACHE_DEACTIVATE_CRON'] = config.STRIPE_CACHE_DEACTIVATE_CRON
 app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME, ENCRYPTION_KEY)
 app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD, ENCRYPTION_KEY)
 app.config['DISCORD_BOT_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_DISCORD_BOT_TOKEN, ENCRYPTION_KEY)
+app.config['AUTH0_CLIENT_SECRET'] = CryptoUtil.decrypt(config.ENCRYPTED_AUTH0_CLIENT_SECRET, ENCRYPTION_KEY)
 
 # Plaintext Configuration
 app.config['SMTP_SERVER'] = config.SMTP_SERVER
@@ -66,6 +68,9 @@ app.config['DISCORD_ROLE_VETTED_MEMBER'] = config.DISCORD_ROLE_VETTED_MEMBER
 app.config['LOG_FILE'] = config.LOG_FILE
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=12)
 
+app.config['AUTH0_CLIENT_ID'] = config.AUTH0_CLIENT_ID
+app.config['AUTH0_DOMAIN'] = config.AUTH0_DOMAIN
+
 # Logging
 file_handler = logging.FileHandler(app.config['LOG_FILE'])
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
@@ -74,12 +79,23 @@ app.logger.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 
 app.logger.info("------------------------------")
-app.logger.info("SYN Shop Identifyer Started...")
+app.logger.info("SYN Shop Id Started...")
 app.logger.info("------------------------------")
 
 # Imports down here so that they can see the app.config elements
 import identity.stripe
 
+oauth = OAuth(app)
+
+oauth.register(
+    "auth0",
+    client_id=app.config['AUTH0_CLIENT_ID'],
+    client_secret=app.config['AUTH0_CLIENT_SECRET'],
+    client_kwargs={
+        "scope": "openid profile email",
+    },
+    server_metadata_url=f'https://{app.config["AUTH0_DOMAIN"]}/.well-known/openid-configuration',
+)
 
 def connect_db():
     return mysql.connect(
@@ -204,8 +220,8 @@ if config.SCHEDULER_ENABLED == True:
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get('logged_in') is None:
-            return redirect(url_for("show_login"))
+        if session.get('user') is None:
+            return redirect(url_for("index"))
         return f(*args, **kwargs)
 
     return decorated_function
@@ -233,30 +249,24 @@ def admin_change_password(stripe_id=None, password=None):
 
 
 # Check the password for the user login
-def check_password(username=None, password=None):
+def is_admin(email=None):
     with app.app_context():
 
         try:
             db = get_db()
             cur = db.cursor()
 
-            stmt = "select a.pwd from admin_users a where a.stripe_id = (select m.stripe_id from members m where " \
-                   "nick_name = %s) "
-            cur.execute(stmt, (username,))
+            stmt = "select is_admin from members where stripe_id = (select stripe_id from stripe_cache where stripe_email = %s)"
+            cur.execute(stmt, (email,))
             entries = cur.fetchall()
-            hashed_password = entries[0][0].encode('utf-8')
-
-            if bcrypt.hashpw(password.encode('utf-8'), hashed_password) == hashed_password:
-                passwords_match = True
+            if entries[0][0] == 'Y':
+                return True
             else:
-                passwords_match = False
-
+                return False
         except Exception as e:
             app.logger.info(e)
-            passwords_match = False
-
-        return passwords_match
-
+            return False
+   
 
 # Send a nightly report
 def send_member_deactivation_email(member):
@@ -838,65 +848,7 @@ def update_member(request=None):
     db = connect_db()
     cur = db.cursor()
 
-    if request.files['badge_file'].filename != "":
-        badge_photo = request.files['badge_file'].read()
-    else:
-        badge_base64 = request.form.get('badge_base64_data', default=None)
-        if len(badge_base64) != 0:
-            badge_photo = base64.b64decode(badge_base64)
-        else:
-            badge_photo = None
-
-    if request.files['liability_file'].filename != "":
-        liability_wavier_form = request.files['liability_file'].read()
-    else:
-        liability_base64 = request.form.get('liability_base64_data', default=None)
-        if len(liability_base64) != 0:
-            liability_wavier_form = base64.b64decode(liability_base64)
-            liability_wavier_form = io.BytesIO(liability_wavier_form)
-            image = PILImage.open(liability_wavier_form)
-            image = image.transpose(PILImage.Transpose.ROTATE_270)
-            enh = ImageEnhance.Contrast(image)
-            image = enh.enhance(1.8)
-            liability_wavier_form = io.BytesIO()
-            image.save(liability_wavier_form, format='PDF')
-            liability_wavier_form = liability_wavier_form.getvalue()
-        else:
-            liability_wavier_form = None
-
-    if request.files['vetted_file'].filename != "":
-        vetted_membership_form = request.files['vetted_file'].read()
-    else:
-        vetted_base64 = request.form.get('vetted_base64_data', default=None)
-        if len(vetted_base64) != 0:
-            vetted_membership_form = base64.b64decode(vetted_base64)
-            vetted_membership_form = io.BytesIO(vetted_membership_form)
-            image = PILImage.open(vetted_membership_form)
-            image = image.transpose(PILImage.Transpose.ROTATE_270)
-            enh = ImageEnhance.Contrast(image)
-            image = enh.enhance(1.8)
-            vetted_membership_form = io.BytesIO()
-            image.save(vetted_membership_form, format='PDF')
-            vetted_membership_form = vetted_membership_form.getvalue()
-        else:
-            vetted_membership_form = None
-
-    # Do any image / document updates separately, otherwise you will clobber the existing blobs
-
     stripe_id = request.form.get('stripe_id')
-
-    if vetted_membership_form != None:
-        cur.execute('update members set vetted_membership_form=%s where stripe_id=%s',
-                    (vetted_membership_form, stripe_id))
-        db.commit()
-
-    if liability_wavier_form != None:
-        cur.execute('update members set liability_waiver=%s where stripe_id=%s', (liability_wavier_form, stripe_id))
-        db.commit()
-
-    if badge_photo != None:
-        cur.execute('update members set badge_photo=%s where stripe_id=%s', (badge_photo, stripe_id))
-        db.commit()
 
     insert_data = (
         request.form.get('member_status'),
@@ -918,6 +870,7 @@ def update_member(request=None):
                'led_color=%s where stripe_id=%s '
     cur.execute(sql_stmt, insert_data)
 
+    print(insert_data)
     db.commit()
     db.close()
 
@@ -1231,52 +1184,6 @@ def show_onboard_new_member(stripe_id):
 
     if request.method == "POST":
 
-        # Need to determine if this is a file upload or an webcam image capture
-        # for badge photos, liability waivers, and vetted membership forms
-
-        if request.files['badge_file'].filename != "":
-            badge_photo = request.files['badge_file'].read()
-        else:
-            badge_base64 = request.form.get('badge_base64_data', default=None)
-            if len(badge_base64) != 0:
-                badge_photo = base64.b64decode(badge_base64)
-            else:
-                badge_photo = None
-
-        if request.files['liability_file'].filename != "":
-            liability_wavier_form = request.files['liability_file'].read()
-        else:
-            liability_base64 = request.form.get('liability_base64_data', default=None)
-            if len(liability_base64) != 0:
-                liability_wavier_form = base64.b64decode(liability_base64)
-                liability_wavier_form = io.BytesIO(liability_wavier_form)
-                image = PILImage.open(liability_wavier_form)
-                image = image.transpose(PILImage.Transpose.ROTATE_270)
-                enh = ImageEnhance.Contrast(image)
-                image = enh.enhance(1.8)
-                liability_wavier_form = io.BytesIO()
-                image.save(liability_wavier_form, format='PDF')
-                liability_wavier_form = liability_wavier_form.getvalue()
-            else:
-                liability_wavier_form = None
-
-        if request.files['vetted_file'].filename != "":
-            vetted_membership_form = request.files['vetted_file'].read()
-        else:
-            vetted_base64 = request.form.get('vetted_base64_data', default=None)
-            if len(vetted_base64) != 0:
-                vetted_membership_form = base64.b64decode(vetted_base64)
-                vetted_membership_form = io.BytesIO(vetted_membership_form)
-                image = PILImage.open(vetted_membership_form)
-                image = image.transpose(PILImage.Transpose.ROTATE_270)
-                enh = ImageEnhance.Contrast(image)
-                image = enh.enhance(1.8)
-                vetted_membership_form = io.BytesIO()
-                image.save(vetted_membership_form, format='PDF')
-                vetted_membership_form = vetted_membership_form.getvalue()
-            else:
-                vetted_membership_form = None
-
         insert_data = (
             request.form.get('stripe_id'),
             request.form.get('drupal_id'),
@@ -1288,9 +1195,6 @@ def show_onboard_new_member(stripe_id):
             request.form.get('emergency_contact_name'),
             request.form.get('emergency_contact_mobile'),
             request.form.get('is_vetted', 'NOT VETTED'),
-            liability_wavier_form,
-            vetted_membership_form,
-            badge_photo,
             request.form.get('discord_handle'),
             request.form.get('locker_num')
         )
@@ -1299,8 +1203,8 @@ def show_onboard_new_member(stripe_id):
         cur = db.cursor()
         cur.execute(
             'insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,'
-            'emergency_contact_name,emergency_contact_mobile,is_vetted,liability_waiver,vetted_membership_form,'
-            'badge_photo,discord_handle,locker_num) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+            'emergency_contact_name,emergency_contact_mobile,is_vetted,discord_handle,locker_num) '
+            'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
             insert_data)
         db.commit()
         db.close()
@@ -1333,12 +1237,12 @@ def show_member(stripe_id):
 def edit_member_details(stripe_id):
     if request.method == "GET":
         user = get_member(stripe_id)
-        app.logger.info("User %s is editing member %s " % (session['username'], stripe_id))
+        app.logger.info("User %s is editing member %s " % (session['email'], stripe_id))
         return render_template('edit_member.html', member=user)
 
     if request.method == "POST":
         update_member(request)
-        app.logger.info("User %s updated member %s" % (session['username'], stripe_id))
+        app.logger.info("User %s updated member %s" % (session['email'], stripe_id))
         return redirect(url_for("show_admin", _scheme='https', _external=True))
 
 
@@ -1446,28 +1350,32 @@ def api_public_stats():
     return jsonify(statsClean)
 
 
+@app.route("/callback", methods=["GET", "POST"])
+def callback():
+    try:
+        token = oauth.auth0.authorize_access_token()
+        session["user"] = token
+        email = token['userinfo']['email']
+
+        if is_admin(email):
+            app.logger.info("This email address was found in Stripe, redirecting to /admin...")
+            session['logged_in'] = True
+            session['email'] = email
+            return redirect(url_for("show_admin"))
+        else:
+            app.logger.info("This email address was not found in Stripe, redirecting to /...")
+            session['logged_in'] = False
+            return redirect(url_for("index"))
+
+    except OAuthError as e:
+        app.logger.info(e)
+        return render_template("index.html")
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def show_login():
-    error = ""
-    r_to = request.referrer
-
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        url = "/admin"
-
-        if check_password(username, password):
-            session['logged_in'] = True
-            session['username'] = username
-            session.permanent = True
-            app.logger.info("User %s logged in successfully" % (username))
-            return redirect(url)
-        else:
-            error = 'Invalid credentials'
-            app.logger.info("User %s failed login attempt" % (username))
-            r_to = url
-
-    return render_template('login.html', r_to=r_to, errors=error)
+    redirect_uri=url_for("callback", _external=True)
+    return oauth.auth0.authorize_redirect(redirect_uri)
 
 
 @app.route('/logout')
@@ -1488,17 +1396,6 @@ def show_admin():
 @login_required
 def show_admin_onboard():
     return render_template('onboard.html', entries=get_members_to_onboard(), stats=get_public_stats())
-
-
-@app.route('/admin/changepassword/<stripe_id>', methods=['GET', 'POST'])
-@login_required
-def show_changepassword(stripe_id):
-    if request.method == "GET":
-        return render_template('changepassword.html', stripe_id=stripe_id)
-
-    if request.method == "POST":
-        x = admin_change_password(stripe_id, request.form.get('password1'), )
-        return redirect(url_for('show_index'))
 
 
 @app.route('/admin/dooraccess', methods=['GET'])
@@ -1602,8 +1499,3 @@ def show_reactivate_member_post():
 def show_manage_discord_roles():
     return render_template('manage_discord_roles.html', entries=None)
 
-
-# Widget Testing
-@app.route('/widget', methods=['GET', 'POST'])
-def show_test_widget():
-    return render_template('camera-widget.html')
