@@ -96,7 +96,7 @@ Some of the features included are:
 
 You can access the server at http://localhost:8000 and it should look like this:
 
-![](first-run.png)
+![](docs/first-run.png)
 
 ### Adding admin users
 
