@@ -1,517 +1,203 @@
 <!DOCTYPE html>
 <html>
 
-<title>SYN Shop Member - Add new member</title>
+<title>SYN Shop - Onboard New Member</title>
 
 <head>
-  <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/jasny-bootstrap.min.css') }}" rel="stylesheet">
-
-  <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/jasny-bootstrap.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/webcam.min.js') }}"></script>
-
-  <script type="text/javascript">
-
-  $(document).ready (
-    function() {
-
-      /*
-      var badge_serial = "{{ member.badge_serial }}";
-
-      if (badge_serial == "-1") {
-          refresh_rate = 1000;
-      } else {
-          refresh_rate = 86400000;
-          $('#badge_serial').val(badge_serial);
-      }
-
-      setInterval(function() {
-        $.ajax({ url: "/queue/message", type: "DELETE", success: function(data) {
-          if (data.message != "NULL") {
-            $('#badge_serial').val(data.message);
-          }
-        }, dataType: "json"});
-      }, refresh_rate
-    );
-    */
-
-    Webcam.set({
-      width: 320,
-      height: 240,
-      dest_width: 640,
-      dest_height: 480,
-      image_format: 'jpeg',
-      jpeg_quality: 100,
-      force_flash: false
-    });
-
-    Webcam.attach( '#badge_camera' );
-    Webcam.attach( '#liability_camera' );
-    Webcam.attach( '#vetted_camera' );
-
-    $("#badge_previewSnapshot").bind( "click", function() {
-      Webcam.freeze();
-      document.getElementById('badge_pre_take_buttons').style.display = 'none';
-      document.getElementById('badge_post_take_buttons').style.display = '';
-    });
-
-    $("#badge_cancelPreview").bind( "click", function() {
-      Webcam.unfreeze();
-      document.getElementById('badge_pre_take_buttons').style.display = '';
-      document.getElementById('badge_post_take_buttons').style.display = 'none';
-    });
-
-    $("#badge_saveSnapshot").bind( "click", function() {
-      Webcam.snap( function(data_uri) {
-        var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
-        document.getElementById('badge_base64_data').value = raw_image_data;
-        $('#badge_snapshot_modal').modal('hide')
-        document.getElementById('badge_pre_take_buttons').style.display = '';
-        document.getElementById('badge_post_take_buttons').style.display = 'none';
-      });
-    });
-
-    $("#liability_previewSnapshot").bind( "click", function() {
-      Webcam.freeze();
-      document.getElementById('liability_pre_take_buttons').style.display = 'none';
-      document.getElementById('liability_post_take_buttons').style.display = '';
-    });
-
-    $("#liability_cancelPreview").bind( "click", function() {
-      Webcam.unfreeze();
-      document.getElementById('liability_pre_take_buttons').style.display = '';
-      document.getElementById('liability_post_take_buttons').style.display = 'none';
-    });
-
-    $("#liability_saveSnapshot").bind( "click", function() {
-      Webcam.snap( function(data_uri) {
-        var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
-        document.getElementById('liability_base64_data').value = raw_image_data;
-        $('#liability_snapshot_modal').modal('hide')
-        document.getElementById('liability_pre_take_buttons').style.display = '';
-        document.getElementById('liability_post_take_buttons').style.display = 'none';
-      });
-    });
-
-    $("#vetted_previewSnapshot").bind( "click", function() {
-      Webcam.freeze();
-      document.getElementById('vetted_pre_take_buttons').style.display = 'none';
-      document.getElementById('vetted_post_take_buttons').style.display = '';
-    });
-
-    $("#vetted_cancelPreview").bind( "click", function() {
-      Webcam.unfreeze();
-      document.getElementById('vetted_pre_take_buttons').style.display = '';
-      document.getElementById('vetted_post_take_buttons').style.display = 'none';
-    });
-
-    $("#vetted_saveSnapshot").bind( "click", function() {
-      Webcam.snap( function(data_uri) {
-        var raw_image_data = data_uri.replace(/^data\:image\/\w+\;base64\,/, '');
-        document.getElementById('vetted_base64_data').value = raw_image_data;
-        $('#vetted_snapshot_modal').modal('hide')
-        document.getElementById('vetted_pre_take_buttons').style.display = '';
-        document.getElementById('vetted_post_take_buttons').style.display = 'none';
-      });
-    });
-
-    $("#cancel").bind( "click", function() {
-      window.location.href = "/admin/onboard";
-    });
-
-  });
-
-  </script>
-
-  <style>
-  body {
-    min-height: 1000px;
-    padding-top: 70px;
-  }
-  </style>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/static/images/favicon.ico" rel="shortcut icon" >
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <script src="/static/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 
-  <!-- Fixed navbar -->
-  <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
-    <div class="container">
-      <div class="navbar-header">
-        <a class="navbar-brand" href="/admin/onboard">SYN Shop Identity Management System</a>
-      </div>
-      <div id="navbar" class="navbar-collapse collapse">
-        <ul class="nav navbar-nav">
-        </ul>
-        <!--
-        <ul class="nav navbar-form navbar-right">
-          <li>  <button type="button" class="btn btn-default" id='again'>Validate a different user</button> </li></li>
-        </ul>
-        -->
-      </div><!--/.nav-collapse -->
+  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/member/{{member.stripe_id}}">
+        SYN Shop Identity Management
+      </a>
+      <ul class="navbar-nav">
+        {% if session.logged_in %}
+        <li class="nav-item"><a class="nav-link active" aria-current="page" href="/logout">Logout</a></li>
+        {% else %}
+        <li class="nav-item"><a class="nav-link active" aria-current="page" href="/login">Login</a></li>
+        {% endif %}  
+      </ul>
     </div>
   </nav>
 
   <div class="container">
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
-        <div class="alert alert-info" role="alert">
-            Please fill out as much information as possible.  Uploaded forms should be in PDF and photos should be in JPEG.
-        </div>
 
-        <hr/>
-
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <h3 class="panel-title">Onboard New Member</h3>
-      </div>
-      <div class="panel-body">
-
-        <div class="form-group">
-          <label for="rfid_serial" class="col-sm-2 control-label">RFID Serials:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="rfid_serial" name="rfid_serial" placeholder="Swipe Badge on RFID Reader to Begin" readonly>
-          </div>
-        </div>
-
-        <hr/>
-
-        <div class="form-group">
-          <label for="drupal_name" class="col-sm-2 control-label">Drupal Id:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="drupal_id" name="drupal_id" value="{{ member.drupal_id }}" readonly>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="stripe_email" class="col-sm-2 control-label">Stripe Id:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_id" name="stripe_id" value="{{ member.stripe_id }}" readonly>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="stripe_email" class="col-sm-2 control-label">Stripe Email:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" readonly>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="subscription_plan" class="col-sm-2 control-label">Subscription Plan:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="subscription_plan" name="subscription_plan" value="{{ member.stripe_subscription_product }}" readonly>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="subscription_status" class="col-sm-2 control-label">Subscription Status:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="subscription_status" name="subscription_status" value="{{ member.stripe_subscription_status }}" readonly>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="payment_status" class="col-sm-2 control-label">Payment Status:</label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="payment_status" name="payment_status" value="{{ member.stripe_last_payment_status }}" readonly>
-          </div>
-        </div>
-
-        <hr/>
-
-      <div class="form-group">
-        <label for="full_name" class="col-sm-2 control-label">Full Name:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="nick_name" class="col-sm-2 control-label">Nickname:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="nick_name" name="nick_name" value="">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="meetup_email" class="col-sm-2 control-label">Meetup Email:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="meetup_email" name="meetup_email" placeholder="">
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="meetup_email" class="col-sm-2 control-label">Discord Handle:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_id }}">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="meetup_email" class="col-sm-2 control-label">Locker:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="locker_num" name="locker_num" placeholder="">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="meetup_email" class="col-sm-2 control-label">LED Color:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="led_color" name="led_color" placeholder="">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="mobile" class="col-sm-2 control-label">Cell #:</label>
-        <div class="col-sm-10">
-          <input type="tel" class="form-control" id="mobile" name="mobile" data-mask="999-999-9999" placeholder="">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="emergency_contact_name" class="col-sm-2 control-label">Emergency Contact Name:</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" placeholder="">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="emergency_contact_mobile" class="col-sm-2 control-label">Emergency Contact #:</label>
-        <div class="col-sm-10">
-          <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" data-mask="999-999-9999" placeholder="">
-        </div>
-      </div>
-
-      <hr/>
-
-      <div class="form-group">
-        <label class="col-sm-2 control-label">Photo:</label>
-        <div class="col-sm-10">
-
-          <!-- Hidden data field for webcam badge photo -->
-          <input type="hidden" id="badge_base64_data" name="badge_base64_data" value=""/>
-
-          <!-- Button to trigger modal dialog for webcam capture -->
-          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#badge_snapshot_modal">
-            Capture via webcam
-          </button>
-          
-          <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#badge_upload_modal">
-            Upload a file
-          </button>
-          
-          <!-- Modal Dialog for Webcam Capture -->
-          <div class="modal fade" id="badge_snapshot_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                  <h4>Take a photo!</h4>
-                  <div class="alert alert-info" role="alert">
-                      When capturing the photo, make sure to get the member's face fully inside the green rectangular box.
-                  </div>
-                </div>
-                <div class="modal-body">
-                  <div class="center-block" id="badge_camera" style="width:320px; height:240px;"></div>
-                  <img style="position:absolute;left:136px;top:20px;" src="{{ url_for('static', filename='images/target-dashed.png')}}">
-                </div>
-                <div class="modal-footer">
-                  <div id="badge_pre_take_buttons">
-                    <button type="button" class="btn btn-danger center-block" id="badge_previewSnapshot">Take Snapshot</button>
-                  </div>
-                  <div id="badge_post_take_buttons" style="display:none;text-align:center;">
-                    <button type="button" class="btn btn-default" id="badge_cancelPreview">Retake</button>
-                    <button type="button" class="btn btn-primary" id="badge_saveSnapshot">Keep Photo</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        <!-- Modal Dialog for File Upload (Badge Photo) -->
-        <div class="modal fade" id="badge_upload_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4>Upload a File for Badge Photo</h4>
-              </div>
-              <div class="modal-body">
-                <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-                    <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
-                    <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
-                    <input type="file" name="badge_file"></span>
-                    <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="alert alert-success" role="alert">
+      If you need to update information that is read-only, please email <strong>brian@synshop.org</strong>.
     </div>
 
-    <hr/>
+    <div class="card">
 
-    <div class="form-group">
-      <label class="col-sm-2 control-label">Liability Wavier:</label>
-      <div class="col-sm-10">
-
-        <!-- Hidden data field for webcam photo -->
-        <input type="hidden" id="liability_base64_data" name="liability_base64_data" value=""/>
-
-        <!-- Button to trigger modal dialog for webcam capture -->
-        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#liability_snapshot_modal">
-          Capture via webcam
-        </button>
-        
-        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#liability_upload_modal">
-          Upload a file
-        </button>
-        
-        <!-- Modal Dialog for Webcam Capture -->
-        <div class="modal fade" id="liability_snapshot_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4>Capture document via webcam</h4>
-                <div class="alert alert-info" role="alert">
-                    When capturing the document, make sure to get the all the text and the signature in frame.  
-                    The image will be rotated and converted to PDF when uploaded.
-                </div>
-              </div>
-              <div class="modal-body">
-                <div class="center-block" id="liability_camera" style="width:480px; height:680px;"></div>
-              </div>
-              <div class="modal-footer">
-                <div id="liability_pre_take_buttons">
-                  <button type="button" class="btn btn-danger center-block" id="liability_previewSnapshot">Take Snapshot</button>
-                </div>
-                <div id="liability_post_take_buttons" style="display:none;text-align:center;">
-                  <button type="button" class="btn btn-default" id="liability_cancelPreview">Retake</button>
-                  <button type="button" class="btn btn-primary" id="liability_saveSnapshot">Keep Photo</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      <!-- Modal Dialog for File Upload (Liability Wavier) -->
-      <div class="modal fade" id="liability_upload_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-              <h4>Upload a File for the Liability Wavier</h4>
-            </div>
-            <div class="modal-body">
-              <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-                  <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
-                  <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
-                  <input type="file" name="liability_file"></span>
-                  <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="card-header">
+        <h3 class="card-title">Edit Member</h3>
       </div>
-    </div>
-  </div>
 
-    <hr/>
-
-        <div class="form-group">
-          <label for="is_vetted" class="col-sm-2 control-label">Vetted Member:</label>
+      <div class="card-body">
+        
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Member Info:</b></label>
+          </div>
           <div class="col-sm-10">
-            <select class="form-control" id="is_vetted" name="is_vetted">
-              <option value="VETTED">VETTED</option>
-              <option value="NOT VETTED" selected="selected">NOT VETTED</option>
+            <input type="text" class="form-control" id="meta_info" name="meta_info" value="Created On: {{ member.created_on }}, Last Updated: {{ member.changed_on }}" disabled readonly>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Stripe Payment Plan:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.stripe_plan }}" disabled readonly>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Stripe Email:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" disabled readonly>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>RFID Tokens:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="rfid_tokens" name="rfid_tokens" value="{{ member.rfid_tokens }}" disabled readonly>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="member_status" class="form-label"><b>Member Status:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <select class="form-control" id="member_status" name="member_status">
+              {% for n in ['ACTIVE', 'INACTIVE'] %}
+                {% if n == member.member_status %}
+                  <option value="{{n}}" selected="selected">{{n}}</option>
+                {% else %}
+                  <option value="{{n}}">{{n}}</option>
+                {% endif %}
+              {% endfor %}
             </select>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label">Vetted Membership Form:</label>
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="is_vetted" class="form-label"><b>Vetted Status:</b></label>
+          </div>
           <div class="col-sm-10">
-      
-            <!-- Hidden data field for webcam photo -->
-            <input type="hidden" id="vetted_base64_data" name="vetted_base64_data" value=""/>
-      
-            <!-- Button to trigger modal dialog for webcam capture -->
-            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#vetted_snapshot_modal">
-              Capture via webcam
-            </button>
-            
-            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#vetted_upload_modal">
-              Upload a file
-            </button>
-            
-            <!-- Modal Dialog for Webcam Capture -->
-            <div class="modal fade" id="vetted_snapshot_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-              <div class="modal-dialog">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4>Capture document via webcam</h4>
-                    <div class="alert alert-info" role="alert">
-                      When capturing the document, make sure to get the all the text and the signature in frame.  
-                      The image will be rotated and converted to PDF when uploaded.
-                    </div>
-                  </div>
-                  <div class="modal-body">
-                    <div class="center-block" id="vetted_camera" style="width:320px; height:240px;"></div>
-                  </div>
-                  <div class="modal-footer">
-                    <div id="vetted_pre_take_buttons">
-                      <button type="button" class="btn btn-danger center-block" id="vetted_previewSnapshot">Take Snapshot</button>
-                    </div>
-                    <div id="vetted_post_take_buttons" style="display:none;text-align:center;">
-                      <button type="button" class="btn btn-default" id="vetted_cancelPreview">Retake</button>
-                      <button type="button" class="btn btn-primary" id="vetted_saveSnapshot">Keep Photo</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-      
-          <!-- Modal Dialog for File Upload (Vetted Membership Form) -->
-          <div class="modal fade" id="vetted_upload_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                  <h4>Upload a File for the Vetted Membership Form</h4>
-                </div>
-                <div class="modal-body">
-                  <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-                      <div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div>
-                      <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span>
-                      <input type="file" name="vetted_file"></span>
-                      <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <select class="form-control" id="is_vetted" name="is_vetted">
+              {% for n in ['VETTED','NOT VETTED'] %}
+              {% if n == member.vetted_status %}
+              <option value="{{n}}" selected="selected">{{n}}</option>
+              {% else %}
+              <option value="{{n}}">{{n}}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
           </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <div class="col-sm-offset-2 col-sm-10">
-          <button type="submit" class="btn btn-primary btn-success">Create!</button>
-          <button type="button" id="cancel" name="cancel" class="btn btn-secondary">Cancel</button>
+        <hr/>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
+          </div>
         </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Nickname:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.nick_name }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Discord ID:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_handle }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Locker #:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="locker_num" name="locker_num" value="{{ member.locker_num }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>LED Color:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="led_color" name="led_color" value="{{ member.led_color }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Cell #:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="tel" class="form-control" id="mobile" name="mobile" data-mask="999-999-9999" value="{{ member.mobile }}">
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Emergency Contact:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ member.emergency_contact_name }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Emergency Cell #:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" data-mask="999-999-9999" value="{{ member.emergency_contact_mobile }}" placeholder="">
+          </div>
+        </div>
+
       </div>
+
+    </div>
+
+    <div class="form-group" style="margin-top:25px;margin-bottom:50px;">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-lg btn-primary">Save Changes</button>
+        <button type="cancel" class="btn btn-lg btn-secondary">Cancel</button>
+      </div>
+    </div>
+
     </form>
-
-    </div>
-    </div>
-
   </div>
-
 </body>
 </html>

@@ -22,6 +22,7 @@ create table shopidentifyer.members (
   liability_waiver longblob,
   vetted_membership_form longblob,
   badge_photo longblob,
+  is_admin ENUM('Y','N') NOT NULL DEFAULT "N",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

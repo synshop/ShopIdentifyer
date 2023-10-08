@@ -4,58 +4,39 @@
 <title>SYN Shop Admin Interface</title>
 
 <head>
-  <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-
-  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/jasny-bootstrap.min.css') }}" rel="stylesheet">
-
-  <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/Chart.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/jasny-bootstrap.min.js') }}"></script>
-
-<style>
-    body {
-        min-height: 1000px;
-        padding-top: 70px;
-    }
-
-    th {
-        background-color:#eee;
-    }
-  </style>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/static/images/favicon.ico" rel="shortcut icon" >
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <script src="/static/js/bootstrap.bundle.min.js"></script>
 </head>
+
 <body>
 
-  <!-- Fixed navbar -->
-  <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
-    <div class="container">
-      <div class="navbar-header">
-        <a class="navbar-brand" href="/admin">SYN Shop Identity Management System</a>
-      </div>
-      <div id="navbar" class="navbar-collapse collapse">
-        <ul class="nav navbar-nav navbar-right">
-            {% if session.logged_in %}
-            <li><a href="/logout">Logout</a></li>
-            {% else %}
-            <li><a href="/login">Login</a></li>
-            {% endif %}
-        </ul>
-      </div><!--/.nav-collapse -->
+  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/admin/dooraccess">
+        SYN Shop Identity Management
+      </a>
+      <ul class="navbar-nav">
+        {% if session.logged_in %}
+        <li class="nav-item"><a class="nav-link active" aria-current="page" href="/logout">Logout</a></li>
+        {% else %}
+        <li class="nav-item"><a class="nav-link active" aria-current="page" href="/login">Login</a></li>
+        {% endif %}  
+      </ul>
     </div>
   </nav>
 
 <div class="container">
 
-  <div class="alert alert-info" role="alert">
+  <div class="alert alert-success" role="alert">
     Choose a token to modify.</b>
   </div>
   <form method="GET" action="/admin/dooraccess/tokenattributes/edit">
 
   <table class="table table-hover table-bordered" id="results">
     <thead>
-    <tr>
+    <tr class="table-primary">
         <th>Modify</th>
         <th>EB ID</th>
         <th>EB Status</th>
@@ -78,9 +59,9 @@
 </tbody>
 </table>
 
-<div class="form-group">
-    <button type="submit" class="btn btn-primary btn-success">Modify Token</button>
-    <button type="button" id="cancel" name="cancel" class="btn btn-secondary">Cancel</button>
+<div class="form-group" style="padding-bottom:25px;">
+    <button type="submit" class="btn btn-primary btn-lg">Modify Token</button>
+    <button type="button" class="btn btn-secondary btn-lg">Cancel</button>
 </div>
 
 </form>
