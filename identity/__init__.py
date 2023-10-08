@@ -216,17 +216,6 @@ if config.SCHEDULER_ENABLED == True:
 
 # End cron tasks
 
-# Decorator for Required Auth
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if session.get('user') is None:
-            return redirect(url_for("index"))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
 # Testing Only
 def inspect_user(email=None):
     member_array = identity.stripe.inspect_user(email)
@@ -975,7 +964,7 @@ def post_alert(data):
         app.logger.info('post_alert() called, but no URLs declared in ALERT_URLS in config.')
 
 
-# Get unbounded event logs
+# Get latest 100 rows from the event log
 def get_event_log():
     db = get_db()
     cur = db.cursor()
@@ -995,6 +984,7 @@ def get_event_log():
             event_log.stripe_id = members.stripe_id
         ORDER BY 
             event_log.event_id desc
+        LIMIT 100;
     """
     cur.execute(sql_stmt)
     return cur.fetchall()
@@ -1142,6 +1132,16 @@ def get_admin_view():
 
     return ret_members
 
+
+# Decorator for Required Auth
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('logged_in') == False or session.get('logged_in') == None:
+            return redirect(url_for("show_index"))
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 # Onboarding process - this attempts to pre-populate some fields
 # when setting up a new user.
@@ -1332,15 +1332,6 @@ def show_event_log():
     return jsonify({"status": 200})
 
 
-# Landing Page Routes
-@app.route('/')
-def show_index():
-    if session.get('logged_in') == None:
-        return render_template('index.html', stats=get_public_stats())
-    else:
-        return redirect(url_for('show_admin'))
-
-
 # API for public stats, JSON
 @app.route('/api/public_stats')
 def api_public_stats():
@@ -1348,6 +1339,15 @@ def api_public_stats():
     for k, v in get_public_stats().items():
         statsClean[k] = v['count']
     return jsonify(statsClean)
+
+
+# Landing Page Routes
+@app.route('/')
+def show_index():
+    if session.get('logged_in') == False or session.get('logged_in') == None:
+        return render_template('index.html', stats=get_public_stats())
+    else:
+        return redirect(url_for('show_admin'))
 
 
 @app.route("/callback", methods=["GET", "POST"])
@@ -1365,7 +1365,8 @@ def callback():
         else:
             app.logger.info("This email address was not found in Stripe, redirecting to /...")
             session['logged_in'] = False
-            return redirect(url_for("index"))
+            print(session)
+            return redirect(url_for("show_index"))
 
     except OAuthError as e:
         app.logger.info(e)
@@ -1380,10 +1381,9 @@ def show_login():
 
 @app.route('/logout')
 def show_logout():
-    session.pop('logged_in', None)
-    session.pop('username', None)
-    flash('You were logged out')
-    return redirect(url_for('show_index', _scheme='https', _external=True))
+    session.pop('logged_in', False)
+    session.pop('email', False)
+    return redirect(url_for('show_index'))
 
 
 @app.route('/admin')
@@ -1434,21 +1434,6 @@ def show_door_access_assign_post():
     return redirect(url_for('show_door_access_landing'))
 
 
-@app.route('/admin/dooraccess/unassign', methods=['GET'])
-@login_required
-def show_door_access_unassign():
-    return render_template('door_access_unassign.html', entries=get_members_with_rfid_tokens())
-
-
-@app.route('/admin/dooraccess/unassign', methods=['POST'])
-@login_required
-def show_door_access_unassign_post():
-    rfid_token_hex = request.form.get('rfid_id_token_hex')
-    unassign_rfid_token(rfid_token_hex)
-    flash('RFID Token has been unassigned')
-    return redirect(url_for('show_door_access_landing'))
-
-
 @app.route('/admin/dooraccess/tokenattributes', methods=['GET'])
 @login_required
 def show_door_access_token_attributes():
@@ -1469,12 +1454,6 @@ def show_access_attributes_edit():
     return redirect(url_for('show_door_access_landing'))
 
 
-@app.route('/admin/dooraccess/scanlog', methods=['GET'])
-@login_required
-def show_door_access_scanlog():
-    return render_template('door_access_scanlog.html')
-
-
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
 def show_eventlog_landing():
@@ -1492,10 +1471,3 @@ def show_reactivate_member():
 def show_reactivate_member_post():
     stripe_id = request.form.get('stripe_id')
     return redirect('/member/' + stripe_id + '/edit')
-
-
-@app.route('/admin/discordroles', methods=['GET'])
-@login_required
-def show_manage_discord_roles():
-    return render_template('manage_discord_roles.html', entries=None)
-

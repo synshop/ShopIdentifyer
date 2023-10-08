@@ -31,44 +31,53 @@
 
   <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
 
-  <div class="alert alert-info" role="alert">
-    Enter the Electric Badger Slot ID, RFID Token Hex value and any neccessary comments about the token.
+  <div class="alert alert-success" role="alert">
+    Enter the Electric Badger Slot ID, RFID Token Hex value, and any additional comments about the token)
   </div>
 
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 class="panel-title">Add a new RFID Token</h3>
+  <div class="card">
+
+    <div class="card-header">
+      <h3 class="card-title">Add a new RFID Token</h3>
     </div>
-    <div class="panel-body">
+    
+    <div class="card-body">
       
-      <div class="form-group">
-        <label for="rfid_token_hex" class="col-sm-2 control-label">RFID Token (Hex):</label>
-        <div class="col-sm-4">
+      <div class="row">
+        <div class="col-sm-2 col-form-label">
+          <label for="eb_id" class="form-label"><b>EB ID:</b></label>
+        </div>
+        <div class="col-sm-5">
+          <input type="text" class="form-control" id="eb_id" name="eb_id">
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-sm-2 col-form-label">
+          <label for="rfid_token_hex" class="form-label"><b>RFID Token (Hex):</b></label>
+        </div>
+        <div class="col-sm-5">
           <input type="text" class="form-control" id="rfid_token_hex" name="rfid_token_hex">
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="eb_id" class="col-sm-2 control-label">EB ID:</label>
-        <div class="col-sm-4">
-          <input type="text" class="form-control" id="eb_id" name="eb_id">
+      <div class="row">
+        <div class="col-sm-2 col-form-label">
+          <label for="rfid_token_comment" class="form-label"><b>RFID Token Comment:</b></label>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="rfid_token_comment" class="col-sm-2 control-label">RFID Token Comment:</label>
-        <div class="col-sm-4">
+        <div class="col-sm-5">
           <input type="text" class="form-control" id="rfid_token_comment" name="rfid_token_comment" value="PRIMARY">
         </div>
-      </div>
-
-      <div class="form-group">
-        <div class="col-sm-offset-2 col-sm-4">
-          <button type="submit" class="btn btn-primary btn-success">Add Token</button>
-          <button type="button" id="cancel" name="cancel" class="btn btn-secondary">Cancel</button>
-        </div>
-      </div>      
+      </div>    
     </div>
+  </div>
+
+  <div class="form-group" style="margin-top:25px;margin-bottom:50px;">
+    <div class="col-sm-offset-2 col-sm-10">
+      <button type="submit" class="btn btn-lg btn-primary">Save Changes</button>
+      <button type="cancel" class="btn btn-lg btn-secondary">Cancel</button>
+    </div>
+  </div>
 
   </form>
 </div>
