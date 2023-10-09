@@ -50,13 +50,6 @@ create table shopidentifyer.stripe_cache (
   stripe_discord_id varchar(25)
 );
 
-create table shopidentifyer.admin_users (
-  stripe_id varchar(255) NOT NULL PRIMARY KEY,
-  pwd varchar(2048)
-);
-
-insert into shopidentifyer.admin_users values ('cus_12VClCAS8R2pNP','$2b$12$fyqvNiP3ouafim/p.xPDDOqu6I3qXROoroPfoe/pWPb1nkzkbItJm');
-
 CREATE TABLE shopidentifyer.rfid_tokens (
   eb_id int DEFAULT NULL,
   stripe_id varchar(255),
@@ -66,14 +59,4 @@ CREATE TABLE shopidentifyer.rfid_tokens (
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   rfid_token_comment varchar(255),
   eb_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE"
-);
-
-create table shopidentifyer.discord_roles (
-  role_id bigint primary key,
-  role_name varchar(255)
-);
-
-create table shopidentifyer.member_discord_roles (
-  stripe_id varchar(255),
-  role_id bigint
 );
