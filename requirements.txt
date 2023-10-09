@@ -31,5 +31,5 @@ stripe==4.0.2
 svgwrite==1.4.3
 tzdata==2022.1
 tzlocal==4.2
-urllib3==1.26.11
+urllib3==1.26.17
 Werkzeug==2.2.3
