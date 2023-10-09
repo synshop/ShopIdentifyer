@@ -221,22 +221,6 @@ def inspect_user(email=None):
     member_array = identity.stripe.inspect_user(email)
 
 
-# Allow admin users to change their passwords
-def admin_change_password(stripe_id=None, password=None):
-    try:
-        db = get_db()
-        cur = db.cursor()
-
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-        stmt = "update admin_users set pwd = %s where stripe_id = %s"
-        cur.execute(stmt, (hashed_password, stripe_id,))
-        db.commit()
-        return True
-    except:
-        return False
-
-
 # Check the password for the user login
 def is_admin(email=None):
     with app.app_context():
