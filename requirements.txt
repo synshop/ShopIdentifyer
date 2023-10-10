@@ -1,4 +1,4 @@
-APScheduler==3.9.1
+APScheduler==3.10.4
 Authlib==1.2.1
 bcrypt==3.2.2
 blinker==1.5
