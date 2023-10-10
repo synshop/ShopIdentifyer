@@ -29,6 +29,7 @@
   <div class="container">
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="stripe_id" value="{{ member.stripe_id }}" />
 
     <div class="alert alert-success" role="alert">
       If you need to update information that is read-only, please email <strong>brian@synshop.org</strong>.
@@ -37,11 +38,12 @@
     <div class="card">
 
       <div class="card-header">
-        <h3 class="card-title">Edit Member</h3>
+        <h3 class="card-title">Onboard New Member</h3>
       </div>
 
       <div class="card-body">
         
+        <!--
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="meta_info" class="form-label"><b>Member Info:</b></label>
@@ -50,13 +52,14 @@
             <input type="text" class="form-control" id="meta_info" name="meta_info" value="Created On: {{ member.created_on }}, Last Updated: {{ member.changed_on }}" disabled readonly>
           </div>
         </div>
+        -->
 
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="meta_info" class="form-label"><b>Stripe Payment Plan:</b></label>
           </div>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.stripe_plan }}" disabled readonly>
+            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.stripe_subscription_product }}" disabled readonly>
           </div>
         </div>
 
@@ -69,6 +72,7 @@
           </div>
         </div>
 
+        <!--
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="meta_info" class="form-label"><b>RFID Tokens:</b></label>
@@ -77,13 +81,14 @@
             <input type="text" class="form-control" id="rfid_tokens" name="rfid_tokens" value="{{ member.rfid_tokens }}" disabled readonly>
           </div>
         </div>
+        -->
         
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="member_status" class="form-label"><b>Member Status:</b></label>
           </div>
           <div class="col-sm-10">
-            <select class="form-control" id="member_status" name="member_status">
+            <select class="form-control" id="member_status" name="member_status" disabled readonly>
               {% for n in ['ACTIVE', 'INACTIVE'] %}
                 {% if n == member.member_status %}
                   <option value="{{n}}" selected="selected">{{n}}</option>
@@ -101,7 +106,7 @@
           </div>
           <div class="col-sm-10">
             <select class="form-control" id="is_vetted" name="is_vetted">
-              {% for n in ['VETTED','NOT VETTED'] %}
+              {% for n in ['NOT VETTED','VETTED'] %}
               {% if n == member.vetted_status %}
               <option value="{{n}}" selected="selected">{{n}}</option>
               {% else %}
@@ -137,7 +142,7 @@
             <label for="meta_info" class="form-label"><b>Discord ID:</b></label>
           </div>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_handle }}">
+            <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_id }}">
           </div>
         </div>
 
