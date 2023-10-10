@@ -548,7 +548,7 @@ def unassign_rfid_token(rfid_id_token_hex=None):
 def get_unassigned_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'select eb_id,rfid_token_hex,created_on,eb_status from rfid_tokens where status = "UNASSIGNED"'
+    sql_stmt = 'select eb_id,rfid_token_hex,created_on,eb_status from rfid_tokens where status = "UNASSIGNED" order by eb_id'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
