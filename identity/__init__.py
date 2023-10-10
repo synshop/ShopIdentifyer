@@ -886,6 +886,12 @@ def insert_log_event(request=None):
     # Default log values
     stripe_id = "NA"
     rfid_token_comment = "NONE"
+    member = {
+        'name': 'NA', 
+        'handle': 'unknown ' + swipe_status, 
+        'color': 'red', 
+        'event_type': event_type
+    }
 
     db = get_db()
     cur = db.cursor()
@@ -893,30 +899,31 @@ def insert_log_event(request=None):
     sql_stmt = "select stripe_id, rfid_token_comment, eb_id from rfid_tokens where rfid_token_hex = %s"
     cur.execute(sql_stmt, (rfid_token_hex,))
     entry = cur.fetchone()
-
-    member = {'name': 'NA', 'handle': 'unknown ' + swipe_status, 'color': 'red', 'event_type': event_type}
-    if entry[0] != None:
+    
+    if entry != None:
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
         sql_stmt = "select full_name, discord_handle, led_color from members where stripe_id = %s"
         cur.execute(sql_stmt, (stripe_id,))
         member_tmp = cur.fetchone()
+
         if len(member_tmp) > 0:
             if member_tmp[2] is None:
                 color = 'yellow'
             else:
                 color = member_tmp[2]
+            
             member['name'] = member_tmp[0]
             member['handle'] = member_tmp[1]
             member['color'] = color
             member['badge'] = rfid_token_hex
 
+    post_alert(member)
+
     sql_stmt = 'insert into event_log (stripe_id, rfid_token_hex, event_type, rfid_token_comment) values (%s,%s,%s,%s)'
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
     db.commit()
-
-    post_alert(member)
 
     if stripe_id == 'NA':
         # Send alert email about a rfid token swiping in but is not assigned to a member in the system
