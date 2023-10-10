@@ -1141,7 +1141,7 @@ def login_required(f):
 def show_onboard_new_member(stripe_id):
     # Get a new form, or if a POST then save the data
     if request.method == "GET":
-        app.logger.info("User %s is onboarding member %s" % (session['username'], stripe_id))
+        app.logger.info("User %s is onboarding member %s" % (session['email'], stripe_id))
 
         db = connect_db()
         cur = db.cursor()
@@ -1211,7 +1211,7 @@ def show_onboard_new_member(stripe_id):
             assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
                                 get_member_discord_id(request.form.get('discord_handle')))
 
-        app.logger.info("User %s successfully onboarded member %s" % (session['username'], stripe_id))
+        app.logger.info("User %s successfully onboarded member %s" % (session['email'], stripe_id))
         return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
 
 
