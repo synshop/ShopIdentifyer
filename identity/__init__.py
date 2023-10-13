@@ -392,6 +392,7 @@ def get_member_discord_nickname(discord_username=None):
     if discord_username == "None" or discord_username == "":
         return "No Discord Id"
 
+    # member is still using old discord name
     if "#" in discord_username:
         (username, discriminator) = discord_username.split("#")
         encoded_name = urllib.parse.quote(username)
@@ -405,10 +406,13 @@ def get_member_discord_nickname(discord_username=None):
     url = f'https://discord.com/api/guilds/{GUILD_ID}/members/search?limit=1&query={encoded_name}'
     results = requests.get(url,headers=headers)
 
-    if results.json()[0]['nick'] == None:
-        return results.json()[0]['user']['global_name']
+    if len(results.json()) > 0:
+        if results.json()[0]['nick'] == None:
+            return results.json()[0]['user']['global_name']
+        else:
+            return results.json()[0]['nick']
     else:
-        return results.json()[0]['nick']
+        return "No Discord Id"
     
 
 # Convert a given member's discord username 
@@ -503,7 +507,7 @@ def m_add_all_discord_roles():
 def get_subscription_id_from_stripe_cache(stripe_id=None):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select stripe_subscription_id from stripe_cache where stripe_id = %s"
+    sql_stmt = "select subscription_id from stripe_cache where stripe_id = %s"
     cur.execute(sql_stmt, (stripe_id,))
 
     return cur.fetchall()[0][0]
@@ -666,7 +670,7 @@ def get_members_to_onboard():
     return entries_x
 
 
-# Get a list of onboarded INACTIVE members
+# Get a list of on-boarded INACTIVE members
 def get_inactive_members():
     db = get_db()
     cur = db.cursor()
@@ -718,12 +722,50 @@ def get_member_rfid_tokens(stripe_id=None):
     return ", ".join(rfid_tokens)
 
 
+# Insert a newly on-boarded member into the system
+def create_new_member(stripe_id=None, r=None):
+
+    insert_data = (
+        stripe_id,
+        'ACTIVE',
+        r.form.get('mobile'),
+        r.form.get('emergency_contact_name'),
+        r.form.get('emergency_contact_mobile'),
+        r.form.get('is_vetted', 'NOT VETTED'),
+        r.form.get('locker_num')
+    )
+
+    db = connect_db()
+    cur = db.cursor()
+    cur.execute(
+        'insert into members (stripe_id, member_status, mobile, emergency_contact_name,'
+        'emergency_contact_mobile, is_vetted, locker_num) '
+        'values (%s,%s,%s,%s,%s,%s,%s)',
+        insert_data)
+    db.commit()
+    db.close()
+
+    if app.config["DISCORD_MANAGE_ROLES"] and r.form.get('discord_username') != None:
+
+        discord_id = get_member_discord_id(r.form.get('discord_username'))
+        pm = app.config["DISCORD_ROLE_PAID_MEMBER"]
+        vm = app.config["DISCORD_ROLE_VETTED_MEMBER"]
+
+        # Add Paid Member Role
+        assign_discord_role(pm,discord_id)
+
+        # Add Vetted Member Role if the member is vetted
+        if r.form.get('is_vetted') == "VETTED":
+            assign_discord_role(vm,discord_id)
+
+    return True
+
+
 # Fetch a member 'object'
 def get_member(stripe_id=None):
-    member = {}
 
+    member = {}
     subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
-    member['rfid_tokens'] = get_member_rfid_tokens(stripe_id)
 
     db = get_db()
     cur = db.cursor()
@@ -736,7 +778,7 @@ def get_member(stripe_id=None):
         member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
         member['stripe_email'] = stripe_info['stripe_email']
 
-        sql_stmt = 'update stripe_cache set stripe_last_payment_status = %s, stripe_subscription_status = %s WHERE ' \
+        sql_stmt = 'update stripe_cache set last_payment_status = %s, subscription_status = %s WHERE ' \
                    'stripe_id = %s '
         cur.execute(sql_stmt,
                     (stripe_info['stripe_last_payment_status'], stripe_info['stripe_subscription_status'], stripe_id))
@@ -744,62 +786,55 @@ def get_member(stripe_id=None):
     else:
         app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, user Stripe status not updated.')
 
-    sql_stmt = '''select
-         member_status,
-         created_on,
-         changed_on,
-         full_name,
-         nick_name,
-         drupal_id,
-         meetup_email,
-         mobile,
-         emergency_contact_name,
-         emergency_contact_mobile,
-         is_vetted,
-         liability_waiver,
-         vetted_membership_form,
-         discord_handle,
-         locker_num,
-         led_color 
-         from members where stripe_id = %s'''
-
+    sql_stmt = """
+            SELECT 
+                m.stripe_id,
+                m.member_status,
+                m.is_vetted,
+                m.created_on,
+                m.changed_on,
+                m.locker_num,
+                m.led_color,
+                m.mobile,
+                m.emergency_contact_name,
+                m.emergency_contact_mobile,
+                m.liability_waiver,
+                m.vetted_membership_form,
+                sc.full_name,
+                sc.email,
+                sc.subscription_status,
+                sc.last_payment_status,
+                sc.discord_username
+            FROM
+                members m,
+                stripe_cache sc
+            WHERE
+                sc.stripe_id = %s"""
+    
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
     cur.execute(sql_stmt, (stripe_id,))
     entries = cur.fetchall()
     entry = entries[0]
-
-    member["stripe_id"] = stripe_id
-    member["member_status"] = entry[0]
-    member["created_on"] = entry[1]
-    member["changed_on"] = entry[2]
-    member["full_name"] = entry[3]
-    member["nick_name"] = entry[4]
-    member["drupal_id"] = entry[5]
-    member["meetup_email"] = entry[6]
-    member["mobile"] = entry[7]
-    member["emergency_contact_name"] = entry[8]
-    member["emergency_contact_mobile"] = entry[9]
-    member["vetted_status"] = entry[10]
-
+    
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
-    if entry[11] == None:
+    if entry["liability_waiver"] == None:
         member['has_wavier'] = False
     else:
         member['has_wavier'] = True
 
-    if entry[12] == None:
+    if entry["vetted_membership_form"] == None:
         member['has_vetted'] = False
     else:
         member['has_vetted'] = True
 
-    member["stripe_subscription_id"] = subscription_id
-    member["discord_handle"] = entry[13]
-    member["locker_num"] = entry[14]
-    member["led_color"] = entry[15]
-    member["door_access"] = member_has_authorized_rfid(stripe_id)
-    member["rfid_tokens"] = get_member_rfid_tokens(stripe_id)
-    
+    member.update(entry)
 
+    member['rfid_tokens'] = get_member_rfid_tokens(stripe_id)
+    member["stripe_subscription_id"] = subscription_id
+    member["door_access"] = member_has_authorized_rfid(stripe_id)
+    member["kiosk_username"] = get_member_discord_nickname(member["discord_username"])
+    
     return member
 
 
@@ -812,47 +847,37 @@ def update_member(request=None):
 
     insert_data = (
         request.form.get('member_status'),
-        request.form.get('full_name'),
-        request.form.get('nick_name'),
-        request.form.get('meetup_email'),
+        request.form.get('is_vetted', 'NOT VETTED'),
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted', 'NOT VETTED'),
-        request.form.get('discord_handle'),
         request.form.get('locker_num'),
         request.form.get('led_color'),
         stripe_id
     )
 
-    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,' \
-               'emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,' \
-               'led_color=%s where stripe_id=%s '
+    sql_stmt = 'update members set member_status=%s,is_vetted=%s,mobile=%s,' \
+               'emergency_contact_name=%s,emergency_contact_mobile=%s,locker_num=%s,' \
+               'led_color=%s where stripe_id=%s'
     cur.execute(sql_stmt, insert_data)
 
-    print(insert_data)
     db.commit()
     db.close()
 
-    # Add Vetted Member Role if the member has a discord handle
-    if app.config["DISCORD_MANAGE_ROLES"] and \
-            request.form.get('is_vetted') == "VETTED" and \
-            request.form.get('discord_handle') is not None:
-        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
-                            get_member_discord_id(request.form.get('discord_handle')))
+    if app.config["DISCORD_MANAGE_ROLES"] and request.form.get('discord_username') != "":
 
-    # Remove Vetted Member Role if the member has a discord handle
-    if request.form.get('is_vetted') == "NOT VETTED" and \
-            request.form.get('discord_handle') is not None and app.config["DISCORD_MANAGE_ROLES"]:
-        unassign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
-                              get_member_discord_id(request.form.get('discord_handle')))
+        discord_id = get_member_discord_id(request.form.get('discord_username'))
+        pm = app.config["DISCORD_ROLE_PAID_MEMBER"]
+        vm = app.config["DISCORD_ROLE_VETTED_MEMBER"]
 
-    # Add Paid Member Role if the member has a discord handle
-    if app.config["DISCORD_MANAGE_ROLES"] and \
-            request.form.get('stripe_plan') != "Pause Membership" and \
-            request.form.get('discord_handle') is not None:
-        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
-                            get_member_discord_id(request.form.get('discord_handle')))
+        # Add Paid Member Role
+        assign_discord_role(pm,discord_id)
+
+        # Add Vetted Member Role if the member is vetted
+        if request.form.get('is_vetted') == "VETTED":
+            assign_discord_role(vm,discord_id)
+        else:
+            unassign_discord_role(vm,discord_id)
 
 
 # Push log event into database
@@ -1144,46 +1169,10 @@ def show_onboard_new_member(stripe_id):
 # when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['POST',])
 @login_required
-def create_new_member(stripe_id):
-
-    insert_data = (
-        request.form.get('stripe_id'),
-        request.form.get('drupal_id'),
-        'ACTIVE',
-        request.form.get('full_name'),
-        request.form.get('nick_name'),
-        request.form.get('meetup_email'),
-        request.form.get('mobile'),
-        request.form.get('emergency_contact_name'),
-        request.form.get('emergency_contact_mobile'),
-        request.form.get('is_vetted', 'NOT VETTED'),
-        request.form.get('discord_handle'),
-        request.form.get('locker_num')
-    )
-
-    db = connect_db()
-    cur = db.cursor()
-    cur.execute(
-        'insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,'
-        'emergency_contact_name,emergency_contact_mobile,is_vetted,discord_handle,locker_num) '
-        'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-        insert_data)
-    db.commit()
-    db.close()
-
-    # Add Paid Member Role in if the member has a discord handle
-    if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
-                            get_member_discord_id(request.form.get('discord_handle')))
-
-    # Add Vetted Member Role in if the member has a discord handle
-    if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config[
-        "DISCORD_MANAGE_ROLES"]:
-        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
-                            get_member_discord_id(request.form.get('discord_handle')))
-
-    app.logger.info("User %s successfully onboarded member %s" % (session['username'], stripe_id))
-    return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
+def onboard_new_member(stripe_id):
+    create_new_member(stripe_id, request)
+    app.logger.info("User %s successfully on-boarded member %s" % (session['email'], stripe_id))
+    return redirect(url_for("show_admin_onboard"))
 
 
 # Show member details

@@ -29,10 +29,12 @@
   <div class="container">
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="stripe_id" value="{{member.stripe_id}}" />
+      <input type="hidden" name="discord_username" value="{{member.discord_username}}" />
 
-    <div class="alert alert-success" role="alert">
-      If you need to update information that is read-only, please email <strong>brian@synshop.org</strong>.
-    </div>
+      <div class="alert alert-success" role="alert">
+        Read-only attributes are managed via Stripe, please see a board member if you need help changing any of those values.
+      </div>
 
     <div class="card">
 
@@ -66,6 +68,33 @@
           </div>
           <div class="col-sm-10">
             <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" disabled readonly>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}" disabled readonly>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Discord Username:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="discord_username" name="discord_username" value="{{ member.discord_username }}" disabled readonly>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Kiosk Username:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="kiosk_username" name="kiosk_username" value="{{ member.kiosk_username }}" disabled readonly>
           </div>
         </div>
 
@@ -113,33 +142,6 @@
         </div>
 
         <hr/>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Nickname:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.nick_name }}">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Discord ID:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_handle }}">
-          </div>
-        </div>
 
         <div class="row">
           <div class="col-sm-2 col-form-label">
