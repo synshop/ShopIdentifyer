@@ -25,10 +25,10 @@ except Exception as e:
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-# TODO: Move to svglib
 # TODO: Look at using CursorDictRowsMixIn for db operations
 
 import MySQLdb as mysql
+import MySQLdb.cursors
 
 from flask import Flask, request, g, flash, redirect, make_response, render_template, jsonify, session, url_for
 
@@ -121,35 +121,10 @@ def close_db(error):
 # Start cron tasks
 s1 = BackgroundScheduler()
 
-
 # This helps with stripe information lookup performance
-# Currently it runs every ~15 minutes and grabs
-# the last 15 minutes of data
-@s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REFRESH_CRON']))
-def refresh_stripe_cache():
-    app.logger.info("refreshing stripe cache")
-    member_array = identity.stripe.get_stripe_customers(incremental=True)
-
-    with app.app_context():
-        db = get_db()
-
-        for member in member_array:
-            cur = db.cursor()
-
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                        (member['stripe_id'], member['stripe_created_on'], member['stripe_email'],
-                         member['stripe_description'], member['stripe_last_payment_status'],
-                         member['stripe_subscription_id'], member['stripe_subscription_product'],
-                         member['stripe_subscription_status'], member['stripe_subscription_created_on']))
-
-        db.commit()
-
-    app.logger.info("finished refreshing stripe cache")
-
-
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_REBUILD_CRON']))
 def rebuild_stripe_cache():
-    app.logger.info("nightly stripe cache rebuild")
+    app.logger.info("rebuilding stripe cache")
 
     member_array = identity.stripe.get_stripe_customers()
 
@@ -161,14 +136,21 @@ def rebuild_stripe_cache():
         db.commit()
 
         for member in member_array:
-            cur = db.cursor()
 
-            cur.execute("insert ignore into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
-                        (member['stripe_id'], member['stripe_created_on'], member['stripe_email'],
-                         member['stripe_description'], member['stripe_last_payment_status'],
-                         member['stripe_subscription_id'], member['stripe_subscription_product'],
-                         member['stripe_subscription_status'], member['stripe_subscription_created_on'],
-                         member['stripe_discord_id']))
+            cur = db.cursor()
+            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                member['stripe_id'], 
+                member['stripe_created_on'],
+                member['stripe_email'],
+                member['stripe_full_name'],
+                member['stripe_discord_username'],
+                member['stripe_last_payment_status'],
+                member['stripe_subscription_id'], 
+                member['stripe_subscription_product'],
+                member['stripe_subscription_status'], 
+                member['stripe_subscription_created_on']
+            ))
 
         db.commit()
 
@@ -221,7 +203,7 @@ def inspect_user(email=None):
     member_array = identity.stripe.inspect_user(email)
 
 
-# Check the password for the user login
+# Determine if user is allowed to log in
 def is_admin(email=None):
     with app.app_context():
 
@@ -387,22 +369,6 @@ def send_na_stripe_id_alert_email(rfid_id_token_hex=None):
         app.logger.info(log_message)
 
 
-# Check to see if a user is able to login and make changes to the system
-def member_is_admin(stripe_id=None):
-    try:
-        db = get_db()
-        cur = db.cursor()
-        stmt = "select count(*) from admin_users where stripe_id = %s"
-        cur.execute(stmt, (stripe_id,))
-        entry = cur.fetchone()
-        if entry[0] > 0:
-            return True
-        else:
-            return False
-    except:
-        return False
-
-
 # Returns True if user has an RFID token in the access control system
 def member_has_authorized_rfid(stripe_id=None):
     try:
@@ -420,17 +386,44 @@ def member_has_authorized_rfid(stripe_id=None):
         return False
 
 
-# Convert a given member's discord handle (username#discrimator)
+# Get a member's discord nickname for displaying on Kiosk
+def get_member_discord_nickname(discord_username=None):
+
+    if discord_username == "None" or discord_username == "":
+        return "No Discord Id"
+
+    if "#" in discord_username:
+        (username, discriminator) = discord_username.split("#")
+        encoded_name = urllib.parse.quote(username)
+    else:
+        encoded_name = urllib.parse.quote(discord_username)
+
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+
+    headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'}
+    url = f'https://discord.com/api/guilds/{GUILD_ID}/members/search?limit=1&query={encoded_name}'
+    results = requests.get(url,headers=headers)
+
+    if results.json()[0]['nick'] == None:
+        return results.json()[0]['user']['global_name']
+    else:
+        return results.json()[0]['nick']
+    
+
+# Convert a given member's discord username 
+# (either with or without the #discriminator)
 # into their 18 digit discord id
-def get_member_discord_id(discord_handle=None):
-    if discord_handle == "None" or discord_handle == "":
+def get_member_discord_id(discord_username=None):
+
+    if discord_username == "None" or discord_username == "":
         return "000000000000000000"
 
-    try:
-        (username, discriminator) = discord_handle.split("#")
+    if "#" in discord_username:
+        (username, discriminator) = discord_username.split("#")
         encoded_name = urllib.parse.quote(username)
-    except ValueError:
-        encoded_name = urllib.parse.quote(discord_handle)
+    else:
+        encoded_name = urllib.parse.quote(discord_username)
 
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
@@ -640,12 +633,12 @@ def get_members_to_onboard():
     sql_stmt = """
         SELECT
             stripe_id, 
-            stripe_created_on, 
-            stripe_email, 
-            stripe_description,
-            stripe_last_payment_status,
-            stripe_subscription_product,
-            stripe_subscription_status
+            created_on, 
+            email, 
+            full_name,
+            last_payment_status,
+            subscription_product,
+            subscription_status
         FROM 
             stripe_cache 
         WHERE
@@ -653,7 +646,7 @@ def get_members_to_onboard():
         NOT IN
             (SELECT stripe_id FROM members) 
         ORDER BY 
-            stripe_created_on desc
+            created_on desc
     """
     cur.execute(sql_stmt)
     rows = cur.fetchall()
@@ -789,7 +782,6 @@ def get_member(stripe_id=None):
 
     # Flags set to determine if a member has
     # a waiver / vetted membership form on file,
-    # or if they are an admin in the system.
     if entry[11] == None:
         member['has_wavier'] = False
     else:
@@ -799,11 +791,6 @@ def get_member(stripe_id=None):
         member['has_vetted'] = False
     else:
         member['has_vetted'] = True
-
-    if member_is_admin(stripe_id):
-        member['is_admin'] = True
-    else:
-        member['is_admin'] = False
 
     member["stripe_subscription_id"] = subscription_id
     member["discord_handle"] = entry[13]
@@ -990,24 +977,24 @@ def get_public_stats():
         },
         'total_free': {
             'count': 0,
-            'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Free Membership"'
+            'sql': 'select count(*) from stripe_cache where subscription_product = "Free Membership"'
         },
         'total_paused': {
             'count': 0,
-            'sql': 'select count(*) from stripe_cache where stripe_subscription_product = "Paused Membership"'
+            'sql': 'select count(*) from stripe_cache where subscription_product = "Paused Membership"'
         },
         'total_need_onboarding': {
             'count': 0,
-            'sql': 'select count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" and '
+            'sql': 'select count(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'total_vetted': {
             'count': 0,
-            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "VETTED" AND member_status = "ACTIVE");'
+            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "VETTED" AND member_status = "ACTIVE");'
         },
         'total_not_vetted': {
             'count': 0,
-            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
+            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
         },
         'total_have_waivers': {
             'count': 0,
@@ -1090,15 +1077,15 @@ def get_admin_view():
     stmt = """  
         SELECT 
             m.stripe_id,
-            s.stripe_subscription_id,
-            m.full_name,
+            s.subscription_id,
+            s.full_name,
             m.is_vetted, 
             m.liability_waiver, 
             m.vetted_membership_form, 
-            s.stripe_email,
-            s.stripe_subscription_status,
-            s.stripe_subscription_product,
-            s.stripe_last_payment_status
+            s.email,
+            s.subscription_status,
+            s.subscription_product,
+            s.last_payment_status
         FROM 
             members m
         JOIN
@@ -1108,7 +1095,7 @@ def get_admin_view():
         AND
             m.stripe_id = s.stripe_id
         ORDER BY
-            m.is_vetted asc, s.stripe_subscription_product, m.full_name
+            m.is_vetted asc, s.subscription_product, m.full_name
     """
     cur.execute(stmt)
     members = cur.fetchall()
@@ -1136,83 +1123,67 @@ def login_required(f):
 
 # Onboarding process - this attempts to pre-populate some fields
 # when setting up a new user.
-@app.route('/member/new/<stripe_id>', methods=['GET', 'POST'])
+@app.route('/member/new/<stripe_id>', methods=['GET',])
 @login_required
 def show_onboard_new_member(stripe_id):
-    # Get a new form, or if a POST then save the data
-    if request.method == "GET":
-        app.logger.info("User %s is onboarding member %s" % (session['username'], stripe_id))
+    
+    app.logger.info("User %s is onboarding member %s" % (session['email'], stripe_id))
 
-        db = connect_db()
-        cur = db.cursor()
-        sql_stmt = 'select stripe_email, stripe_description, stripe_last_payment_status, stripe_subscription_product, ' \
-                   'stripe_subscription_status, stripe_discord_id from stripe_cache where stripe_id = %s '
-        cur.execute(sql_stmt, (stripe_id,))
-        rows = cur.fetchall()
-        member = rows[0]
+    db = connect_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql_stmt = 'select stripe_id, email, full_name, last_payment_status, subscription_product, ' \
+                'subscription_status, discord_username from stripe_cache where stripe_id = %s '
+    cur.execute(sql_stmt, (stripe_id,))
+    rows = cur.fetchall()
+    member = rows[0]
+    
 
-        user = {}
+    return render_template('new_member.html', member=member)
 
-        user["stripe_id"] = stripe_id
-        user["full_name"] = member[1]
-        user["drupal_name"] = member[1]
-        user["drupal_id"] = member[1]
-        user["stripe_email"] = member[0]
-        user["discord_id"] = member[5]
+# Onboarding process - this attempts to pre-populate some fields
+# when setting up a new user.
+@app.route('/member/new/<stripe_id>', methods=['POST',])
+@login_required
+def create_new_member(stripe_id):
 
-        if member[2] != None:
-            user["stripe_last_payment_status"] = member[2].upper()
-        else:
-            if member[3] == "Free Membership":
-                user["stripe_last_payment_status"] = "NOT AVAILABLE"
-            else:
-                user["stripe_last_payment_status"] = "STATUS ERROR"
+    insert_data = (
+        request.form.get('stripe_id'),
+        request.form.get('drupal_id'),
+        'ACTIVE',
+        request.form.get('full_name'),
+        request.form.get('nick_name'),
+        request.form.get('meetup_email'),
+        request.form.get('mobile'),
+        request.form.get('emergency_contact_name'),
+        request.form.get('emergency_contact_mobile'),
+        request.form.get('is_vetted', 'NOT VETTED'),
+        request.form.get('discord_handle'),
+        request.form.get('locker_num')
+    )
 
-        user["stripe_subscription_product"] = member[3].upper()
-        user["stripe_subscription_status"] = member[4].upper()
+    db = connect_db()
+    cur = db.cursor()
+    cur.execute(
+        'insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,'
+        'emergency_contact_name,emergency_contact_mobile,is_vetted,discord_handle,locker_num) '
+        'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+        insert_data)
+    db.commit()
+    db.close()
 
-        return render_template('new_member.html', member=user)
+    # Add Paid Member Role in if the member has a discord handle
+    if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
+        assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
+                            get_member_discord_id(request.form.get('discord_handle')))
 
-    if request.method == "POST":
+    # Add Vetted Member Role in if the member has a discord handle
+    if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config[
+        "DISCORD_MANAGE_ROLES"]:
+        assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
+                            get_member_discord_id(request.form.get('discord_handle')))
 
-        insert_data = (
-            request.form.get('stripe_id'),
-            request.form.get('drupal_id'),
-            'ACTIVE',
-            request.form.get('full_name'),
-            request.form.get('nick_name'),
-            request.form.get('meetup_email'),
-            request.form.get('mobile'),
-            request.form.get('emergency_contact_name'),
-            request.form.get('emergency_contact_mobile'),
-            request.form.get('is_vetted', 'NOT VETTED'),
-            request.form.get('discord_handle'),
-            request.form.get('locker_num')
-        )
-
-        db = connect_db()
-        cur = db.cursor()
-        cur.execute(
-            'insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,'
-            'emergency_contact_name,emergency_contact_mobile,is_vetted,discord_handle,locker_num) '
-            'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-            insert_data)
-        db.commit()
-        db.close()
-
-        # Add Paid Member Role in if the member has a discord handle
-        if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
-                                get_member_discord_id(request.form.get('discord_handle')))
-
-        # Add Vetted Member Role in if the member has a discord handle
-        if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config[
-            "DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
-                                get_member_discord_id(request.form.get('discord_handle')))
-
-        app.logger.info("User %s successfully onboarded member %s" % (session['username'], stripe_id))
-        return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
+    app.logger.info("User %s successfully onboarded member %s" % (session['username'], stripe_id))
+    return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
 
 
 # Show member details

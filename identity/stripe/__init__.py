@@ -31,13 +31,13 @@ def _get_customer_attributes(subscription):
         "stripe_id": None,
         "stripe_created_on": None,
         "stripe_email": None,
-        "stripe_description": None,
+        "stripe_full_name": None,
         "stripe_last_payment_status": None,
         "stripe_subscription_id": None,
         "stripe_subscription_product": None,
         "stripe_subscription_status": None,
         "stripe_subscription_created_on": None,
-        "stripe_discord_id": None
+        "stripe_discord_username": None
     }
 
     customer = stripe.Customer.retrieve(subscription.customer)
@@ -45,15 +45,15 @@ def _get_customer_attributes(subscription):
     user["stripe_id"] = customer.id
     user["stripe_email"] = customer.email.lower()
     user["stripe_created_on"] = customer.created
-    user["stripe_description"] = customer.name
+    user["stripe_full_name"] = customer.name
     user["stripe_subscription_status"] = subscription.status
     user["stripe_subscription_created_on"] = subscription.created
     user["stripe_subscription_id"] = subscription.id
     
     if customer["metadata"]:
-        user["stripe_discord_id"] = customer["metadata"]["discord_id"]
+        user["stripe_discord_username"] = customer["metadata"]["discord_id"]
     else:
-        user["stripe_discord_id"] = ""
+        user["stripe_discord_username"] = ""
 
     # Determine if member is in good standing 
     for last_payment_intent in stripe.PaymentIntent.list(customer=subscription.customer, limit=1):
@@ -75,13 +75,7 @@ def get_stripe_customers(incremental=False):
     stripe.api_key = app.config['STRIPE_TOKEN']
 
     member_array = []
-
-    if (incremental == False):
-        subscriptions = stripe.Subscription.list()
-    else:
-        i = app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] * 60
-        t = int(time.time()) - i
-        subscriptions = stripe.Subscription.list(created={'gte':t})
+    subscriptions = stripe.Subscription.list()
 
     for subscription in subscriptions.auto_paging_iter():
         member = _get_customer_attributes(subscription)

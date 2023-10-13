@@ -1,19 +1,14 @@
 -- CREATE USER 'synshop'@'localhost' IDENTIFIED BY 'CHANGME';
 
-DROP DATABASE IF EXISTS shopidentifyer;
-CREATE DATABASE shopidentifyer;
-GRANT ALL PRIVILEGES ON shopidentifyer.* TO 'synshop'@'localhost' WITH GRANT OPTION;
+DROP DATABASE IF EXISTS shopid;
+CREATE DATABASE shopid;
+GRANT ALL PRIVILEGES ON shopid.* TO 'synshop'@'localhost' WITH GRANT OPTION;
 
-create table shopidentifyer.members (
+create table shopid.members (
   stripe_id varchar(255) NOT NULL PRIMARY KEY UNIQUE,
-  drupal_id varchar(255),
-  badge_serial varchar(255) default "N/A",
   member_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
   is_vetted ENUM('VETTED','NOT VETTED') NOT NULL DEFAULT "NOT VETTED",
   full_name varchar(255),
-  nick_name varchar(255),
-  meetup_email varchar(255),
-  discord_handle varchar(255),
   locker_num varchar(255),
   led_color varchar(255) DEFAULT "#000000,#000000",
   mobile varchar(25),
@@ -27,7 +22,20 @@ create table shopidentifyer.members (
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-create table shopidentifyer.event_log (
+create table shopid.stripe_cache (
+  stripe_id varchar(255) unique,
+  created_on varchar(255),
+  email varchar(255),
+  full_name text,
+  discord_username varchar(25),
+  last_payment_status varchar(255),
+  subscription_id varchar(255),
+  subscription_product varchar(255),
+  subscription_status varchar(255),
+  subscription_created_on varchar(255)
+);
+
+create table shopid.event_log (
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
   stripe_id varchar(255) NOT NULL,
   rfid_token_hex varchar(255) NOT NULL,
@@ -37,26 +45,13 @@ create table shopidentifyer.event_log (
   rfid_token_comment varchar(255)
 );
 
-create table shopidentifyer.stripe_cache (
-  stripe_id varchar(255) unique,
-  stripe_created_on varchar(255),
-  stripe_email varchar(255),
-  stripe_description text,
-  stripe_last_payment_status varchar(255),
-  stripe_subscription_id varchar(255),
-  stripe_subscription_product varchar(255),
-  stripe_subscription_status varchar(255),
-  stripe_subscription_created_on varchar(255),
-  stripe_discord_id varchar(25)
-);
-
-CREATE TABLE shopidentifyer.rfid_tokens (
+CREATE TABLE shopid.rfid_tokens (
   eb_id int DEFAULT NULL,
   stripe_id varchar(255),
+  eb_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
   rfid_token_hex varchar(255) NOT NULL PRIMARY KEY,
+  rfid_token_comment varchar(255),
   status ENUM('ASSIGNED','UNASSIGNED','LOST','BROKEN') NOT NULL DEFAULT "UNASSIGNED",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  rfid_token_comment varchar(255),
-  eb_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE"
+  changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
