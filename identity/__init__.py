@@ -1182,49 +1182,8 @@ def create_new_member(stripe_id):
         assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
                             get_member_discord_id(request.form.get('discord_handle')))
 
-<<<<<<< HEAD
     app.logger.info("User %s successfully onboarded member %s" % (session['username'], stripe_id))
     return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
-=======
-        insert_data = (
-            request.form.get('stripe_id'),
-            request.form.get('drupal_id'),
-            'ACTIVE',
-            request.form.get('full_name'),
-            request.form.get('nick_name'),
-            request.form.get('meetup_email'),
-            request.form.get('mobile'),
-            request.form.get('emergency_contact_name'),
-            request.form.get('emergency_contact_mobile'),
-            request.form.get('is_vetted', 'NOT VETTED'),
-            request.form.get('discord_handle'),
-            request.form.get('locker_num')
-        )
-
-        db = connect_db()
-        cur = db.cursor()
-        cur.execute(
-            'insert into members (stripe_id,drupal_id,member_status,full_name,nick_name,meetup_email,mobile,'
-            'emergency_contact_name,emergency_contact_mobile,is_vetted,discord_handle,locker_num) '
-            'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-            insert_data)
-        db.commit()
-        db.close()
-
-        # Add Paid Member Role in if the member has a discord handle
-        if request.form.get('discord_handle') != None and app.config["DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app.config["DISCORD_ROLE_PAID_MEMBER"],
-                                get_member_discord_id(request.form.get('discord_handle')))
-
-        # Add Vetted Member Role in if the member has a discord handle
-        if request.form.get('is_vetted') == "VETTED" and request.form.get('discord_handle') != None and app.config[
-            "DISCORD_MANAGE_ROLES"]:
-            assign_discord_role(app.config["DISCORD_ROLE_VETTED_MEMBER"],
-                                get_member_discord_id(request.form.get('discord_handle')))
-
-        app.logger.info("User %s successfully onboarded member %s" % (session['email'], stripe_id))
-        return redirect(url_for("show_admin_onboard", _scheme='https', _external=True))
->>>>>>> origin/prod
 
 
 # Show member details
