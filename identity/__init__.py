@@ -420,17 +420,52 @@ def member_has_authorized_rfid(stripe_id=None):
         return False
 
 
-# Convert a given member's discord handle (username#discrimator)
+# Get a member's discord nickname for displaying on Kiosk
+def get_member_discord_nickname(discord_username=None):
+
+    if discord_username == "None" or discord_username == "":
+        return "No Discord Username"
+
+    # member is still using old discord name
+    if "#" in discord_username:
+        (username, discriminator) = discord_username.split("#")
+        encoded_name = urllib.parse.quote(username)
+    else:
+        encoded_name = urllib.parse.quote(discord_username)
+
+    GUILD_ID = app.config['DISCORD_GUILD_ID']
+    TOKEN = app.config['DISCORD_BOT_TOKEN']
+
+    headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'}
+    url = f'https://discord.com/api/guilds/{GUILD_ID}/members/search?limit=1&query={encoded_name}'
+    results = requests.get(url,headers=headers)
+
+    if len(results.json()) > 0:
+        user = results.json()[0]
+        if user['nick'] == None:
+            if user['user']['global_name'] == None:
+                return user['user']['username']
+            else:
+                return user['user']['global_name']
+        else:
+            return user['nick']
+    else:
+        return "No Discord Username"
+    
+
+# Convert a given member's discord username 
+# (either with or without the #discriminator)
 # into their 18 digit discord id
-def get_member_discord_id(discord_handle=None):
-    if discord_handle == "None" or discord_handle == "":
+def get_member_discord_id(discord_username=None):
+
+    if discord_username == "None" or discord_username == "":
         return "000000000000000000"
 
-    try:
-        (username, discriminator) = discord_handle.split("#")
+    if "#" in discord_username:
+        (username, discriminator) = discord_username.split("#")
         encoded_name = urllib.parse.quote(username)
-    except ValueError:
-        encoded_name = urllib.parse.quote(discord_handle)
+    else:
+        encoded_name = urllib.parse.quote(discord_username)
 
     GUILD_ID = app.config['DISCORD_GUILD_ID']
     TOKEN = app.config['DISCORD_BOT_TOKEN']
@@ -442,7 +477,6 @@ def get_member_discord_id(discord_handle=None):
         return result.json()[0]['user']['id']
     else:
         return "000000000000000000"
-
 
 # Remove a discord role from a member
 def unassign_discord_role(role_id=None, discord_id=None):
@@ -915,7 +949,7 @@ def insert_log_event(request=None):
                 color = member_tmp[2]
             
             member['name'] = member_tmp[0]
-            member['handle'] = member_tmp[1]
+            member['handle'] = get_member_discord_nickname(member_tmp[1])
             member['color'] = color
             member['badge'] = rfid_token_hex
 
