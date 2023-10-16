@@ -390,7 +390,7 @@ def member_has_authorized_rfid(stripe_id=None):
 def get_member_discord_nickname(discord_username=None):
 
     if discord_username == "None" or discord_username == "":
-        return "No Discord Id"
+        return "No Discord Username"
 
     # member is still using old discord name
     if "#" in discord_username:
@@ -407,12 +407,16 @@ def get_member_discord_nickname(discord_username=None):
     results = requests.get(url,headers=headers)
 
     if len(results.json()) > 0:
-        if results.json()[0]['nick'] == None:
-            return results.json()[0]['user']['global_name']
+        user = results.json()[0]
+        if user['nick'] == None:
+            if user['user']['global_name'] == None:
+                return user['user']['username']
+            else:
+                return user['user']['global_name']
         else:
-            return results.json()[0]['nick']
+            return user['nick']
     else:
-        return "No Discord Id"
+        return "No Discord Username"
     
 
 # Convert a given member's discord username 
@@ -439,7 +443,6 @@ def get_member_discord_id(discord_username=None):
         return result.json()[0]['user']['id']
     else:
         return "000000000000000000"
-
 
 # Remove a discord role from a member
 def unassign_discord_role(role_id=None, discord_id=None):
@@ -927,7 +930,7 @@ def insert_log_event(request=None):
                 color = member_tmp[2]
             
             member['name'] = member_tmp[0]
-            member['handle'] = member_tmp[1]
+            member['handle'] = get_member_discord_nickname(member_tmp[1])
             member['color'] = color
             member['badge'] = rfid_token_hex
 
