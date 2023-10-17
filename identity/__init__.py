@@ -47,8 +47,6 @@ except Exception as e:
 # Encrypted Configuration
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
-app.config['STRIPE_CACHE_REFRESH_CRON'] = config.STRIPE_CACHE_REFRESH_CRON
-app.config['STRIPE_CACHE_REFRESH_REACHBACK_MIN'] = config.STRIPE_CACHE_REFRESH_REACHBACK_MIN
 app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
 app.config['STRIPE_CACHE_DEACTIVATE_CRON'] = config.STRIPE_CACHE_DEACTIVATE_CRON
 app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME, ENCRYPTION_KEY)
@@ -211,7 +209,7 @@ def is_admin(email=None):
             db = get_db()
             cur = db.cursor()
 
-            stmt = "select is_admin from members where stripe_id = (select stripe_id from stripe_cache where stripe_email = %s)"
+            stmt = "select is_admin from members where stripe_id = (select stripe_id from stripe_cache where email = %s)"
             cur.execute(stmt, (email,))
             entries = cur.fetchall()
             if entries[0][0] == 'Y':
@@ -1061,17 +1059,17 @@ def get_usage_report():
         },
         'paused_not_onboarded': {
             'count': 0,
-            'sql': 'SELECT count(stripe_id) from stripe_cache where stripe_subscription_product = "Paused Membership" '
+            'sql': 'SELECT count(stripe_id) from stripe_cache where subscription_product = "Paused Membership" '
                    'AND stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'paused_onboarded': {
             'count': 0,
             'sql': 'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND '
-                   's.stripe_subscription_product = "Paused Membership" '
+                   's.subscription_product = "Paused Membership" '
         },
         'need_onboarding': {
             'count': 0,
-            'sql': 'SELECT count(*) FROM stripe_cache WHERE stripe_subscription_product <> "Paused Membership" and '
+            'sql': 'SELECT count(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'door_swipes': {
@@ -1082,7 +1080,7 @@ def get_usage_report():
             'count': 0,
             'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_DENY"'
         },
-        'door_accss_granted': {
+        'door_access_granted': {
             'count': 0,
             'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_GRANT"'
         }
@@ -1284,15 +1282,6 @@ def show_member_vetted(stripe_id):
 def show_event_log():
     insert_log_event(request)
     return jsonify({"status": 200})
-
-
-# API for public stats, JSON
-@app.route('/api/public_stats')
-def api_public_stats():
-    statsClean = {}
-    for k, v in get_public_stats().items():
-        statsClean[k] = v['count']
-    return jsonify(statsClean)
 
 
 # Landing Page Routes
