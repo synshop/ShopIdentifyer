@@ -30,7 +30,7 @@ create table shopid.stripe_cache (
   discord_username varchar(25),
   last_payment_status varchar(255),
   subscription_id varchar(255),
-  subscription_product varchar(255),
+  subscription_description varchar(255),
   subscription_status varchar(255),
   subscription_created_on varchar(255)
 );

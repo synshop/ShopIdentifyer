@@ -12,6 +12,7 @@ import urllib
 from email.message import EmailMessage
 from functools import wraps
 from .crypto import SettingsUtil, CryptoUtil
+from .models import member
 
 from authlib.integrations.flask_client import OAuth
 from authlib.integrations.base_client.errors import OAuthError
@@ -145,7 +146,7 @@ def rebuild_stripe_cache():
                 member['stripe_discord_username'],
                 member['stripe_last_payment_status'],
                 member['stripe_subscription_id'], 
-                member['stripe_subscription_product'],
+                member['stripe_subscription_description'],
                 member['stripe_subscription_status'], 
                 member['stripe_subscription_created_on']
             ))
@@ -266,7 +267,7 @@ def send_payment_alert_email(sub_id=None):
 
     email_body_data = (
         member['full_name'],
-        stripe_info['stripe_subscription_product'],
+        stripe_info['stripe_subscription_description'],
         stripe_info['stripe_last_payment_status']
     )
 
@@ -309,7 +310,7 @@ def send_door_access_alert_email(sub_id=None):
 
     email_body_data = (
         member['full_name'],
-        stripe_info['stripe_subscription_product'],
+        stripe_info['stripe_subscription_description'],
         stripe_info['stripe_last_payment_status'],
     )
 
@@ -495,7 +496,7 @@ def m_add_all_discord_roles():
             time.sleep(5)
 
         # Get discord handles for ACTIVE Members with valid Subscription Plans
-        stmt = 'select m.discord_handle, m.stripe_id, sc.stripe_subscription_product from members m, stripe_cache sc ' \
+        stmt = 'select m.discord_handle, m.stripe_id, sc.subscription_description from members m, stripe_cache sc ' \
                'where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL '
         cur.execute(stmt)
         for member in cur.fetchall():
@@ -642,7 +643,7 @@ def get_members_to_onboard():
             email, 
             full_name,
             last_payment_status,
-            subscription_product,
+            subscription_description,
             subscription_status
         FROM 
             stripe_cache 
@@ -663,7 +664,7 @@ def get_members_to_onboard():
             stripe_email=row[2],
             drupal_legal_name=row[3],
             stripe_last_payment_status=row[4],
-            stripe_subscription_product=row[5],
+            stripe_subscription_description=row[5],
             stripe_subscription_status=row[6])
 
         entries_x.append(entry_dict)
@@ -681,7 +682,7 @@ def get_inactive_members():
             s.stripe_subscription_id,
             m.full_name,
             m.is_vetted,
-            s.stripe_subscription_product,
+            s.stripe_subscription_description,
             s.stripe_subscription_status,
             s.stripe_last_payment_status
         FROM 
@@ -691,7 +692,7 @@ def get_inactive_members():
         WHERE
             m.member_status = "INACTIVE"
         ORDER BY
-            s.stripe_subscription_product desc
+            s.stripe_subscription_description desc
     """
 
     cur.execute(sql_stmt)
@@ -776,7 +777,7 @@ def get_member(stripe_id=None):
         stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
 
         member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
-        member['stripe_plan'] = stripe_info['stripe_subscription_product'].upper()
+        member['stripe_plan'] = stripe_info['stripe_subscription_description'].upper()
         member['stripe_email'] = stripe_info['stripe_email']
 
         sql_stmt = 'update stripe_cache set last_payment_status = %s, subscription_status = %s WHERE ' \
@@ -1003,24 +1004,24 @@ def get_public_stats():
         },
         'total_free': {
             'count': 0,
-            'sql': 'select count(*) from stripe_cache where subscription_product = "Free Membership"'
+            'sql': 'select count(*) from stripe_cache where subscription_description = "Free Membership"'
         },
         'total_paused': {
             'count': 0,
-            'sql': 'select count(*) from stripe_cache where subscription_product = "Paused Membership"'
+            'sql': 'select count(*) from stripe_cache where subscription_description = "Paused Membership"'
         },
         'total_need_onboarding': {
             'count': 0,
-            'sql': 'select count(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" and '
+            'sql': 'select count(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'total_vetted': {
             'count': 0,
-            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "VETTED" AND member_status = "ACTIVE");'
+            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "VETTED" AND member_status = "ACTIVE");'
         },
         'total_not_vetted': {
             'count': 0,
-            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
+            'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
         },
         'total_have_waivers': {
             'count': 0,
@@ -1059,17 +1060,17 @@ def get_usage_report():
         },
         'paused_not_onboarded': {
             'count': 0,
-            'sql': 'SELECT count(stripe_id) from stripe_cache where subscription_product = "Paused Membership" '
+            'sql': 'SELECT count(stripe_id) from stripe_cache where subscription_description = "Paused Membership" '
                    'AND stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'paused_onboarded': {
             'count': 0,
             'sql': 'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND '
-                   's.subscription_product = "Paused Membership" '
+                   's.subscription_description = "Paused Membership" '
         },
         'need_onboarding': {
             'count': 0,
-            'sql': 'SELECT count(*) FROM stripe_cache WHERE subscription_product <> "Paused Membership" and '
+            'sql': 'SELECT count(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
         'door_swipes': {
@@ -1110,7 +1111,7 @@ def get_admin_view():
             m.vetted_membership_form, 
             s.email,
             s.subscription_status,
-            s.subscription_product,
+            s.subscription_description,
             s.last_payment_status
         FROM 
             members m
@@ -1121,16 +1122,16 @@ def get_admin_view():
         AND
             m.stripe_id = s.stripe_id
         ORDER BY
-            m.is_vetted asc, s.subscription_product, m.full_name
+            m.is_vetted asc, s.subscription_description, m.full_name
     """
     cur.execute(stmt)
     members = cur.fetchall()
 
     ret_members = []
 
-    for member in members:
-        x = list(member)
-        has_rfid = member_has_authorized_rfid(member[0])
+    for m in members:
+        x = list(m)
+        has_rfid = member_has_authorized_rfid(m[0])
         x.append(has_rfid)
         ret_members.append(x)
 
@@ -1157,7 +1158,7 @@ def show_onboard_new_member(stripe_id):
 
     db = connect_db()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
-    sql_stmt = 'select stripe_id, email, full_name, last_payment_status, subscription_product, ' \
+    sql_stmt = 'select stripe_id, email, full_name, last_payment_status, subscription_description, ' \
                 'subscription_status, discord_username from stripe_cache where stripe_id = %s '
     cur.execute(sql_stmt, (stripe_id,))
     rows = cur.fetchall()

@@ -3,7 +3,7 @@ from identity import app
 
 PAYMENT_SUCCEEDED = "succeeded"
 ACTIVE_SUBSCRIPTION = "active"
-PAUSE_MEMBERSHIP = "Pause Membership"
+PAUSED_MEMBERSHIP = "Paused Membership"
 
 STRIPE_VERSION = "2022-08-01"
 
@@ -34,7 +34,7 @@ def _get_customer_attributes(subscription):
         "stripe_full_name": None,
         "stripe_last_payment_status": None,
         "stripe_subscription_id": None,
-        "stripe_subscription_product": None,
+        "stripe_subscription_description": None,
         "stripe_subscription_status": None,
         "stripe_subscription_created_on": None,
         "stripe_discord_username": None
@@ -65,7 +65,7 @@ def _get_customer_attributes(subscription):
         sub_array.append(s.plan.nickname)
     
     subs_string = ' + '.join(sub_array)
-    user["stripe_subscription_product"] = subs_string
+    user["stripe_subscription_description"] = subs_string
 
     return user
 
@@ -96,11 +96,11 @@ def member_is_in_good_standing(subscription_id=None):
     member_stripe_info = get_realtime_stripe_info(subscription_id)
     payment_status = member_stripe_info['stripe_last_payment_status']
     subscription_status = member_stripe_info['stripe_subscription_status']
-    subscription_product = member_stripe_info['stripe_subscription_product']
+    stripe_subscription_description = member_stripe_info['stripe_subscription_description']
 
     if payment_status == PAYMENT_SUCCEEDED and \
         subscription_status == ACTIVE_SUBSCRIPTION and \
-        subscription_product != PAUSE_MEMBERSHIP:
+        stripe_subscription_description != PAUSED_MEMBERSHIP:
         return True
     else:
         return False
