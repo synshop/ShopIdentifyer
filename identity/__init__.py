@@ -857,11 +857,10 @@ def update_member(request=None):
 
     stripe_id = request.form.get('stripe_id')
 
-    insert_data = (
+    update_data = (
         request.form.get('member_status'),
         request.form.get('full_name'),
         request.form.get('nick_name'),
-        request.form.get('meetup_email'),
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
@@ -872,12 +871,14 @@ def update_member(request=None):
         stripe_id
     )
 
-    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,meetup_email=%s,mobile=%s,' \
+    print(update_data)
+    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,mobile=%s,' \
                'emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,' \
-               'led_color=%s where stripe_id=%s '
-    cur.execute(sql_stmt, insert_data)
-
-    print(insert_data)
+               'led_color=%s where stripe_id=%s'
+    try:
+        x = cur.execute(sql_stmt, update_data)
+    except Exception as e:
+        print(e)
     db.commit()
     db.close()
 
