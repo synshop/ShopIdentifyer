@@ -37,32 +37,27 @@
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
-        <th>Modify</th>
         <th>EB ID</th>
         <th>EB Status</th>
         <th>Token Status</th>
         <th>RFID Hex</th>
         <th>Assigned To</th>
+        <th>Action</th>
     </tr>
     </thead>
     <tbody>
     {% for entry in entries %}
     <tr>
-      <td style="text-align:center;"><input type="radio" name="rfid_token_hex" value="{{ entry[0] }}"</td>
       <td>{{ entry[1] }}</td>      
       <td>{{ entry[2] }}</td>
       <td>{{ entry[4] }}</td>
       <td>{{ entry[0] }}</td>
       <td>{{ entry[3] }}</td>
+      <td><a href="#">Modify</a></td>
     </tr>
     {% endfor %}
 </tbody>
 </table>
-
-<div class="form-group" style="padding-bottom:25px;">
-    <button type="submit" class="btn btn-primary btn-lg">Modify Token</button>
-    <button type="button" class="btn btn-secondary btn-lg">Cancel</button>
-</div>
 
 </form>
 

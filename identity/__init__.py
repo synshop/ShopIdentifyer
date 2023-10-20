@@ -19,23 +19,19 @@ from authlib.integrations.base_client.errors import OAuthError
 
 try:
     import identity.config as config
-except Exception as e:
+except Exception:
     print('ERROR', 'Missing "config.py" file. See https://github.com/synshop/ShopIdentifyer/ for info')
     quit()
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-# TODO: Look at using CursorDictRowsMixIn for db operations
-
 import MySQLdb as mysql
 import MySQLdb.cursors
 
 from flask import Flask, request, g, flash, redirect, make_response, render_template, jsonify, session, url_for
 
-RUN_MODE = 'development'
-
-ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get(RUN_MODE == 'development')
+ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get()
 
 app = Flask(__name__)
 
@@ -56,6 +52,7 @@ app.config['DISCORD_BOT_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_DISCORD_BO
 app.config['AUTH0_CLIENT_SECRET'] = CryptoUtil.decrypt(config.ENCRYPTED_AUTH0_CLIENT_SECRET, ENCRYPTION_KEY)
 
 # Plaintext Configuration
+app.config['STRIPE_VERSION'] = config.STRIPE_VERSION
 app.config['SMTP_SERVER'] = config.SMTP_SERVER
 app.config['SMTP_PORT'] = config.SMTP_PORT
 
@@ -72,7 +69,7 @@ app.config['AUTH0_DOMAIN'] = config.AUTH0_DOMAIN
 
 # Logging
 file_handler = logging.FileHandler(app.config['LOG_FILE'])
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
+file_handler.setFormatter(logging.Formatter('%(asctime)s: %(message)s'))
 file_handler.setLevel(logging.INFO)
 app.logger.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
@@ -152,7 +149,8 @@ def rebuild_stripe_cache():
             ))
 
         db.commit()
-
+    
+    put_kv_item('stripe_cache_rebuild',datetime.datetime.now())
     app.logger.info("finished rebuilding stripe cache")
 
 
@@ -198,9 +196,41 @@ if config.SCHEDULER_ENABLED == True:
 # End cron tasks
 
 # Testing Only
-def inspect_user(email=None):
-    member_array = identity.stripe.inspect_user(email)
+def m_inspect_user(email=None):
+    member_array = identity.stripe.m_inspect_user(email)
 
+
+# Push a value in the k,v store
+def put_kv_item(k=None,v=None):
+    with app.app_context():
+
+        try:
+            db = get_db()
+            cur = db.cursor()
+
+            s = "INSERT INTO kv_store (k,v) VALUES(%s,%s) ON DUPLICATE KEY UPDATE k=%s, v=%s"
+            cur.execute(s, (k,v,k,v))
+            db.commit()
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
+
+# Get a value from the k,v store
+def get_kv_item(k=None):
+    with app.app_context():
+
+        try:
+            db = get_db()
+            cur = db.cursor()
+
+            stmt = "select v from kv_store where k = %s"
+            cur.execute(stmt, (k,))
+            entry = cur.fetchone()
+            return entry[0]
+        except:
+            return None
 
 # Determine if user is allowed to log in
 def is_admin(email=None):
@@ -210,10 +240,10 @@ def is_admin(email=None):
             db = get_db()
             cur = db.cursor()
 
-            stmt = "select is_admin from members where stripe_id = (select stripe_id from stripe_cache where email = %s)"
+            stmt = "select email from admins where email = %s"
             cur.execute(stmt, (email,))
             entries = cur.fetchall()
-            if entries[0][0] == 'Y':
+            if entries[0][0] == email:
                 return True
             else:
                 return False
@@ -547,20 +577,22 @@ def unassign_rfid_token(rfid_id_token_hex=None):
 def get_unassigned_rfid_tokens():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = 'select eb_id,rfid_token_hex,created_on,eb_status from rfid_tokens where status = "UNASSIGNED" order by eb_id'
+    sql_stmt = 'select eb_id, rfid_token_hex, created_on, eb_status from rfid_tokens where status = "UNASSIGNED" order by eb_id'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
 
 # Get all the RFID Tokens in the system
 def get_all_rfid_tokens():
+    tokens = {}
     db = get_db()
-    cur = db.cursor()
-    sql_stmt = 'select r.rfid_token_hex,r.eb_id,r.eb_status,m.full_name,r.status,r.stripe_id from rfid_tokens r, ' \
-               'members m where r.stripe_id = m.stripe_id order by r.eb_id, m.full_name '
-    cur.execute(sql_stmt)
-    return cur.fetchall()
-
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql = """select r.rfid_token_hex,r.eb_id, r.eb_status, sc.full_name, r.status, r.stripe_id 
+        from rfid_tokens r, stripe_cache sc where r.stripe_id = sc.stripe_id order 
+        by r.eb_id, sc.full_name"""
+    
+    cur.execute(sql)
+    return(cur.fetchall())
 
 # Get the attributes for a given token
 def get_rfid_token_attributes(rfid_token_hex=None):
@@ -594,37 +626,12 @@ def update_rfid_token_attributes(request=None):
     db.commit()
 
 
-# NOT USED YET
-def get_unassigned_rfid_tokens_from_event_log():
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = """
-        select distinct event_log.rfid_token_hex from event_log 
-        where event_log.event_type = "ACCESS_GRANT" 
-        and event_log.rfid_token_hex not in 
-        (select rfid_tokens.rfid_token_hex from rfid_tokens 
-        where rfid_tokens.status = "ASSIGNED")'
-    """
-    cur.execute(sql_stmt)
-    return cur.fetchall()
-
-
 # Get a list of users to assign a RFID (need to be VETTED and ACTIVE)
 def get_members_for_rfid_association():
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, sc.stripe_email, m.is_vetted from members m, stripe_cache sc where " \
-               "m.stripe_id = sc.stripe_id and member_status = 'ACTIVE' and is_vetted = 'VETTED' "
-    cur.execute(sql_stmt)
-    return cur.fetchall()
-
-
-# Get a list of members with RFID Tokens assigned to them
-def get_members_with_rfid_tokens():
-    db = get_db()
-    cur = db.cursor()
-    sql_stmt = "select m.stripe_id, m.full_name, r.rfid_token_hex, r.rfid_token_comment from members m, rfid_tokens r " \
-               "where m.stripe_id = r.stripe_id order by m.full_name "
+    sql_stmt = "select m.stripe_id, sc.full_name, sc.email, m.is_vetted from members m, stripe_cache sc where " \
+               "m.stripe_id = sc.stripe_id and m.member_status = 'ACTIVE' and is_vetted = 'VETTED'"
     cur.execute(sql_stmt)
     return cur.fetchall()
 
@@ -672,19 +679,18 @@ def get_members_to_onboard():
     return entries_x
 
 
-# Get a list of on-boarded INACTIVE members
+# Get a list of on-boarded, INACTIVE members
 def get_inactive_members():
     db = get_db()
     cur = db.cursor()
     sql_stmt = """
             SELECT 
             m.stripe_id,
-            s.stripe_subscription_id,
             m.full_name,
             m.is_vetted,
-            s.stripe_subscription_description,
-            s.stripe_subscription_status,
-            s.stripe_last_payment_status
+            s.subscription_id,
+            s.subscription_description,
+            s.last_payment_status
         FROM 
             members m
         LEFT JOIN
@@ -692,7 +698,7 @@ def get_inactive_members():
         WHERE
             m.member_status = "INACTIVE"
         ORDER BY
-            s.stripe_subscription_description desc
+            s.subscription_description desc
     """
 
     cur.execute(sql_stmt)
@@ -725,11 +731,12 @@ def get_member_rfid_tokens(stripe_id=None):
 
 
 # Insert a newly on-boarded member into the system
-def create_new_member(stripe_id=None, r=None):
+def insert_new_member(stripe_id=None, r=None):
 
     insert_data = (
         stripe_id,
         'ACTIVE',
+        r.form.get('full_name'),
         r.form.get('mobile'),
         r.form.get('emergency_contact_name'),
         r.form.get('emergency_contact_mobile'),
@@ -740,9 +747,9 @@ def create_new_member(stripe_id=None, r=None):
     db = connect_db()
     cur = db.cursor()
     cur.execute(
-        'insert into members (stripe_id, member_status, mobile, emergency_contact_name,'
-        'emergency_contact_mobile, is_vetted, locker_num) '
-        'values (%s,%s,%s,%s,%s,%s,%s)',
+        'insert into members (stripe_id, member_status, full_name, mobile,'
+        'emergency_contact_name, emergency_contact_mobile, is_vetted, locker_num)'
+        'values (%s,%s,%s,%s,%s,%s,%s,%s)',
         insert_data)
     db.commit()
     db.close()
@@ -763,6 +770,16 @@ def create_new_member(stripe_id=None, r=None):
     return True
 
 
+def get_new_member(stripe_id=None):
+        db = connect_db()
+        cur = db.cursor(MySQLdb.cursors.DictCursor)
+        sql_stmt = 'select stripe_id, email, full_name, last_payment_status, subscription_description, ' \
+                'subscription_status, discord_username from stripe_cache where stripe_id = %s '
+        cur.execute(sql_stmt, (stripe_id,))
+        member = cur.fetchall()[0]
+
+        return member
+
 # Fetch a member 'object'
 def get_member(stripe_id=None):
 
@@ -773,7 +790,6 @@ def get_member(stripe_id=None):
     cur = db.cursor()
     if config.STRIPE_FETCH_REALTIME_UPDATES:
         app.logger.info("[STRIPE] - updating real-time stripe information for %s" % (stripe_id,))
-        # Check and update the stripe cache every time you view member details
         stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
 
         member["stripe_status"] = stripe_info['stripe_subscription_status'].upper()
@@ -811,7 +827,9 @@ def get_member(stripe_id=None):
                 members m,
                 stripe_cache sc
             WHERE
-                sc.stripe_id = %s"""
+                m.stripe_id = sc.stripe_id and
+                sc.stripe_id = %s
+            """
     
     cur = db.cursor(MySQLdb.cursors.DictCursor)
     cur.execute(sql_stmt, (stripe_id,))
@@ -837,6 +855,7 @@ def get_member(stripe_id=None):
     member["door_access"] = member_has_authorized_rfid(stripe_id)
     member["kiosk_username"] = get_member_discord_nickname(member["discord_username"])
     
+    print(member['stripe_id'])
     return member
 
 
@@ -918,15 +937,12 @@ def insert_log_event(request=None):
         stripe_id = entry[0]
         rfid_token_comment = entry[1]
 
-        sql_stmt = "select full_name, discord_handle, led_color from members where stripe_id = %s"
+        sql_stmt = "select sc.full_name, sc.discord_username from stripe_cache sc where sc.stripe_id = %s"
         cur.execute(sql_stmt, (stripe_id,))
         member_tmp = cur.fetchone()
 
         if len(member_tmp) > 0:
-            if member_tmp[2] is None:
-                color = 'yellow'
-            else:
-                color = member_tmp[2]
+            color = 'yellow'
             
             member['name'] = member_tmp[0]
             member['handle'] = get_member_discord_nickname(member_tmp[1])
@@ -1153,26 +1169,15 @@ def login_required(f):
 @app.route('/member/new/<stripe_id>', methods=['GET',])
 @login_required
 def show_onboard_new_member(stripe_id):
-    
-    app.logger.info("User %s is onboarding member %s" % (session['email'], stripe_id))
-
-    db = connect_db()
-    cur = db.cursor(MySQLdb.cursors.DictCursor)
-    sql_stmt = 'select stripe_id, email, full_name, last_payment_status, subscription_description, ' \
-                'subscription_status, discord_username from stripe_cache where stripe_id = %s '
-    cur.execute(sql_stmt, (stripe_id,))
-    rows = cur.fetchall()
-    member = rows[0]
-    
-
-    return render_template('new_member.html', member=member)
+    app.logger.info("User %s is onboarding member %s" % (session['email'], stripe_id)) 
+    return render_template('new_member.html', member=get_new_member(stripe_id))
 
 # Onboarding process - this attempts to pre-populate some fields
 # when setting up a new user.
 @app.route('/member/new/<stripe_id>', methods=['POST',])
 @login_required
 def onboard_new_member(stripe_id):
-    create_new_member(stripe_id, request)
+    insert_new_member(stripe_id, request)
     app.logger.info("User %s successfully on-boarded member %s" % (session['email'], stripe_id))
     return redirect(url_for("show_admin_onboard"))
 
@@ -1295,19 +1300,19 @@ def show_index():
 
 
 @app.route("/callback", methods=["GET", "POST"])
-def callback():
+def auth0_callback():
     try:
         token = oauth.auth0.authorize_access_token()
         session["user"] = token
         email = token['userinfo']['email']
 
         if is_admin(email):
-            app.logger.info("This email address was found in Stripe, redirecting to /admin...")
+            app.logger.info(f'CB - {email} is classified as an admin, redirecting to /admin...')
             session['logged_in'] = True
             session['email'] = email
             return redirect(url_for("show_admin"))
         else:
-            app.logger.info("This email address was not found in Stripe, redirecting to /...")
+            app.logger.info(f'CB - {email} IS NOT classified as an admin, redirecting to /...')
             session['logged_in'] = False
             print(session)
             return redirect(url_for("show_index"))
@@ -1319,7 +1324,7 @@ def callback():
 
 @app.route('/login', methods=['GET', 'POST'])
 def show_login():
-    redirect_uri=url_for("callback", _external=True)
+    redirect_uri=url_for("auth0_callback", _external=True)
     return oauth.auth0.authorize_redirect(redirect_uri)
 
 
@@ -1339,7 +1344,11 @@ def show_admin():
 @app.route('/admin/onboard')
 @login_required
 def show_admin_onboard():
-    return render_template('onboard.html', entries=get_members_to_onboard(), stats=get_public_stats())
+
+    m = get_members_to_onboard()
+    s = get_public_stats()
+    scr = get_kv_item('stripe_cache_rebuild')
+    return render_template('onboard.html',members=m, stats=s, stripe_cache_rebuild = scr)
 
 
 @app.route('/admin/dooraccess', methods=['GET'])

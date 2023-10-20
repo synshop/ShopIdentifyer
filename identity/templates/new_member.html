@@ -13,7 +13,7 @@
 
   <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
     <div class="container">
-      <a class="navbar-brand" href="/member/{{member.stripe_id}}">
+      <a class="navbar-brand" href="/admin">
         SYN Shop Identity Management
       </a>
       <ul class="navbar-nav">
@@ -48,7 +48,7 @@
             <label for="meta_info" class="form-label"><b>Stripe Payment Plan:</b></label>
           </div>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.subscription_product }}" disabled readonly>
+            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.subscription_description }}" disabled readonly>
           </div>
         </div>
 
@@ -61,15 +61,6 @@
           </div>
         </div>
         
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}" disabled readonly>
-          </div>
-        </div>
-
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="meta_info" class="form-label"><b>Discord Username:</b></label>
@@ -96,6 +87,17 @@
           </div>
         </div>
 
+        <hr/>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
+          </div>
+        </div>
+
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="is_vetted" class="form-label"><b>Vetted Status:</b></label>
@@ -112,8 +114,6 @@
             </select>
           </div>
         </div>
-
-        <hr/>
 
         <div class="row">
           <div class="col-sm-2 col-form-label">

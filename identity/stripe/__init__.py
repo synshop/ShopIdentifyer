@@ -5,11 +5,11 @@ PAYMENT_SUCCEEDED = "succeeded"
 ACTIVE_SUBSCRIPTION = "active"
 PAUSED_MEMBERSHIP = "Paused Membership"
 
-STRIPE_VERSION = "2022-08-01"
+stripe.api_version = app.config['STRIPE_VERSION']
+stripe.api_key = app.config['STRIPE_TOKEN']
 
-def inspect_user(email=None):
-    stripe.api_version = STRIPE_VERSION
-    stripe.api_key = app.config['STRIPE_TOKEN']
+def m_inspect_user(email=None):
+
     c = stripe.Customer.search(query='email: "' + email + '"', limit=1)['data'][0]
 
     subs = stripe.Subscription.retrieve("sub_12asGcCEk4tLAE")
@@ -24,7 +24,7 @@ def inspect_user(email=None):
 
         # print(s.plan.nickname)
 
-def _get_customer_attributes(subscription):
+def get_customer_attributes(subscription):
 
     # User Model
     user = {
@@ -70,27 +70,19 @@ def _get_customer_attributes(subscription):
     return user
 
 def get_stripe_customers(incremental=False):
-
-    stripe.api_version = STRIPE_VERSION
-    stripe.api_key = app.config['STRIPE_TOKEN']
-
     member_array = []
     subscriptions = stripe.Subscription.list()
 
     for subscription in subscriptions.auto_paging_iter():
-        member = _get_customer_attributes(subscription)
-        member_array.append(member)
+        member_array.append(get_customer_attributes(subscription))
 
     return member_array
 
 def get_realtime_stripe_info(subscription_id=None):
-
-    stripe.api_version = STRIPE_VERSION
-    stripe.api_key = app.config['STRIPE_TOKEN']
     
     subscription = stripe.Subscription.retrieve(subscription_id)
 
-    return _get_customer_attributes(subscription)
+    return get_customer_attributes(subscription)
 
 def member_is_in_good_standing(subscription_id=None):
     member_stripe_info = get_realtime_stripe_info(subscription_id)

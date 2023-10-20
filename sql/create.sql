@@ -17,7 +17,6 @@ create table shopid.members (
   liability_waiver longblob,
   vetted_membership_form longblob,
   badge_photo longblob,
-  is_admin ENUM('Y','N') NOT NULL DEFAULT "N",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -54,4 +53,15 @@ CREATE TABLE shopid.rfid_tokens (
   status ENUM('ASSIGNED','UNASSIGNED','LOST','BROKEN') NOT NULL DEFAULT "UNASSIGNED",
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE shopid.admins (
+  email varchar(50) NOT NULL PRIMARY KEY UNIQUE
+);
+
+create table shopid.kv_store (
+	k varchar(255) NOT NULL PRIMARY KEY UNIQUE,
+  v varchar(255),
+	created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

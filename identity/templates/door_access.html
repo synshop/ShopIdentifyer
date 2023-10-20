@@ -28,24 +28,19 @@
   </nav>
 
 <div class="container">
-
-  <h2>What do you want to do?</h2>
-  <div class="list-group" style="margin-bottom:25px;">
-    <a href="/admin/dooraccess/newtoken" class="list-group-item">Manually Add a new RFID Token</a>
-    <a href="/admin/dooraccess/tokenattributes" class="list-group-item">Manage RFID Token Attributes</a>
-  </div>
   
   <div class="alert alert-success" role="alert">
-    RFID Tokens added to the system can be assigned to members who are VETTED and in good payment standing ONLY.
+
   </div>
 
   <h2>Unassigned RFID Tokens</h2>
+  <button class="btn btn-sm btn-primary"style="margin-bottom:10px">Add New Token</button>
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
         <th>EB ID</th>
         <th>EB Status</th>
-        <th>RFID</th>
+        <th>RFID (Hex)</th>
         <th>Created On</th>
         <th>Action</th>
     </tr>
@@ -58,13 +53,42 @@
       <td>{{ entry[3] }}</td>
       <td>{{ entry[1] }}</td>
       <td>{{ entry[2] }}</td>
-      <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Assign</a></td>
+      <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Assign</a>
+      </td>
+
     </tr>
     {% endfor %}
 
 </tbody>
 </table>
 
+<h2>Assigned RFID Tokens</h2>
+<table class="table table-hover table-bordered" id="results">
+  <thead>
+  <tr class="table-primary">
+      <th>EB ID</th>
+      <th>EB Status</th>
+      <th>RFID (Hex)</th>
+      <th>Created On</th>
+      <th>Action</th>
+  </tr>
+  </thead>
+  <tbody>
+  
+  {% for entry in entries %}
+  <tr>
+    <td>{{ entry[0] }}</td>
+    <td>{{ entry[3] }}</td>
+    <td>{{ entry[1] }}</td>
+    <td>{{ entry[2] }}</td>
+    <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Manage</a>
+    </td>
+
+  </tr>
+  {% endfor %}
+
+</tbody>
+</table>
 </div>
 </body>
 </html>

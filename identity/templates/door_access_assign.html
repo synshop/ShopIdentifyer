@@ -12,7 +12,7 @@
 
 <body>
 
-  <nav class="navbar navbar-expand bg-primarybg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
     <div class="container">
       <a class="navbar-brand" href="/admin/dooraccess">
         SYN Shop Identity Management
@@ -30,38 +30,30 @@
 <div class="container">
 
   <div class="alert alert-success" role="alert">
-    Choose a user for RFID token assignment.  <br/>
-    Please note that user must have a <b>VETTED</b> status in the system.
+    Member isn't showing up here?  Please note that they must have a <b>VETTED</b> status in the system.
   </div>
   <form method="POST">
-
-    <input type="hidden" name="eb_id" value="{{ eb_id }}">
-
+    <input type="hidden" name="eb_id" value="{{ eb_id }}" />
+  
+  <h2>Choose a user for RFID token assignment</h2>
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
-        <th>Assign</th>
         <th>Name</th>
-        <th>Stripe Email</th>
-        <th>Vetted</th>
+        <th>Discord Username</th>
+        <th>Action</th>
     </tr>
     </thead>
     <tbody>
     {% for entry in entries %}
     <tr>
-      <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
       <td>{{ entry[1] }}</td>      
       <td>{{ entry[2] }}</td>
-      <td>{{ entry[3] }}</td>
+      <td><a href="">Assign</a></td>
     </tr>
     {% endfor %}
 </tbody>
 </table>
-
-<div class="form-group" style="padding-bottom:25px;">
-    <button type="submit" class="btn btn-primary btn-lg">Assign Token</button>
-    <button type="button" class="btn btn-secondary btn-lg">Cancel</button>
-</div>
 
 </form>
 
