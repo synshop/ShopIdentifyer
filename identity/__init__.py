@@ -868,12 +868,7 @@ def update_member(request=None):
 
     update_data = (
         request.form.get('member_status'),
-<<<<<<< HEAD
         request.form.get('is_vetted', 'NOT VETTED'),
-=======
-        request.form.get('full_name'),
-        request.form.get('nick_name'),
->>>>>>> origin/prod
         request.form.get('mobile'),
         request.form.get('emergency_contact_name'),
         request.form.get('emergency_contact_mobile'),
@@ -882,13 +877,11 @@ def update_member(request=None):
         stripe_id
     )
 
-<<<<<<< HEAD
     sql_stmt = 'update members set member_status=%s,is_vetted=%s,mobile=%s,' \
                'emergency_contact_name=%s,emergency_contact_mobile=%s,locker_num=%s,' \
                'led_color=%s where stripe_id=%s'
     cur.execute(sql_stmt, insert_data)
 
-=======
     print(update_data)
     sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,mobile=%s,' \
                'emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,' \
