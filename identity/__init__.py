@@ -221,7 +221,7 @@ def inspect_user(email=None):
     member_array = identity.stripe.inspect_user(email)
 
 
-# Check the password for the user login
+# Determine if user is allowed to log in
 def is_admin(email=None):
     with app.app_context():
 
@@ -229,10 +229,10 @@ def is_admin(email=None):
             db = get_db()
             cur = db.cursor()
 
-            stmt = "select is_admin from members where stripe_id = (select stripe_id from stripe_cache where stripe_email = %s)"
+            stmt = "select email from admins where email = %s"
             cur.execute(stmt, (email,))
             entries = cur.fetchall()
-            if entries[0][0] == 'Y':
+            if entries[0][0] == email:
                 return True
             else:
                 return False
