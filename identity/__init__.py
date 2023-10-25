@@ -26,6 +26,7 @@ except Exception:
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+# Think about moving to pymysql
 import MySQLdb as mysql
 import MySQLdb.cursors
 
