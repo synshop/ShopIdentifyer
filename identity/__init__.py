@@ -890,7 +890,7 @@ def update_member(request=None):
         x = cur.execute(sql_stmt, update_data)
     except Exception as e:
         print(e)
->>>>>>> origin/prod
+
     db.commit()
     db.close()
 
