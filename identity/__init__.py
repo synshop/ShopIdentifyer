@@ -660,7 +660,7 @@ def get_members_to_onboard():
         NOT IN
             (SELECT stripe_id FROM members) 
         ORDER BY 
-            created_on desc
+            subscription_description, full_name asc
     """
     cur.execute(sql_stmt)
     rows = cur.fetchall()
@@ -881,12 +881,8 @@ def update_member(request=None):
     sql_stmt = 'update members set member_status=%s,is_vetted=%s,mobile=%s,' \
                'emergency_contact_name=%s,emergency_contact_mobile=%s,locker_num=%s,' \
                'led_color=%s where stripe_id=%s'
-    cur.execute(sql_stmt, insert_data)
 
     print(update_data)
-    sql_stmt = 'update members set member_status=%s,full_name=%s,nick_name=%s,mobile=%s,' \
-               'emergency_contact_name=%s,emergency_contact_mobile=%s,is_vetted=%s,discord_handle=%s,locker_num=%s,' \
-               'led_color=%s where stripe_id=%s'
     try:
         x = cur.execute(sql_stmt, update_data)
     except Exception as e:
@@ -1126,7 +1122,7 @@ def get_usage_report():
 # Build the /admin view
 def get_admin_view():
     db = get_db()
-    cur = db.cursor()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
     stmt = """  
         SELECT 
             m.stripe_id,
@@ -1138,7 +1134,8 @@ def get_admin_view():
             s.email,
             s.subscription_status,
             s.subscription_description,
-            s.last_payment_status
+            s.last_payment_status,
+            s.discord_username
         FROM 
             members m
         JOIN
@@ -1152,14 +1149,12 @@ def get_admin_view():
     """
     cur.execute(stmt)
     members = cur.fetchall()
-
+  
     ret_members = []
 
     for m in members:
-        x = list(m)
-        has_rfid = member_has_authorized_rfid(m[0])
-        x.append(has_rfid)
-        ret_members.append(x)
+        m['has_rfid'] = member_has_authorized_rfid(m['stripe_id']) 
+        ret_members.append(m)
 
     return ret_members
 
@@ -1218,12 +1213,11 @@ def edit_member_details(stripe_id):
 @app.route('/member/<stripe_id>/files/photo.jpg')
 @login_required
 def show_member_photo(stripe_id):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
-    photo = cur.fetchone()[0]
-
     try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("select badge_photo from members where stripe_id = %s", (stripe_id,))
+        photo = cur.fetchone()[0]
         response = make_response(photo)
         response.headers['Content-Description'] = 'Badge Photo'
         response.headers['Content-Type'] = 'image/jpeg'
@@ -1231,64 +1225,10 @@ def show_member_photo(stripe_id):
     except Exception as e:
         with open("./identity/static/images/syn_shop_badge_logo.png", mode='rb') as file:
             photo = file.read()
-
-        response = make_response(photo)
-        response.headers['Content-Description'] = 'Badge Photo'
-        response.headers['Content-Type'] = 'image/jpeg'
-        response.headers['Content-Disposition'] = 'inline'
-
-    return response
-
-
-# Get member liability waiver
-@app.route("/member/<stripe_id>/files/liability-waiver.pdf")
-@login_required
-def show_member_wavier(stripe_id):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("select liability_waiver from members where stripe_id = %s", (stripe_id,))
-    wavier = cur.fetchone()[0]
-
-    if wavier[0] == None:
-        response = make_response("No Waiver on file, please fix this!")
-        response.headers['Content-Description'] = 'Liability Wavier'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/plain'
-        # response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
-        response.headers['Content-Disposition'] = 'inline'
-    else:
-        response = make_response(wavier)
-        response.headers['Content-Description'] = 'Liability Wavier'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'application/pdf'
-        # response.headers['Content-Disposition'] = 'attachment; filename=liability-wavier.pdf'
-        response.headers['Content-Disposition'] = 'inline'
-
-    return response
-
-
-# Get member vetted membership form
-@app.route('/member/<stripe_id>/files/vetted-membership-form.pdf')
-@login_required
-def show_member_vetted(stripe_id):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("select vetted_membership_form from members where stripe_id = %s", (stripe_id,))
-    vetted = cur.fetchone()[0]
-
-    if vetted[0] == None:
-        response = make_response("No signed vetted membership form on file, please fix this!")
-        response.headers['Content-Description'] = 'Vetted Membership Form'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/plain'
-        response.headers['Content-Disposition'] = 'inline'
-
-    else:
-        response = make_response(vetted)
-        response.headers['Content-Description'] = 'Vetted Membership Form'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = 'inline'
+            response = make_response(photo)
+            response.headers['Content-Description'] = 'Badge Photo'
+            response.headers['Content-Type'] = 'image/jpeg'
+            response.headers['Content-Disposition'] = 'inline'
 
     return response
 

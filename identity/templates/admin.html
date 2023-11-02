@@ -44,56 +44,41 @@
       <thead>
       <tr class="table-primary">
         <th>Full Name</th>
+        <th>Discord Username</th>
         <th>Is Vetted?</th>
-        <th>Plan</th>
-        <th>Status</th>
-        <th>Payment Status</th>
         <th>Has RFIDs</th>
+        <th>Subscription Plan</th>
+        <th>Payment Status</th>
       </tr>
       </thead>
       <tbody>
       {% for entry in entries %}
-        {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None or entry[8] | upper == "PAUSED MEMBERSHIP" %}
-          <tr class="table-warning">
+        {% if entry['last_payment_status'] == "past_due" or entry['last_payment_status'] == None or entry['subscription_description'] == None or entry['subscription_description'] | upper == "PAUSED MEMBERSHIP" %}
+        <tr class="table-warning">
         {% else %}
-          <tr>
+        <tr>
         {% endif %}
-          <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td>
 
-          {% if entry[3] == "NOT VETTED" %}
-            <td>{{ entry[3] }}</td>
+          <td><a href="/member/{{ entry['stripe_id'] }}">{{ entry['full_name'] }}</a></td>
+          <td>{{ entry['discord_username'] }}</td>
+          <td>{{ entry['is_vetted'] }}</td>
+          <td>{{ entry['has_rfid'] | upper }}</td>
+
+          {% if entry['subscription_description'] == None %}
+          <td>NO SUBSCRIPTION PLAN</td>
           {% else %}
-            {% if entry[5] == None %}
-              <!-- Member is vetted but no vetted form on file -->
-              <td>VETTED</td>
-            {% else %}
-              <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
-            {% endif %}
-          {% endif %}
-          
-          {% if entry[8] == None %}
-            <td>NO SUBSCRIPTION PLAN</td>
-          {% else %}
-            <td>{{ entry[8] | upper }}</td>
-          {% endif %}
-          
-          {% if entry[7] == None %}
-            <td>NOT AVAILABLE</td>
-          {% else %}
-            <td>{{ entry[7] | upper }}</td>
-          {% endif %}
-          
-          {% if entry[9] == None %}
-            <td>N / A</td>
-          {% else %}
-            <td>{{ entry[9] | upper }}</td>
+          <td>{{ entry['subscription_description'] | upper }}</td>
           {% endif %}
 
-          <td>{{ entry[10] | upper }}</td>
-
-      </tr>
+          {% if entry['last_payment_status'] == None %}
+          <td>N / A</td>
+          {% else %}
+          <td>{{ entry['last_payment_status'] | upper }}</td>
+          {% endif %}
+        
+        </tr>
       {% else %}
-        <tr><td colspan="3">No entries here so far</td></tr>
+        <tr><td colspan="6">No entries here so far</td></tr>
       {% endfor %}
 
     </tbody>

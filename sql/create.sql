@@ -14,9 +14,6 @@ create table shopid.members (
   mobile varchar(25),
   emergency_contact_name varchar(255),
   emergency_contact_mobile varchar(25),
-  liability_waiver longblob,
-  vetted_membership_form longblob,
-  badge_photo longblob,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
