@@ -4,7 +4,7 @@ DROP DATABASE IF EXISTS shopid;
 CREATE DATABASE shopid;
 GRANT ALL PRIVILEGES ON shopid.* TO 'synshop'@'localhost' WITH GRANT OPTION;
 
-create table shopid.members (
+create table `shopid`.`members` (
   stripe_id varchar(255) NOT NULL PRIMARY KEY UNIQUE,
   member_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
   is_vetted ENUM('VETTED','NOT VETTED') NOT NULL DEFAULT "NOT VETTED",
@@ -18,7 +18,7 @@ create table shopid.members (
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-create table shopid.stripe_cache (
+create table `shopid`.`stripe_cache` (
   stripe_id varchar(255) unique,
   created_on varchar(255),
   email varchar(255),
@@ -31,7 +31,7 @@ create table shopid.stripe_cache (
   subscription_created_on varchar(255)
 );
 
-create table shopid.event_log (
+create table `shopid`.`event_log` (
   event_id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
   stripe_id varchar(255) NOT NULL,
   rfid_token_hex varchar(255) NOT NULL,
@@ -41,7 +41,7 @@ create table shopid.event_log (
   rfid_token_comment varchar(255)
 );
 
-CREATE TABLE shopid.rfid_tokens (
+CREATE TABLE `shopid`.`rfid_tokens` (
   eb_id int DEFAULT NULL,
   stripe_id varchar(255),
   eb_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
@@ -52,11 +52,11 @@ CREATE TABLE shopid.rfid_tokens (
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE shopid.admins (
+CREATE TABLE `shopid`.`admins` (
   email varchar(50) NOT NULL PRIMARY KEY UNIQUE
 );
 
-create table shopid.kv_store (
+create table `shopid`.`kv_store` (
 	k varchar(255) NOT NULL PRIMARY KEY UNIQUE,
   v varchar(255),
 	created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

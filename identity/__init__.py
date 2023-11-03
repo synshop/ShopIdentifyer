@@ -494,6 +494,13 @@ def assign_discord_role(role_id=None, discord_id=None):
     return result
 
 
+# Manually onboard all members in the stripe_cache
+def close_issue_82():
+    """insert into members (stripe_id,full_name) select stripe_id,full_name from stripe_cache;"""
+    """UPDATE members set is_vetted = 'VETTED' where stripe_id in (select stripe_id from rfid_tokens where stripe_id IS NOT NULL);"""
+    pass
+
+
 # Manual process to remove all Vetted and Paid discord roles
 # from ALL users
 def m_remove_discord_roles():
@@ -817,8 +824,6 @@ def get_member(stripe_id=None):
                 m.mobile,
                 m.emergency_contact_name,
                 m.emergency_contact_mobile,
-                m.liability_waiver,
-                m.vetted_membership_form,
                 sc.full_name,
                 sc.email,
                 sc.subscription_status,
@@ -837,18 +842,6 @@ def get_member(stripe_id=None):
     entries = cur.fetchall()
     entry = entries[0]
     
-    # Flags set to determine if a member has
-    # a waiver / vetted membership form on file,
-    if entry["liability_waiver"] == None:
-        member['has_wavier'] = False
-    else:
-        member['has_wavier'] = True
-
-    if entry["vetted_membership_form"] == None:
-        member['has_vetted'] = False
-    else:
-        member['has_vetted'] = True
-
     member.update(entry)
 
     member['rfid_tokens'] = get_member_rfid_tokens(stripe_id)
@@ -856,7 +849,6 @@ def get_member(stripe_id=None):
     member["door_access"] = member_has_authorized_rfid(stripe_id)
     member["kiosk_username"] = get_member_discord_nickname(member["discord_username"])
     
-    print(member['stripe_id'])
     return member
 
 
@@ -991,11 +983,11 @@ def post_alert(data):
         app.logger.info('post_alert() called, but no URLs declared in ALERT_URLS in config.')
 
 
-# Get latest 100 rows from the event log
-def get_event_log():
+# Get latest n rows from the event log (default is 100)
+def get_event_log(n=100):
     db = get_db()
-    cur = db.cursor()
-    sql_stmt = """
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql_stmt = f'''
         select 
             event_log.event_id,
             event_log.stripe_id,
@@ -1011,8 +1003,8 @@ def get_event_log():
             event_log.stripe_id = members.stripe_id
         ORDER BY 
             event_log.event_id desc
-        LIMIT 100;
-    """
+        LIMIT {n}'''
+    
     cur.execute(sql_stmt)
     return cur.fetchall()
 
@@ -1044,14 +1036,6 @@ def get_public_stats():
         'total_not_vetted': {
             'count': 0,
             'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
-        },
-        'total_have_waivers': {
-            'count': 0,
-            'sql': 'select count(*) from members where liability_waiver is NOT NULL'
-        },
-        'total_no_waivers': {
-            'count': 0,
-            'sql': 'select count(*) from members where liability_waiver is NULL'
         },
         'total_door_access': {
             'count': 0,
@@ -1128,9 +1112,7 @@ def get_admin_view():
             m.stripe_id,
             s.subscription_id,
             s.full_name,
-            m.is_vetted, 
-            m.liability_waiver, 
-            m.vetted_membership_form, 
+            m.is_vetted,
             s.email,
             s.subscription_status,
             s.subscription_description,
@@ -1288,7 +1270,9 @@ def show_logout():
 @app.route('/admin')
 @login_required
 def show_admin():
-    return render_template('admin.html', entries=get_admin_view())
+    e = get_admin_view()
+    el = get_event_log(n=5)
+    return render_template('admin.html', entries=e,el=el)
 
 
 @app.route('/admin/onboard')
@@ -1298,7 +1282,7 @@ def show_admin_onboard():
     m = get_members_to_onboard()
     s = get_public_stats()
     scr = get_kv_item('stripe_cache_rebuild')
-    return render_template('onboard.html',members=m, stats=s, stripe_cache_rebuild = scr)
+    return render_template('onboard.html',members=m, stats=s, stripe_cache_rebuild=scr)
 
 
 @app.route('/admin/dooraccess', methods=['GET'])

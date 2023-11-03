@@ -30,25 +30,52 @@
 <div class="container" style="padding-bottom:30px;">
 
   <div class="list-group" style="padding-bottom:30px;">
-
     <h2>What do you want to do?</h2>
     <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
     <a href="/admin/reactivate" class="list-group-item">Reactivate Member</a>
     <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
     <a href="/admin/dooraccess" class="list-group-item">RFID Token Management</a>
-
   </div>
 
-  <h2>There are currently {{entries|length}} Active Members at SYN Shop</h2>
-  <table class="table table-hover table-bordered" id="results" style="width: 100%;">
+  <h2>Last 5 Door Access Events</h2>
+  <table class="table table-hover table-bordered">
+      <thead>
+      <tr class="table-primary">
+        <th>Event ID</th>
+        <th>Timestamp</th>
+        <th>Full Name</th>
+        <th>Comment</th>
+        <th>RFID Hex</th>
+        <th>Event Status</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for e in el %}
+        <tr>
+          <td>{{ e['event_id'] }}</td>
+          <td>{{ e['created_on'] }}</td>
+          <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>
+          <td>{{ e['rfid_token_comment'] | upper }}</td>
+          <td>{{ e['rfid_token_hex'] | upper }}</td>
+          <td>{{ e['event_type'] | upper }}</td>        
+        </tr>
+      {% else %}
+        <tr><td colspan="6">No entries here so far</td></tr>
+      {% endfor %}
+
+    </tbody>
+  </table>
+
+  <h2>Active Members</h2>
+  <table class="table table-hover table-bordered">
       <thead>
       <tr class="table-primary">
         <th>Full Name</th>
-        <th>Discord Username</th>
-        <th>Is Vetted?</th>
-        <th>Has RFIDs</th>
+        <th>Discord Usr Name</th>
+        <th>Vetted?</th>
+        <th>RFIDs?</th>
         <th>Subscription Plan</th>
-        <th>Payment Status</th>
+        <th>Payment</th>
       </tr>
       </thead>
       <tbody>
@@ -61,13 +88,18 @@
 
           <td><a href="/member/{{ entry['stripe_id'] }}">{{ entry['full_name'] }}</a></td>
           <td>{{ entry['discord_username'] }}</td>
-          <td>{{ entry['is_vetted'] }}</td>
+          {% if entry['is_vetted'] == "NOT VETTED" %}
+          <td>FALSE</td>
+          {% else %}
+          <td>TRUE</td>
+          {% endif %}
+    
           <td>{{ entry['has_rfid'] | upper }}</td>
 
           {% if entry['subscription_description'] == None %}
           <td>NO SUBSCRIPTION PLAN</td>
           {% else %}
-          <td>{{ entry['subscription_description'] | upper }}</td>
+          <td><a href="https://dashboard.stripe.com/customers/{{entry['stripe_id']}}" target=”_blank”>{{ entry['subscription_description'] | upper }}</a></td>
           {% endif %}
 
           {% if entry['last_payment_status'] == None %}
