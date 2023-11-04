@@ -584,11 +584,18 @@ def unassign_rfid_token(rfid_id_token_hex=None):
 # Get a list of unassigned tokens
 def get_unassigned_rfid_tokens():
     db = get_db()
-    cur = db.cursor()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
     sql_stmt = 'select eb_id, rfid_token_hex, created_on, eb_status from rfid_tokens where status = "UNASSIGNED" order by eb_id'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
+# Get a list of assigned tokens
+def get_assigned_rfid_tokens():
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql_stmt = 'select r.eb_id, r.rfid_token_hex, r.created_on, r.eb_status, m.full_name, m.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by eb_id'
+    cur.execute(sql_stmt)
+    return cur.fetchall()
 
 # Get all the RFID Tokens in the system
 def get_all_rfid_tokens():
@@ -1009,7 +1016,7 @@ def get_event_log(n=100):
     return cur.fetchall()
 
 
-# Get public membership statistics for the front page
+# Get public membership statistics
 def get_public_stats():
     stats = {
         'total_membership': {
@@ -1053,56 +1060,6 @@ def get_public_stats():
     return stats
 
 
-# Get member usage statistics
-def get_usage_report():
-    stats = {
-        'active_membership': {
-            'count': 0,
-            'sql': 'select count(*) from members where member_status = "ACTIVE"'
-        },
-        'inactive_membership': {
-            'count': 0,
-            'sql': 'select count(*) from members where member_status = "INACTIVE"'
-        },
-        'paused_not_onboarded': {
-            'count': 0,
-            'sql': 'SELECT count(stripe_id) from stripe_cache where subscription_description = "Paused Membership" '
-                   'AND stripe_id NOT IN (SELECT stripe_id FROM members) '
-        },
-        'paused_onboarded': {
-            'count': 0,
-            'sql': 'SELECT count(s.stripe_id) from members m, stripe_cache s where s.stripe_id = m.stripe_id AND '
-                   's.subscription_description = "Paused Membership" '
-        },
-        'need_onboarding': {
-            'count': 0,
-            'sql': 'SELECT count(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" and '
-                   'stripe_id NOT IN (SELECT stripe_id FROM members) '
-        },
-        'door_swipes': {
-            'count': 0,
-            'sql': 'select count(*) from event_log where created_on >="2022-11-01"'
-        },
-        'door_access_deny': {
-            'count': 0,
-            'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_DENY"'
-        },
-        'door_access_granted': {
-            'count': 0,
-            'sql': 'select count(*) from event_log where created_on >="2022-11-01" and event_type = "ACCESS_GRANT"'
-        }
-    }
-
-    db = get_db()
-    cur = db.cursor()
-
-    for key in stats:
-        cur.execute(stats[key]['sql'])
-        stats[key]['count'] = cur.fetchall()[0][0]
-
-    return stats
-
-
 # Build the /admin view
 def get_admin_view():
     db = get_db()
@@ -1127,7 +1084,7 @@ def get_admin_view():
         AND
             m.stripe_id = s.stripe_id
         ORDER BY
-            m.is_vetted asc, s.subscription_description, m.full_name
+            s.subscription_description, m.full_name
     """
     cur.execute(stmt)
     members = cur.fetchall()
@@ -1272,7 +1229,8 @@ def show_logout():
 def show_admin():
     e = get_admin_view()
     el = get_event_log(n=5)
-    return render_template('admin.html', entries=e,el=el)
+    us = get_public_stats()
+    return render_template('admin.html', entries=e, el=el, us=us)
 
 
 @app.route('/admin/onboard')
@@ -1288,7 +1246,9 @@ def show_admin_onboard():
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
 def show_door_access_landing():
-    return render_template('door_access.html', entries=get_unassigned_rfid_tokens())
+    u = get_unassigned_rfid_tokens()
+    a = get_assigned_rfid_tokens()
+    return render_template('door_access.html', unassigned=a, assigned=u)
 
 
 @app.route('/admin/dooraccess/newtoken', methods=['GET'])

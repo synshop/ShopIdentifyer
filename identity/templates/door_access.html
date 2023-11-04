@@ -30,11 +30,11 @@
 <div class="container">
   
   <div class="alert alert-success" role="alert">
-
+    What should I say here?
   </div>
 
   <h2>Unassigned RFID Tokens</h2>
-  <button class="btn btn-sm btn-primary"style="margin-bottom:10px">Add New Token</button>
+  <button class="btn btn-sm btn-primary" style="margin-bottom:10px">Add New Token</button>
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
@@ -47,15 +47,13 @@
     </thead>
     <tbody>
     
-    {% for entry in entries %}
+    {% for e in assigned %}
     <tr>
-      <td>{{ entry[0] }}</td>
-      <td>{{ entry[3] }}</td>
-      <td>{{ entry[1] }}</td>
-      <td>{{ entry[2] }}</td>
-      <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Assign</a>
-      </td>
-
+      <td>{{ e['eb_id'] }}</td>
+      <td>{{ e['eb_status'] }}</td>
+      <td>{{ e['rfid_token_hex'] }}</td>
+      <td>{{ e['created_on'] }}</td>
+      <td><a href="#" id="assignToken-{{ e['eb_id'] }}">Assign</a></td>
     </tr>
     {% endfor %}
 
@@ -69,19 +67,21 @@
       <th>EB ID</th>
       <th>EB Status</th>
       <th>RFID (Hex)</th>
+      <th>Attached To</th>
       <th>Created On</th>
       <th>Action</th>
   </tr>
   </thead>
   <tbody>
   
-  {% for entry in entries %}
+  {% for e in unassigned %}
   <tr>
-    <td>{{ entry[0] }}</td>
-    <td>{{ entry[3] }}</td>
-    <td>{{ entry[1] }}</td>
-    <td>{{ entry[2] }}</td>
-    <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Manage</a>
+    <td>{{ e['eb_id'] }}</td>
+    <td>{{ e['eb_status'] }}</td>
+    <td>{{ e['rfid_token_hex'] }}</td>
+    <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>
+    <td>{{ e['created_on'] }}</td>
+    <td><a href="#" id="assignToken-{{ e['eb_id'] }}">Manage</a></td>
     </td>
 
   </tr>
