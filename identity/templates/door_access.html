@@ -15,7 +15,7 @@
     $(document).ready(function() {
       
       // Add new token button
-      $('#addNewToken').click(function(){        
+      $('#addNewToken').click(function(){   
         $('#form1').attr('action','/admin/dooraccess/newtoken');
         $('#form1').attr('method','GET');
         $('#form1').trigger('submit');
@@ -115,9 +115,14 @@
   <tbody>
   
   {% for e in assigned %}
-  <tr>
-    <td>{{ e['eb_id'] }}</td>
-    <td>{{ e['eb_status'] }}</td>
+    {% if e['eb_id'] | upper == "NONE" and e['eb_status'] == "ACTIVE" %}
+      <tr class="table-warning">
+    {% else %}
+      <tr>
+    {% endif %}
+
+    <td>{{ e['eb_id'] | upper }}</td>
+    <td>{{ e['eb_status'] }} / {{ e['status'] }}</td>
     <td>{{ e['rfid_token_hex'] }}</td>
     <td>{{ e['rfid_token_comment'] }}</td>
     <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>

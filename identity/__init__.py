@@ -568,7 +568,6 @@ def insert_new_rfid_token_record(eb_id=None, rfid_token_hex=None, rfid_token_com
 
 # Attach a RFID token to a member
 def assign_rfid_token(eb_id=None, stripe_id=None):
-    print(eb_id)
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = %s, status = 'ASSIGNED' where eb_id = %s"
@@ -577,12 +576,11 @@ def assign_rfid_token(eb_id=None, stripe_id=None):
 
 
 # Detach a RFID token from a member
-def unassign_rfid_token(rfid_id_token_hex=None):
+def unassign_rfid_token(eb_id):
     db = get_db()
     cur = db.cursor()
-    sql_stmt = "update rfid_tokens set stripe_id = 'NA', status = 'UNASSIGNED', rfid_token_comment = '' where " \
-               "rfid_token_hex = %s "
-    cur.execute(sql_stmt, (rfid_id_token_hex,))
+    sql_stmt = "update rfid_tokens set stripe_id = NULL, status = 'UNASSIGNED' where eb_id = %s"
+    cur.execute(sql_stmt, (eb_id,))
     db.commit()
 
 
@@ -598,7 +596,7 @@ def get_unassigned_rfid_tokens():
 def get_assigned_rfid_tokens():
     db = get_db()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
-    sql_stmt = 'select r.eb_id, r.rfid_token_hex, r.rfid_token_comment, r.created_on, r.eb_status, m.full_name, m.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by r.eb_id'
+    sql_stmt = 'select r.eb_id, r.rfid_token_hex, r.rfid_token_comment, r.created_on, r.eb_status, r.status, m.full_name, m.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by r.eb_id'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
@@ -1288,17 +1286,23 @@ def show_door_access_new_token_post():
 
 @app.route('/admin/dooraccess/tokenattributes/edit', methods=['GET'])
 @login_required
-def show_door_access_token_attributes_post():
+def show_door_access_token_attributes_get():
     rfid_token_hex = request.args.get('rfid_token_hex')
     return render_template('door_access_modify_attributes.html', e=get_rfid_token_attributes(rfid_token_hex))
 
 
 @app.route('/admin/dooraccess/tokenattributes/edit', methods=['POST'])
 @login_required
-def show_access_attributes_edit():
+def show_door_access_token_attributes_post():
     update_rfid_token_attributes(request)
     return redirect(url_for('show_door_access_get'))
 
+
+@app.route('/admin/dooraccess/tokenattributes/transfer', methods=['POST'])
+@login_required
+def show_door_access_token_unassign():
+    unassign_rfid_token(request.form['eb_id'])
+    return redirect(url_for('show_door_access_get'))
 
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required

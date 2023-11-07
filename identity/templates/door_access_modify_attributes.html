@@ -13,6 +13,12 @@
   <script>
     $(document).ready(function() {
 
+      $("#btnTransferToken").click(function() {
+        $('#form1').attr('action','/admin/dooraccess/tokenattributes/transfer');
+        $('#form1').attr('method','POST');
+        $('#form1').trigger('submit');
+      });
+
       $("#btnCancel").click(function() {
         window.location.replace("/admin/dooraccess");
         return false;
@@ -43,8 +49,11 @@
 
 <div class="container">
 
-  <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
-    
+  <form class="form-horizontal" id="form1" role="form" method="POST">
+    <input type="hidden" id="eb_id" name="eb_id" value="{{ e['eb_id'] }}"/>
+    <input type="hidden" id="rfid_token_hex" name="rfid_token_hex" value="{{ e['rfid_token_hex'] }}"/>
+
+
     <div class="alert alert-success" role="alert">
       <b>Transfer Token</b> will detach the RFID token from the member add it to the 
       pool of tokens available for reassignment.
@@ -126,6 +135,15 @@
             </select>
           </div>
         </div>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="rfid_token_comment" class="form-label"><b>Token Comment:</b></label>
+          </div>
+          <div class="col-sm-5">
+            <input type="text" class="form-control" id="rfid_token_comment" name="rfid_token_comment" value="{{ e['rfid_token_comment'] }}">
+          </div>
+        </div>    
 
       </div>
     </div>      

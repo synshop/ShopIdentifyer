@@ -110,8 +110,11 @@
       </thead>
       <tbody>
       {% for entry in entries %}
-        {% if entry['subscription_description'] | upper == "PAUSED MEMBERSHIP" or entry['subscription_description'] | upper == "FREE MEMBERSHIP" %}
+
+        {% if entry['subscription_description'] | upper == "PAUSED MEMBERSHIP" %}
         <tr class="table-warning paused">
+        {% elif entry['last_payment_status'] | upper != "SUCCEEDED" and entry['last_payment_status'] != None %}
+        <tr class="table-danger">
         {% else %}
         <tr>
         {% endif %}
@@ -133,7 +136,7 @@
           {% endif %}
 
           {% if entry['last_payment_status'] == None %}
-          <td>N / A</td>
+          <td>N/A</td>
           {% else %}
           <td>{{ entry['last_payment_status'] | upper }}</td>
           {% endif %}
