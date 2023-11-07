@@ -12,6 +12,7 @@
 
   <script>
     $(document).ready(function() {
+
       $('#showPaused').click(function(){
 
         if ($('#showPaused').html() == "Hide Paused Members") {
@@ -21,6 +22,9 @@
         }
         $('.paused').toggle();
       });
+
+      $('.paused').hide();
+
     });
   </script>
 </head>
@@ -92,7 +96,7 @@
   </table>
   
   <h2>Active Members</h2>
-  <button class="btn btn-sm btn-primary" style="margin-bottom:10px" id="showPaused">Hide Paused Members</button>
+  <button class="btn btn-sm btn-primary" style="margin-bottom:10px" id="showPaused">Show Paused Members</button>
   <table class="table table-hover table-bordered">
       <thead>
       <tr class="table-primary">

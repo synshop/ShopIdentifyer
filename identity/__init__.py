@@ -495,7 +495,11 @@ def assign_discord_role(role_id=None, discord_id=None):
 
 
 # Manually onboard all members in the stripe_cache
-def close_issue_82():
+def m_close_issue_82():
+    """import rfid_tokens"""
+    """import event_log"""
+    """FIX RFID_TOKENS IMPORT"""
+    """INSERT INTO `rfid_tokens` (eb_id, stripe_id, rfid_token_hex, status, created_on, rfid_token_comment, eb_status, changed_on) """
     """insert into members (stripe_id,full_name) select stripe_id,full_name from stripe_cache;"""
     """UPDATE members set is_vetted = 'VETTED' where stripe_id in (select stripe_id from rfid_tokens where stripe_id IS NOT NULL);"""
     pass
@@ -564,6 +568,7 @@ def insert_new_rfid_token_record(eb_id=None, rfid_token_hex=None, rfid_token_com
 
 # Attach a RFID token to a member
 def assign_rfid_token(eb_id=None, stripe_id=None):
+    print(eb_id)
     db = get_db()
     cur = db.cursor()
     sql_stmt = "update rfid_tokens set stripe_id = %s, status = 'ASSIGNED' where eb_id = %s"
@@ -593,7 +598,7 @@ def get_unassigned_rfid_tokens():
 def get_assigned_rfid_tokens():
     db = get_db()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
-    sql_stmt = 'select r.eb_id, r.rfid_token_hex, r.created_on, r.eb_status, m.full_name, m.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by eb_id'
+    sql_stmt = 'select r.eb_id, r.rfid_token_hex, r.rfid_token_comment, r.created_on, r.eb_status, m.full_name, m.stripe_id from rfid_tokens r, members m where r.stripe_id = m.stripe_id order by r.eb_id'
     cur.execute(sql_stmt)
     return cur.fetchall()
 
@@ -612,7 +617,7 @@ def get_all_rfid_tokens():
 # Get the attributes for a given token
 def get_rfid_token_attributes(rfid_token_hex=None):
     db = get_db()
-    cur = db.cursor()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
     sql_stmt = 'select * from rfid_tokens where rfid_token_hex = %s'
     cur.execute(sql_stmt, (rfid_token_hex,))
     return cur.fetchone()
@@ -644,7 +649,7 @@ def update_rfid_token_attributes(request=None):
 # Get a list of users to assign a RFID (need to be VETTED and ACTIVE)
 def get_members_for_rfid_association():
     db = get_db()
-    cur = db.cursor()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
     sql_stmt = "select m.stripe_id, sc.full_name, sc.email, m.is_vetted from members m, stripe_cache sc where " \
                "m.stripe_id = sc.stripe_id and m.member_status = 'ACTIVE' and is_vetted = 'VETTED'"
     cur.execute(sql_stmt)
@@ -881,7 +886,6 @@ def update_member(request=None):
                'emergency_contact_name=%s,emergency_contact_mobile=%s,locker_num=%s,' \
                'led_color=%s where stripe_id=%s'
 
-    print(update_data)
     try:
         x = cur.execute(sql_stmt, update_data)
     except Exception as e:
@@ -1245,31 +1249,18 @@ def show_admin_onboard():
 
 @app.route('/admin/dooraccess', methods=['GET'])
 @login_required
-def show_door_access_landing():
+def show_door_access_get():
     u = get_unassigned_rfid_tokens()
     a = get_assigned_rfid_tokens()
-    return render_template('door_access.html', unassigned=a, assigned=u)
-
-
-@app.route('/admin/dooraccess/newtoken', methods=['GET'])
-@login_required
-def show_door_access_new_token():
-    return render_template('door_access_new_token.html')
-
-
-@app.route('/admin/dooraccess/newtoken', methods=['POST'])
-@login_required
-def show_door_access_new_token_post():
-    insert_new_rfid_token_record(eb_id=request.form['eb_id'], rfid_token_hex=request.form['rfid_token_hex'],
-                                 rfid_token_comment=request.form['rfid_token_comment'])
-    return redirect(url_for('show_door_access_landing'))
+    return render_template('door_access.html', unassigned=u, assigned=a)
 
 
 @app.route('/admin/dooraccess/assign', methods=['GET'])
 @login_required
-def show_door_access_assign():
+def show_door_access_assign_get():
     eb_id = request.args.get('eb_id')
-    return render_template('door_access_assign.html', entries=get_members_for_rfid_association(), eb_id=eb_id)
+    rfid_token_hex = request.args.get('rfid_token_hex')
+    return render_template('door_access_assign.html', entries=get_members_for_rfid_association(),e=eb_id, r=rfid_token_hex) 
 
 
 @app.route('/admin/dooraccess/assign', methods=['POST'])
@@ -1278,27 +1269,35 @@ def show_door_access_assign_post():
     stripe_id = request.form.get('stripe_id')
     eb_id = request.form.get('eb_id')
     assign_rfid_token(eb_id=eb_id, stripe_id=stripe_id)
-    return redirect(url_for('show_door_access_landing'))
+    return redirect(url_for('show_door_access_get'))
 
 
-@app.route('/admin/dooraccess/tokenattributes', methods=['GET'])
+@app.route('/admin/dooraccess/newtoken', methods=['GET'])
 @login_required
-def show_door_access_token_attributes():
-    return render_template('door_access_modify_attributes.html', entries=get_all_rfid_tokens())
+def show_door_access_new_token():
+    return render_template("door_access_new_token.html")
+
+
+@app.route('/admin/dooraccess/newtoken', methods=['POST'])
+@login_required
+def show_door_access_new_token_post():
+    insert_new_rfid_token_record(eb_id=request.form['eb_id'], rfid_token_hex=request.form['rfid_token_hex'],
+                                 rfid_token_comment=request.form['rfid_token_comment'])
+    return redirect(url_for('show_door_access_get'))
 
 
 @app.route('/admin/dooraccess/tokenattributes/edit', methods=['GET'])
 @login_required
 def show_door_access_token_attributes_post():
     rfid_token_hex = request.args.get('rfid_token_hex')
-    return render_template('door_access_attributes_edit.html', entry=get_rfid_token_attributes(rfid_token_hex))
+    return render_template('door_access_modify_attributes.html', e=get_rfid_token_attributes(rfid_token_hex))
 
 
 @app.route('/admin/dooraccess/tokenattributes/edit', methods=['POST'])
 @login_required
 def show_access_attributes_edit():
     update_rfid_token_attributes(request)
-    return redirect(url_for('show_door_access_landing'))
+    return redirect(url_for('show_door_access_get'))
 
 
 @app.route('/admin/eventlog', methods=['GET'])
