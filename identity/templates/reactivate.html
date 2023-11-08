@@ -13,8 +13,8 @@
 </head>
 <body>
 
-  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container-fluid">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
       <a class="navbar-brand" href="/admin">
         SYN Shop Identity Management
       </a>
@@ -38,29 +38,28 @@
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
-        <th>Reactivate</th>
         <th>Full Name</th>
         <th>Is Vetted?</th>
-        <th>Subscription Plan</th>
-        <th>Subscription Status</th>
-        <th>Last Payment Status</th>
         <th>Has RFIDs</th>
+        <th>Subscription Plan</th>
+        <th>Last Payment Status</th>
+        <th>Action</th>
     </tr>
     </thead>
     <tbody>
     {% for entry in inactive_members %}
     <tr>
-      {% if (entry[4] == None and entry[5] == None) or entry[4] | upper == "PAUSED MEMBERSHIP" %}
+      <td>{{ entry[1] }}</td>      
+      <td>{{ entry[2] }}</td>
+      <td>{{ entry[3] | upper }}</td>
+      <td>{{ entry[4] | upper }}</td>
+      <td>{{ entry[5] | upper }}</td>
+      <td>{{ entry[6] | upper }}</td>
+      {% if (entry[7] == None and entry[7] == None) or entry[7] | upper == "PAUSED MEMBERSHIP" %}
       <td></td>
       {% else %}
       <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
       {% endif %}
-      <td>{{ entry[2] }}</td>      
-      <td>{{ entry[3] }}</td>
-      <td>{{ entry[4] | upper }}</td>
-      <td>{{ entry[5] | upper }}</td>
-      <td>{{ entry[6] | upper }}</td>
-      <td>{{ entry[7] | upper }}</td>
     </tr>
     {% endfor %}
 </tbody>

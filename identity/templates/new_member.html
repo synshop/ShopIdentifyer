@@ -11,9 +11,9 @@
 </head>
 <body>
 
-  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="/member/{{member.stripe_id}}">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
+      <a class="navbar-brand" href="/admin">
         SYN Shop Identity Management
       </a>
       <ul class="navbar-nav">
@@ -32,7 +32,7 @@
       <input type="hidden" name="stripe_id" value="{{ member.stripe_id }}" />
 
     <div class="alert alert-success" role="alert">
-      If you need to update information that is read-only, please email <strong>brian@synshop.org</strong>.
+      Read-only attributes are managed via Stripe, please see a board member if you need help changing any of those values.
     </div>
 
     <div class="card">
@@ -43,23 +43,12 @@
 
       <div class="card-body">
         
-        <!--
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Member Info:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="meta_info" name="meta_info" value="Created On: {{ member.created_on }}, Last Updated: {{ member.changed_on }}" disabled readonly>
-          </div>
-        </div>
-        -->
-
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="meta_info" class="form-label"><b>Stripe Payment Plan:</b></label>
           </div>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.stripe_subscription_product }}" disabled readonly>
+            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.subscription_description }}" disabled readonly>
           </div>
         </div>
 
@@ -68,21 +57,19 @@
             <label for="meta_info" class="form-label"><b>Stripe Email:</b></label>
           </div>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.stripe_email }}" disabled readonly>
+            <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.email }}" disabled readonly>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Discord Username:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="discord_username" name="discord_username" value="{{ member.discord_username }}" disabled readonly>
           </div>
         </div>
 
-        <!--
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>RFID Tokens:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="rfid_tokens" name="rfid_tokens" value="{{ member.rfid_tokens }}" disabled readonly>
-          </div>
-        </div>
-        -->
-        
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="member_status" class="form-label"><b>Member Status:</b></label>
@@ -97,6 +84,17 @@
                 {% endif %}
               {% endfor %}
             </select>
+          </div>
+        </div>
+
+        <hr/>
+
+        <div class="row">
+          <div class="col-sm-2 col-form-label">
+            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
+          </div>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
           </div>
         </div>
 
@@ -117,35 +115,6 @@
           </div>
         </div>
 
-        <hr/>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Nickname:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="nick_name" name="nick_name" value="{{ member.nick_name }}">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Discord ID:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="discord_handle" name="discord_handle" value="{{ member.discord_id }}">
-          </div>
-        </div>
-
         <div class="row">
           <div class="col-sm-2 col-form-label">
             <label for="meta_info" class="form-label"><b>Locker #:</b></label>
@@ -157,10 +126,10 @@
 
         <div class="row">
           <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>LED Color:</b></label>
+            <label for="meta_info" class="form-label"><b>Kiosk LED Color:</b></label>
           </div>
           <div class="col-sm-10">
-            <input type="text" class="form-control" id="led_color" name="led_color" value="{{ member.led_color }}">
+            <input type="text" class="form-control" id="led_color" name="led_color" value="#000000,#000000">
           </div>
         </div>
 

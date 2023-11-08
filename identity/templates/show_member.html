@@ -12,69 +12,72 @@
 
 <body>
 
-  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container-fluid">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
       <a class="navbar-brand" href="/admin">
         SYN Shop Identity Management
       </a>
-      <ul class="navbar-nav" style="display:inline;">
-        {% if session.logged_in %}
-        <li class="nav-item" style="display:inline;"><a class="nav-link active" style="display:inline;" href="/member/{{ member.stripe_id }}/edit">Edit Member</a></li>
-        &nbsp;
-        <li class="nav-item" style="display:inline;"><a class="nav-link active" style="display:inline;" href="/logout">Logout</a></li>
-        {% else %}
-        <li class="nav-item"><a class="nav-link active" aria-current="page" href="/login">Login</a></li>
-        {% endif %}  
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link active" href="/member/{{ member.stripe_id }}/edit">Edit Member</a></li>
+        <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
       </ul>
     </div>
   </nav>
   
   <div class="container">
 
-    <table style="border:0px solid #000;width:70%;margin-left:0px;margin-bottom:10px;margin-top:10px;">
+    <table style="width:70%;margin-left:0px;margin-bottom:20px;margin-top:10px;">
       <tr><td>
-        <img src="/member/{{member.stripe_id}}/files/photo.jpg" class="img-rounded img-thumbnail" width="304" height="236" alt="">
+        <img src="/member/{{member.stripe_id}}/files/photo.jpg" class="img-rounded img-thumbnail" width="304" height="236">
       </td>
       <td>
       <h1 style="font-size:48px;padding-bottom:0px;margin-bottom:0px;"><a href="#">{{ member.full_name }}</a></h1>
-      <h3 style="padding-top:0px;margin-top:0px;"> {{ member.stripe_email }} </h3>
+      <h3 style="padding-top:0px;margin-top:0px;"> {{ member.email }} </h3>
     </td></tr>
-  </table>
+    </table>
 
-    <div class="panel panel-primary">
-      <div class="panel-heading"><h1 class="panel-title">Membership Information:</h1></div>
-
-      <table class="table table-striped table-bordered">
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header">
+        <h2 class="card-title">Membership Information:</h2>
+      </div>
+      <div class="card-body">
+      <table class="table table-striped">
         <tr><th style="width:200px;">Membership Status:</th><td>{{ member.member_status }}</td></tr>
-        <tr><th style="width:200px;">Vetted Status:</th><td>{{ member.vetted_status }}</td></tr>
+        <tr><th style="width:200px;">Vetted Status:</th><td>{{ member.is_vetted }}</td></tr>
         <tr><th style="width:200px;">Subscription Plan:</th><td>{{ member.stripe_plan }}</td></tr>
 
-        {% if member.payment_status == "Delinquent" %}
+        {% if member.subscription_status == "Delinquent" %}
         <tr style="background-color:#ff0000;">
-          <th style="color:#fff;">Payment Status:</th><td style="color:#fff;">{{ member.payment_status }}</td>
+          <th style="color:#fff;">Payment Status:</th><td style="color:#fff;">{{ member.last_payment_status | upper}}</td>
         </tr>
         {% else %}
-        <tr><th>Payment Status:</th><td>{{ member.stripe_status }}</td></tr>
+        <tr><th>Payment Status:</th><td>{{ member.last_payment_status | upper }}</td></tr>
         {% endif %}
         <tr><th style="width:200px;">Contact #:</th><td>{{ member.mobile }}</td></tr>
-        <tr><th style="width:200px;">Has RFID Tokens:</th><td>{{ member.door_access }}</td></tr>
+        <tr><th style="width:200px;">RFID Tokens:</th><td>{{ member.rfid_tokens | upper }}</td></tr>
+        <tr><th style="width:200px;">Kiosk Username:</th><td>{{ member.kiosk_username }}</td></tr>
       </table>
-
+      </div>
     </div>
 
-    <div class="panel panel-primary">
-      <div class="panel-heading"><h1 class="panel-title">Emergency Contact Information:</h1></div>
-
-      <table class="table table-striped table-bordered">
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header">
+        <h2 class="card-title">Emergency Contact Information:</h2>
+      </div>
+      <div class="card-body">
+      <table class="table table-striped">
         <tr><th style="width:200px;">Contact Name:</th><td>{{ member.emergency_contact_name }}</td></tr>
         <tr><th style="width:200px;">Contact #:</th><td>{{ member.emergency_contact_mobile }}</td></tr>
       </table>
+      </div>
     </div>
 
-    <div class="panel panel-primary">
-      <div class="panel-heading"><h1 class="panel-title">Attachments:</h1></div>
-
-      <table class="table table-striped table-bordered">
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header">
+        <h2 class="card-title">Attachments:</h2>
+      </div>
+      <div class="card-body">
+      <table class="table table-striped">
 
         {% if member.has_wavier == True %}
             <tr><th style="width:300px;">Signed Liability Wavier:</th><td><a href="/member/{{member.stripe_id}}/files/liability-waiver.pdf">liability-waiver.pdf</a></td></tr>
@@ -92,15 +95,7 @@
 
       </table>
     </div>
-<!--
-    <div class="panel panel-primary">
-      <div class="panel-heading"><h1 class="panel-title">2 Week Swipe Frequency:</h1></div>
-      <div class="panel-body" style="text-align:center;">
-        <canvas id="swipeChart" style="padding-left:20px;padding-top:20px;" height="100" width="900"></canvas>
-      </div>
     </div>
-    </div>
--->
 
   </div>
 </body>

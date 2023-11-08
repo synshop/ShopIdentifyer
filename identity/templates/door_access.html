@@ -8,12 +8,48 @@
   <link href="/static/images/favicon.ico" rel="shortcut icon" >
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <script src="/static/js/bootstrap.bundle.min.js"></script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      
+      // Add new token button
+      $('#addNewToken').click(function(){   
+        $('#form1').attr('action','/admin/dooraccess/newtoken');
+        $('#form1').attr('method','GET');
+        $('#form1').trigger('submit');
+      });
+
+      // Assign an unregistered token to a member
+      $('.assignToken').click(function(){
+        const a = this.id.split("-");
+        $('#eb_id').val(a[0]);
+        $('#rfid_token_hex').val(a[1]);
+        $('#form1').attr('action','/admin/dooraccess/assign');
+        $('#form1').attr('method','GET');
+        $('#form1').trigger('submit');
+      });
+
+      // Manage token assigned to a member
+      $('.manageToken').click(function(){
+        const a = this.id.split("-");
+        $('#eb_id').val(a[0]);
+        $('#rfid_token_hex').val(a[1]);
+        $('#form1').attr('action','/admin/dooraccess/tokenattributes/edit');
+        $('#form1').attr('method','GET');
+        $('#form1').trigger('submit');
+      });
+
+    });
+  </script>
+
 </head>
 
 <body>
 
-  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container-fluid">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
       <a class="navbar-brand" href="/admin">
         SYN Shop Identity Management
       </a>
@@ -28,43 +64,78 @@
   </nav>
 
 <div class="container">
-
-  <h2>What do you want to do?</h2>
-  <div class="list-group" style="margin-bottom:25px;">
-    <a href="/admin/dooraccess/newtoken" class="list-group-item">Manually Add a new RFID Token</a>
-    <a href="/admin/dooraccess/tokenattributes" class="list-group-item">Manage RFID Token Attributes</a>
-  </div>
+  <form id="form1" method="get">
+  <input type="hidden" id="eb_id" name="eb_id" />
+  <input type="hidden" id="rfid_token_hex" name="rfid_token_hex" />
   
   <div class="alert alert-success" role="alert">
-    RFID Tokens added to the system can be assigned to members who are VETTED and in good payment standing ONLY.
+    What should I say here?
   </div>
 
   <h2>Unassigned RFID Tokens</h2>
+  <button class="btn btn-sm btn-primary" style="margin-bottom:10px" id="addNewToken">Add New Token</button>
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
         <th>EB ID</th>
         <th>EB Status</th>
-        <th>RFID</th>
+        <th>RFID (Hex)</th>
         <th>Created On</th>
         <th>Action</th>
     </tr>
     </thead>
     <tbody>
     
-    {% for entry in entries %}
+    {% for e in unassigned %}
     <tr>
-      <td>{{ entry[0] }}</td>
-      <td>{{ entry[3] }}</td>
-      <td>{{ entry[1] }}</td>
-      <td>{{ entry[2] }}</td>
-      <td><a href="/admin/dooraccess/assign?eb_id={{ entry[0] }}">Assign</a></td>
+      <td>{{ e['eb_id'] }}</td>
+      <td>{{ e['eb_status'] }}</td>
+      <td>{{ e['rfid_token_hex'] }}</td>
+      <td>{{ e['created_on'] }}</td>
+      <td><a href="javascript:void(0);" class="assignToken" id="{{ e['eb_id'] }}-{{ e['rfid_token_hex'] }}">Assign</a></td>
     </tr>
     {% endfor %}
 
 </tbody>
 </table>
 
+<h2>Assigned RFID Tokens</h2>
+<table class="table table-hover table-bordered" id="results">
+  <thead>
+  <tr class="table-primary">
+      <th>EB ID</th>
+      <th>EB Status</th>
+      <th>RFID (Hex)</th>
+      <th>Comment</th>
+      <th>Attached To</th>
+      <th>Created On</th>
+      <th>Action</th>
+  </tr>
+  </thead>
+  <tbody>
+  
+  {% for e in assigned %}
+    {% if e['eb_id'] | upper == "NONE" and e['eb_status'] == "ACTIVE" %}
+      <tr class="table-warning">
+    {% else %}
+      <tr>
+    {% endif %}
+
+    <td>{{ e['eb_id'] | upper }}</td>
+    <td>{{ e['eb_status'] }} / {{ e['status'] }}</td>
+    <td>{{ e['rfid_token_hex'] }}</td>
+    <td>{{ e['rfid_token_comment'] }}</td>
+    <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>
+    <td>{{ e['created_on'] }}</td>
+    <td><a href="javascript:void(0);" class="manageToken" id="{{ e['eb_id'] }}-{{ e['rfid_token_hex'] }}">Manage</a></td>
+    </td>
+
+  </tr>
+  {% endfor %}
+
+</tbody>
+</table>
+</form>
 </div>
 </body>
 </html>

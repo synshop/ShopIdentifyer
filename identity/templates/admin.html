@@ -8,12 +8,31 @@
   <link href="/static/images/favicon.ico" rel="shortcut icon" >
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <script src="/static/js/bootstrap.bundle.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+
+      $('#showPaused').click(function(){
+
+        if ($('#showPaused').html() == "Hide Paused Members") {
+          $('#showPaused').html("Show Paused Members");
+        } else {
+          $('#showPaused').html("Hide Paused Members");
+        }
+        $('.paused').toggle();
+      });
+
+      $('.paused').hide();
+
+    });
+  </script>
 </head>
 
 <body>
 
-  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container-fluid">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
       <a class="navbar-brand">
         SYN Shop Identity Management
       </a>
@@ -29,71 +48,102 @@
 
 <div class="container" style="padding-bottom:30px;">
 
-  <div class="list-group" style="padding-bottom:30px;">
+  <div class="alert alert-success" role="alert">
+    <h5>Current Member Statistics:</h5>
+    Total: {{ us.total_membership.count }},
+    Active: {{ us.total_vetted.count + us.total_not_vetted.count }},
+    Vetted: {{ us.total_vetted.count }},
+    Not Vetted: {{ us.total_not_vetted.count }},
+    Free: {{ us.total_free.count }},
+    Paused: {{ us.total_paused.count }}
+  </div>
 
+  <div class="list-group" style="padding-bottom:30px;">
     <h2>What do you want to do?</h2>
     <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
     <a href="/admin/reactivate" class="list-group-item">Reactivate Member</a>
     <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
     <a href="/admin/dooraccess" class="list-group-item">RFID Token Management</a>
-
   </div>
 
-  <h2>There are currently {{entries|length}} Active Members at SYN Shop</h2>
-  <table class="table table-hover table-bordered" id="results" style="width: 100%;">
+  <h2>Last 5 Door Access Events</h2>
+  <table class="table table-hover table-bordered">
+      <thead>
+      <tr class="table-primary">
+        <th>Event ID</th>
+        <th>Timestamp</th>
+        <th>Full Name</th>
+        <th>Comment</th>
+        <th>RFID Hex</th>
+        <th>Event Status</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for e in el %}
+        <tr>
+          <td>{{ e['event_id'] }}</td>
+          <td>{{ e['created_on'] }}</td>
+          <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>
+          <td>{{ e['rfid_token_comment'] | upper }}</td>
+          <td>{{ e['rfid_token_hex'] | upper }}</td>
+          <td>{{ e['event_type'] | upper }}</td>        
+        </tr>
+      {% else %}
+        <tr><td colspan="6">No entries here so far</td></tr>
+      {% endfor %}
+
+    </tbody>
+  </table>
+  
+  <h2>Active Members</h2>
+  <button class="btn btn-sm btn-primary" style="margin-bottom:10px" id="showPaused">Show Paused Members</button>
+  <table class="table table-hover table-bordered">
       <thead>
       <tr class="table-primary">
         <th>Full Name</th>
-        <th>Is Vetted?</th>
-        <th>Plan</th>
-        <th>Status</th>
-        <th>Payment Status</th>
-        <th>Has RFIDs</th>
+        <th>Discord Usr Name</th>
+        <th>Vetted?</th>
+        <th>RFIDs?</th>
+        <th>Subscription Plan</th>
+        <th>Payment</th>
       </tr>
       </thead>
       <tbody>
       {% for entry in entries %}
-        {% if entry[7] == "past_due" or entry[7] == None or entry[8] == None or entry[8] | upper == "PAUSED MEMBERSHIP" %}
-          <tr class="table-warning">
+
+        {% if entry['subscription_description'] | upper == "PAUSED MEMBERSHIP" %}
+        <tr class="table-warning paused">
+        {% elif entry['last_payment_status'] | upper != "SUCCEEDED" and entry['last_payment_status'] != None %}
+        <tr class="table-danger">
         {% else %}
-          <tr>
+        <tr>
         {% endif %}
-          <td><a href="/member/{{ entry[0] }}">{{ entry[2] }}</a></td>
 
-          {% if entry[3] == "NOT VETTED" %}
-            <td>{{ entry[3] }}</td>
+          <td><a href="/member/{{ entry['stripe_id'] }}">{{ entry['full_name'] }}</a></td>
+          <td>{{ entry['discord_username'] }}</td>
+          {% if entry['is_vetted'] == "NOT VETTED" %}
+          <td>NV</td>
           {% else %}
-            {% if entry[5] == None %}
-              <!-- Member is vetted but no vetted form on file -->
-              <td>VETTED</td>
-            {% else %}
-              <td><a href="/member/{{ entry[0] }}/files/vetted-membership-form.pdf">VETTED</a></td>
-            {% endif %}
+          <td>V</td>
           {% endif %}
-          
-          {% if entry[8] == None %}
-            <td>NO SUBSCRIPTION PLAN</td>
+    
+          <td>{{ entry['has_rfid'] | upper }}</td>
+
+          {% if entry['subscription_description'] == None %}
+          <td>NO SUBSCRIPTION PLAN</td>
           {% else %}
-            <td>{{ entry[8] | upper }}</td>
-          {% endif %}
-          
-          {% if entry[7] == None %}
-            <td>NOT AVAILABLE</td>
-          {% else %}
-            <td>{{ entry[7] | upper }}</td>
-          {% endif %}
-          
-          {% if entry[9] == None %}
-            <td>N / A</td>
-          {% else %}
-            <td>{{ entry[9] | upper }}</td>
+          <td><a href="https://dashboard.stripe.com/customers/{{entry['stripe_id']}}" target=”_blank”>{{ entry['subscription_description'] | upper }}</a></td>
           {% endif %}
 
-          <td>{{ entry[10] | upper }}</td>
-
-      </tr>
+          {% if entry['last_payment_status'] == None %}
+          <td>N/A</td>
+          {% else %}
+          <td>{{ entry['last_payment_status'] | upper }}</td>
+          {% endif %}
+        
+        </tr>
       {% else %}
-        <tr><td colspan="3">No entries here so far</td></tr>
+        <tr><td colspan="6">No entries here so far</td></tr>
       {% endfor %}
 
     </tbody>

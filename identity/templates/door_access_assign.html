@@ -8,12 +8,25 @@
   <link href="/static/images/favicon.ico" rel="shortcut icon" >
   <link href="/static/css/bootstrap.min.css" rel="stylesheet">
   <script src="/static/js/bootstrap.bundle.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+
+      $('.assignToken').click(function(){
+        $('#stripe_id').val(this.id);
+        $('#form1').trigger('submit');
+      });
+
+    });
+  </script>
+
 </head>
 
 <body>
 
-  <nav class="navbar bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container-fluid">
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
       <a class="navbar-brand" href="/admin/dooraccess">
         SYN Shop Identity Management
       </a>
@@ -30,38 +43,32 @@
 <div class="container">
 
   <div class="alert alert-success" role="alert">
-    Choose a user for RFID token assignment.  <br/>
-    Please note that user must have a <b>VETTED</b> status in the system.
+    Member isn't showing up here?  Please note that they must have a <b>VETTED</b> status in the system.
   </div>
-  <form method="POST">
 
-    <input type="hidden" name="eb_id" value="{{ eb_id }}">
-
+  <form id="form1" method="post">
+  <input type="hidden" id="eb_id" name="eb_id" value="{{ e }}" />
+  <input type="hidden" id="stripe_id" name="stripe_id" />
+  
+  <h2>Choose a user to assign token {{ r }}</h2>
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
-        <th>Assign</th>
         <th>Name</th>
-        <th>Stripe Email</th>
-        <th>Vetted</th>
+        <th>Email</th>
+        <th>Action</th>
     </tr>
     </thead>
     <tbody>
-    {% for entry in entries %}
+    {% for e in entries %}
     <tr>
-      <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
-      <td>{{ entry[1] }}</td>      
-      <td>{{ entry[2] }}</td>
-      <td>{{ entry[3] }}</td>
+      <td>{{ e["full_name"] }}</td>      
+      <td>{{ e["email"] }}</td>
+      <td><a href="javascript:void(0);" class="assignToken" id="{{ e['stripe_id'] }}">Assign</a></td>
     </tr>
     {% endfor %}
 </tbody>
 </table>
-
-<div class="form-group" style="padding-bottom:25px;">
-    <button type="submit" class="btn btn-primary btn-lg">Assign Token</button>
-    <button type="button" class="btn btn-secondary btn-lg">Cancel</button>
-</div>
 
 </form>
 
