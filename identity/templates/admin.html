@@ -80,10 +80,18 @@
       </thead>
       <tbody>
       {% for e in el %}
+        {% if e['event_type'] | upper == "ACCESS_DENY" %}
+        <tr class="table-danger">
+        {% else %}
         <tr>
+        {% endif %}
           <td>{{ e['event_id'] }}</td>
           <td>{{ e['created_on'] }}</td>
+          {% if e['full_name'] == None %}
+          <td>UNREGISTERED BADGE</td>
+          {% else %}
           <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>
+          {% endif %}
           <td>{{ e['rfid_token_comment'] | upper }}</td>
           <td>{{ e['rfid_token_hex'] | upper }}</td>
           <td>{{ e['event_type'] | upper }}</td>        
