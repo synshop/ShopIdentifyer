@@ -135,7 +135,7 @@ def rebuild_stripe_cache():
         for member in member_array:
 
             cur = db.cursor()
-            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
             (
                 member['stripe_id'], 
                 member['stripe_created_on'],
@@ -146,7 +146,8 @@ def rebuild_stripe_cache():
                 member['stripe_subscription_id'], 
                 member['stripe_subscription_description'],
                 member['stripe_subscription_status'], 
-                member['stripe_subscription_created_on']
+                member['stripe_subscription_created_on'],
+                member['stripe_coupon_description']
             ))
 
         db.commit()
@@ -771,7 +772,7 @@ def insert_new_member(stripe_id=None, r=None):
         insert_data)
     db.commit()
     db.close()
-
+    
     if app.config["DISCORD_MANAGE_ROLES"] and r.form.get('discord_username') != None:
 
         discord_id = get_member_discord_id(r.form.get('discord_username'))
@@ -1076,7 +1077,8 @@ def get_admin_view():
             s.subscription_status,
             s.subscription_description,
             s.last_payment_status,
-            s.discord_username
+            s.discord_username,
+            s.coupon
         FROM 
             members m
         JOIN

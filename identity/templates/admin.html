@@ -109,7 +109,7 @@
       <thead>
       <tr class="table-primary">
         <th>Full Name</th>
-        <th>Discord Usr Name</th>
+        <th>Discord Username</th>
         <th>Vetted?</th>
         <th>RFIDs?</th>
         <th>Subscription Plan</th>
@@ -138,9 +138,13 @@
           <td>{{ entry['has_rfid'] | upper }}</td>
 
           {% if entry['subscription_description'] == None %}
-          <td>NO SUBSCRIPTION PLAN</td>
+            <td>NO SUBSCRIPTION PLAN</td>
           {% else %}
-          <td><a href="https://dashboard.stripe.com/customers/{{entry['stripe_id']}}" target=”_blank”>{{ entry['subscription_description'] | upper }}</a></td>
+            {% if entry['coupon'] | upper != "NONE" %}
+              <td><a href="https://dashboard.stripe.com/customers/{{entry['stripe_id']}}" target=”_blank”>{{ entry['subscription_description'] | upper }} + {{ entry['coupon'] | upper}}</a></td>
+            {% else %}          
+              <td><a href="https://dashboard.stripe.com/customers/{{entry['stripe_id']}}" target=”_blank”>{{ entry['subscription_description'] | upper }} </a></td>
+            {% endif %}
           {% endif %}
 
           {% if entry['last_payment_status'] == None %}

@@ -11,18 +11,8 @@ stripe.api_key = app.config['STRIPE_TOKEN']
 def m_inspect_user(email=None):
 
     c = stripe.Customer.search(query='email: "' + email + '"', limit=1)['data'][0]
+    print(c)
 
-    subs = stripe.Subscription.retrieve("sub_12asGcCEk4tLAE")
-    for s in subs['items']['data']:
-        print(s.plan.nickname)
-
-    return True
-
-    x = stripe.Subscription.list(customer=c.id, limit=3)
-    for s in x['data'][0]['items']:
-        print(s.plan.nickname)
-
-        # print(s.plan.nickname)
 
 def get_customer_attributes(subscription):
 
@@ -37,7 +27,8 @@ def get_customer_attributes(subscription):
         "stripe_subscription_description": None,
         "stripe_subscription_status": None,
         "stripe_subscription_created_on": None,
-        "stripe_discord_username": None
+        "stripe_discord_username": None,
+        "stripe_coupon_description": None
     }
 
     customer = stripe.Customer.retrieve(subscription.customer)
@@ -54,6 +45,9 @@ def get_customer_attributes(subscription):
         user["stripe_discord_username"] = customer["metadata"]["discord_id"]
     else:
         user["stripe_discord_username"] = ""
+
+    if customer["discount"]:
+        user["stripe_coupon_description"] = customer["discount"]["coupon"]["name"]
 
     # Determine if member is in good standing 
     for last_payment_intent in stripe.PaymentIntent.list(customer=subscription.customer, limit=1):
