@@ -28,7 +28,8 @@ create table `shopid`.`stripe_cache` (
   subscription_id varchar(255),
   subscription_description varchar(255),
   subscription_status varchar(255),
-  subscription_created_on varchar(255)
+  subscription_created_on varchar(255),
+  coupon varchar(255)
 );
 
 create table `shopid`.`event_log` (

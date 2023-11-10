@@ -30,146 +30,147 @@
 
     <form class="form-horizontal" role="form" method="post" enctype="multipart/form-data">
       <input type="hidden" name="stripe_id" value="{{ member.stripe_id }}" />
+      <input type="hidden" name="discord_username" value="{{ member.discord_username }}" />
 
-    <div class="alert alert-success" role="alert">
-      Read-only attributes are managed via Stripe, please see a board member if you need help changing any of those values.
-    </div>
-
-    <div class="card">
-
-      <div class="card-header">
-        <h3 class="card-title">Onboard New Member</h3>
+      <div class="alert alert-success" role="alert">
+        Read-only attributes are managed via Stripe, please see a board member if you need help changing any of those values.
       </div>
 
-      <div class="card-body">
-        
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Stripe Payment Plan:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.subscription_description }}" disabled readonly>
-          </div>
+      <div class="card">
+
+        <div class="card-header">
+          <h3 class="card-title">Onboard New Member</h3>
         </div>
 
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Stripe Email:</b></label>
+        <div class="card-body">
+          
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Stripe Payment Plan:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="stripe_plan" name="stripe_plan" value="{{ member.subscription_description }}" disabled readonly>
+            </div>
           </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.email }}" disabled readonly>
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Discord Username:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="discord_username" name="discord_username" value="{{ member.discord_username }}" disabled readonly>
-          </div>
-        </div>
 
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="member_status" class="form-label"><b>Member Status:</b></label>
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Stripe Email:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="stripe_email" name="stripe_email" value="{{ member.email }}" disabled readonly>
+            </div>
           </div>
-          <div class="col-sm-10">
-            <select class="form-control" id="member_status" name="member_status" disabled readonly>
-              {% for n in ['ACTIVE', 'INACTIVE'] %}
-                {% if n == member.member_status %}
-                  <option value="{{n}}" selected="selected">{{n}}</option>
+          
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Discord Username:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="discord_username" name="discord_username" value="{{ member.discord_username }}" disabled readonly>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="member_status" class="form-label"><b>Member Status:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <select class="form-control" id="member_status" name="member_status" disabled readonly>
+                {% for n in ['ACTIVE', 'INACTIVE'] %}
+                  {% if n == member.member_status %}
+                    <option value="{{n}}" selected="selected">{{n}}</option>
+                  {% else %}
+                    <option value="{{n}}">{{n}}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <hr/>
+
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Full Name:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="is_vetted" class="form-label"><b>Vetted Status:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <select class="form-control" id="is_vetted" name="is_vetted">
+                {% for n in ['NOT VETTED','VETTED'] %}
+                {% if n == member.vetted_status %}
+                <option value="{{n}}" selected="selected">{{n}}</option>
                 {% else %}
-                  <option value="{{n}}">{{n}}</option>
+                <option value="{{n}}">{{n}}</option>
                 {% endif %}
-              {% endfor %}
-            </select>
+                {% endfor %}
+              </select>
+            </div>
           </div>
-        </div>
 
-        <hr/>
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Locker #:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="locker_num" name="locker_num" value="{{ member.locker_num }}">
+            </div>
+          </div>
 
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Full Name:</b></label>
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Kiosk LED Color:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="led_color" name="led_color" value="#000000,#000000">
+            </div>
           </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ member.full_name }}">
-          </div>
-        </div>
 
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="is_vetted" class="form-label"><b>Vetted Status:</b></label>
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Cell #:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="tel" class="form-control" id="mobile" name="mobile" data-mask="999-999-9999" value="{{ member.mobile }}">
+            </div>
           </div>
-          <div class="col-sm-10">
-            <select class="form-control" id="is_vetted" name="is_vetted">
-              {% for n in ['NOT VETTED','VETTED'] %}
-              {% if n == member.vetted_status %}
-              <option value="{{n}}" selected="selected">{{n}}</option>
-              {% else %}
-              <option value="{{n}}">{{n}}</option>
-              {% endif %}
-              {% endfor %}
-            </select>
+          
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Emergency Contact:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ member.emergency_contact_name }}">
+            </div>
           </div>
-        </div>
 
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Locker #:</b></label>
+          <div class="row">
+            <div class="col-sm-2 col-form-label">
+              <label for="meta_info" class="form-label"><b>Emergency Cell #:</b></label>
+            </div>
+            <div class="col-sm-10">
+              <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" data-mask="999-999-9999" value="{{ member.emergency_contact_mobile }}" placeholder="">
+            </div>
           </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="locker_num" name="locker_num" value="{{ member.locker_num }}">
-          </div>
-        </div>
 
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Kiosk LED Color:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="led_color" name="led_color" value="#000000,#000000">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Cell #:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="tel" class="form-control" id="mobile" name="mobile" data-mask="999-999-9999" value="{{ member.mobile }}">
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Emergency Contact:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ member.emergency_contact_name }}">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-sm-2 col-form-label">
-            <label for="meta_info" class="form-label"><b>Emergency Cell #:</b></label>
-          </div>
-          <div class="col-sm-10">
-            <input type="tel" class="form-control" id="emergency_contact_mobile" name="emergency_contact_mobile" data-mask="999-999-9999" value="{{ member.emergency_contact_mobile }}" placeholder="">
-          </div>
         </div>
 
       </div>
 
-    </div>
-
-    <div class="form-group" style="margin-top:25px;margin-bottom:50px;">
-      <div class="col-sm-offset-2 col-sm-10">
-        <button type="submit" class="btn btn-lg btn-primary">Save Changes</button>
-        <button type="cancel" class="btn btn-lg btn-secondary">Cancel</button>
+      <div class="form-group" style="margin-top:25px;margin-bottom:50px;">
+        <div class="col-sm-offset-2 col-sm-10">
+          <button type="submit" class="btn btn-lg btn-primary">Save Changes</button>
+          <button type="cancel" class="btn btn-lg btn-secondary">Cancel</button>
+        </div>
       </div>
-    </div>
 
     </form>
   </div>
