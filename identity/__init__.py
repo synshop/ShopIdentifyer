@@ -165,9 +165,9 @@ def archive_members_no_sub():
         app.logger.info("[ARCHIVE MEMBERS] - Starting archiving process...")
         db = get_db()
         cur = db.cursor()
-        sql_stmt = 'select stripe_id, full_name, discord_handle, created_on from members where stripe_id not in (' \
-                   'select stripe_id from stripe_cache) and member_status = "ACTIVE" '
-        cur.execute(sql_stmt)
+        sql = 'select m.stripe_id, m.full_name, created_on from members m where m.stripe_id not in (select stripe_id from stripe_cache) and m.member_status = "ACTIVE"'
+
+        cur.execute(sql)
         members = cur.fetchall()
 
         if len(members) != 0:
