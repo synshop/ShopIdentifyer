@@ -46,6 +46,7 @@ except Exception as e:
 app.config['STRIPE_TOKEN'] = CryptoUtil.decrypt(config.ENCRYPTED_STRIPE_TOKEN, ENCRYPTION_KEY)
 app.config['DATABASE_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_DATABASE_PASSWORD, ENCRYPTION_KEY)
 app.config['STRIPE_CACHE_REBUILD_CRON'] = config.STRIPE_CACHE_REBUILD_CRON
+app.config['MEMBERS_TABLE_REFRESH_CRON'] = config.MEMBERS_TABLE_REFRESH_CRON
 app.config['STRIPE_CACHE_DEACTIVATE_CRON'] = config.STRIPE_CACHE_DEACTIVATE_CRON
 app.config['SMTP_USERNAME'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_USERNAME, ENCRYPTION_KEY)
 app.config['SMTP_PASSWORD'] = CryptoUtil.decrypt(config.ENCRYPTED_SMTP_PASSWORD, ENCRYPTION_KEY)
@@ -156,6 +157,22 @@ def rebuild_stripe_cache():
     app.logger.info("finished rebuilding stripe cache")
 
 
+# Rebuild members table attributes from stripe_cache
+@s1.scheduled_job(CronTrigger.from_crontab(app.config['MEMBERS_TABLE_REFRESH_CRON']))
+def refresh_members_table():
+    app.logger.info("updating members table")
+
+    with app.app_context():
+        db = get_db()
+
+        cur = db.cursor()
+        cur.execute("select stripe_id from stripe_cache")
+        members = cur.fetchall()
+        for member in members:
+            pass
+
+
+
 # Archive (set m.status to INACTIVE) for members w/o a subscription
 # and send a nightly email report
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_DEACTIVATE_CRON']))
@@ -261,10 +278,7 @@ def send_member_deactivation_email(member):
     email_subject = "[ARCHIVING MEMBER] - %s no longer has a Stripe subscription" % (member[1],)
     email_body = """
     
-    Name:
-    %s
-    
-    Discord Handle:
+    Full Name:
     %s
     
     Account Created On:
@@ -273,7 +287,7 @@ def send_member_deactivation_email(member):
     Has RFID Token(s)
     %s
 
-    """ % (member[1], member[2], member[3], has_tokens)
+    """ % (member[1], member[2], has_tokens)
 
     if config.SMTP_SEND_EMAIL:
         app.logger.info("Sending alert email about archiving a member")
@@ -493,17 +507,6 @@ def assign_discord_role(role_id=None, discord_id=None):
     url = f'https://discord.com/api/v10/guilds/{GUILD_ID}/members/{discord_id}/roles/{role_id}'
     result = requests.put(url, headers={'Authorization': f'Bot {TOKEN}', 'Content-Type': 'application/json'})
     return result
-
-
-# Manually onboard all members in the stripe_cache
-def m_close_issue_82():
-    """import rfid_tokens"""
-    """import event_log"""
-    """FIX RFID_TOKENS IMPORT"""
-    """INSERT INTO `rfid_tokens` (eb_id, stripe_id, rfid_token_hex, status, created_on, rfid_token_comment, eb_status, changed_on) """
-    """insert into members (stripe_id,full_name) select stripe_id,full_name from stripe_cache;"""
-    """UPDATE members set is_vetted = 'VETTED' where stripe_id in (select stripe_id from rfid_tokens where stripe_id IS NOT NULL);"""
-    pass
 
 
 # Manual process to remove all Vetted and Paid discord roles
@@ -756,6 +759,7 @@ def insert_new_member(stripe_id=None, r=None):
         stripe_id,
         'ACTIVE',
         r.form.get('full_name'),
+        r.form.get('discord_username'),
         r.form.get('mobile'),
         r.form.get('emergency_contact_name'),
         r.form.get('emergency_contact_mobile'),
@@ -766,9 +770,9 @@ def insert_new_member(stripe_id=None, r=None):
     db = connect_db()
     cur = db.cursor()
     cur.execute(
-        'insert into members (stripe_id, member_status, full_name, mobile,'
+        'insert into members (stripe_id, member_status, full_name, discord_username, mobile,'
         'emergency_contact_name, emergency_contact_mobile, is_vetted, locker_num)'
-        'values (%s,%s,%s,%s,%s,%s,%s,%s)',
+        'values (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
         insert_data)
     db.commit()
     db.close()
