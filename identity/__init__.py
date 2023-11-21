@@ -704,7 +704,7 @@ def get_members_to_onboard():
 # Get a list of on-boarded, INACTIVE members
 def get_inactive_members():
     db = get_db()
-    cur = db.cursor()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
     sql_stmt = """
             SELECT 
             m.stripe_id,
@@ -726,15 +726,7 @@ def get_inactive_members():
     cur.execute(sql_stmt)
     members = cur.fetchall()
 
-    ret_members = []
-
-    for member in members:
-        x = list(member)
-        has_rfid = member_has_authorized_rfid(member[0])
-        x.append(has_rfid)
-        ret_members.append(x)
-
-    return ret_members
+    return members
 
 
 # Fetch the rfid_token(s) for a user
@@ -1319,11 +1311,5 @@ def show_eventlog_landing():
 @app.route('/admin/reactivate', methods=['GET'])
 @login_required
 def show_reactivate_member():
+    print(get_inactive_members()[0])
     return render_template('reactivate.html', inactive_members=get_inactive_members())
-
-
-@app.route('/admin/reactivate', methods=['POST'])
-@login_required
-def show_reactivate_member_post():
-    stripe_id = request.form.get('stripe_id')
-    return redirect('/member/' + stripe_id + '/edit')

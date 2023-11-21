@@ -31,7 +31,11 @@
 <div class="container">
 
   <div class="alert alert-success" role="alert" role="alert">
-    Please note that only members with Non Paused and Active Stripe subscriptions can be reactivated. 
+    To reactivate a member, click on their name and change their Membership Status 
+    to Active (and update any other information)
+    <br/><br/>
+    Please note that only members with <b>Non Paused</b> and <b>Active</b> Stripe subscriptions 
+    can be reactivated.  
   </div>
   <form method="POST">
     
@@ -39,36 +43,24 @@
     <thead>
     <tr class="table-primary">
         <th>Full Name</th>
-        <th>Is Vetted?</th>
-        <th>Has RFIDs</th>
         <th>Subscription Plan</th>
         <th>Last Payment Status</th>
-        <th>Action</th>
     </tr>
     </thead>
     <tbody>
-    {% for entry in inactive_members %}
+    {% for e in inactive_members %}
     <tr>
-      <td>{{ entry[1] }}</td>      
-      <td>{{ entry[2] }}</td>
-      <td>{{ entry[3] | upper }}</td>
-      <td>{{ entry[4] | upper }}</td>
-      <td>{{ entry[5] | upper }}</td>
-      <td>{{ entry[6] | upper }}</td>
-      {% if (entry[7] == None and entry[7] == None) or entry[7] | upper == "PAUSED MEMBERSHIP" %}
-      <td></td>
+      {% if e['subscription_description'] | upper == "PAUSED MEMBERSHIP" %}
+      <td>{{ e['full_name'] }}</td>
       {% else %}
-      <td style="text-align:center;"><input type="radio" name="stripe_id" value="{{ entry[0] }}"</td>
+      <td><a href="/member/ {{ e['stripe_id'] }} /edit">{{ e['full_name'] }}</a></td>
       {% endif %}
+      <td>{{ e['subscription_description'] }}</td>
+      <td>{{ e['last_payment_status'] | upper }}</td>
     </tr>
     {% endfor %}
 </tbody>
 </table>
-
-<div class="form-group">
-    <button type="submit" class="btn btn-primary btn-submit">Edit Member</button>
-    <button type="button" id="cancel" name="cancel" class="btn btn-secondary">Cancel</button>
-</div>
 
 </form>
 
