@@ -200,9 +200,8 @@ def archive_members_no_sub():
                     unassign_discord_role(app.config['DISCORD_ROLE_VETTED_MEMBER'], discord_id)
 
             # Do the deactivation
-            sql_stmt = 'update members set member_status = "INACTIVE", is_vetted = "NOT VETTED" where stripe_id not ' \
-                       'in (select stripe_id from stripe_cache) '
-            cur.execute(sql_stmt)
+            sql_stmt = 'update members set member_status = "INACTIVE", is_vetted = "NOT VETTED" where stripe_id = %s'
+            cur.execute(sql_stmt,(member[0],))
             db.commit()
         else:
             app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
