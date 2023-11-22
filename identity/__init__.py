@@ -182,7 +182,7 @@ def archive_members_no_sub():
         app.logger.info("[ARCHIVE MEMBERS] - Starting archiving process...")
         db = get_db()
         cur = db.cursor()
-        sql = 'select m.stripe_id, m.full_name, created_on from members m where m.stripe_id not in (select stripe_id from stripe_cache) and m.member_status = "ACTIVE"'
+        sql = 'select m.stripe_id, m.full_name, created_on, m.discord_username from members m where m.stripe_id not in (select stripe_id from stripe_cache) and m.member_status = "ACTIVE"'
 
         cur.execute(sql)
         members = cur.fetchall()
@@ -193,9 +193,9 @@ def archive_members_no_sub():
                 send_member_deactivation_email(member)
 
                 # Remove Vetted and Paid Member Discord Roles if member has a discord handle
-                if member[2] != None and app.config["DISCORD_MANAGE_ROLES"]:
+                if member[3] != None and app.config["DISCORD_MANAGE_ROLES"]:
                     app.logger.info("[ARCHIVE MEMBERS] - Removing Discord Roles for " + member[0])
-                    discord_id = get_member_discord_id(member[2])
+                    discord_id = get_member_discord_id(member[3])
                     unassign_discord_role(app.config['DISCORD_ROLE_PAID_MEMBER'], discord_id)
                     unassign_discord_role(app.config['DISCORD_ROLE_VETTED_MEMBER'], discord_id)
 
