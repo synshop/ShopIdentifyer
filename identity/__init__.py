@@ -1310,5 +1310,4 @@ def show_eventlog_landing():
 @app.route('/admin/reactivate', methods=['GET'])
 @login_required
 def show_reactivate_member():
-    print(get_inactive_members()[0])
     return render_template('reactivate.html', inactive_members=get_inactive_members())

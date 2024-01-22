@@ -50,12 +50,14 @@
     <tbody>
     {% for e in inactive_members %}
     <tr>
-      {% if e['subscription_description'] | upper == "PAUSED MEMBERSHIP" %}
+      {% if e['subscription_description'] | upper == "PAUSED MEMBERSHIP" 
+         or e['subscription_description'] | upper == "NONE" 
+      %}
       <td>{{ e['full_name'] }}</td>
       {% else %}
-      <td><a href="/member/ {{ e['stripe_id'] }} /edit">{{ e['full_name'] }}</a></td>
+      <td><a href="/member/{{ e['stripe_id'] }}/edit">{{ e['full_name'] }}</a></td>
       {% endif %}
-      <td>{{ e['subscription_description'] }}</td>
+      <td>{{ e['subscription_description'] | upper }}</td>
       <td>{{ e['last_payment_status'] | upper }}</td>
     </tr>
     {% endfor %}
