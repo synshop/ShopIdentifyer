@@ -1210,6 +1210,15 @@ def auth0_callback():
         return render_template("index.html")
 
 
+# API for public stats, JSON
+@app.route('/api/public_stats')
+def api_public_stats():
+    statsClean = {}
+    for k, v in get_public_stats().items():
+        statsClean[k] = v['count']
+    return jsonify(statsClean)
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def show_login():
     redirect_uri=url_for("auth0_callback", _external=True)
