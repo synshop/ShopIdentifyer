@@ -4,6 +4,7 @@ from identity import app
 PAYMENT_SUCCEEDED = "succeeded"
 ACTIVE_SUBSCRIPTION = "active"
 PAUSED_MEMBERSHIP = "Paused Membership"
+FREE_MEMBERSHIP = "Free Membership"
 
 stripe.api_version = app.config['STRIPE_VERSION']
 stripe.api_key = app.config['STRIPE_TOKEN']
@@ -79,11 +80,15 @@ def get_realtime_stripe_info(subscription_id=None):
     return get_customer_attributes(subscription)
 
 def member_is_in_good_standing(subscription_id=None):
+
     member_stripe_info = get_realtime_stripe_info(subscription_id)
     payment_status = member_stripe_info['stripe_last_payment_status']
     subscription_status = member_stripe_info['stripe_subscription_status']
     stripe_subscription_description = member_stripe_info['stripe_subscription_description']
 
+    if stripe_subscription_description == FREE_MEMBERSHIP:
+        return True
+    
     if payment_status == PAYMENT_SUCCEEDED and \
         subscription_status == ACTIVE_SUBSCRIPTION and \
         stripe_subscription_description != PAUSED_MEMBERSHIP:
