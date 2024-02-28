@@ -125,7 +125,7 @@
     <td>{{ e['eb_status'] }} / {{ e['status'] }}</td>
     <td>{{ e['rfid_token_hex'] }}</td>
     <td>{{ e['rfid_token_comment'] }}</td>
-    <td><a href="/member/{{ e['stripe_id'] }}">{{ e['full_name'] }}</a></td>
+    <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['full_name'] }}</a></td>
     <td>{{ e['created_on'] }}</td>
     <td><a href="javascript:void(0);" class="manageToken" id="{{ e['eb_id'] }}-{{ e['rfid_token_hex'] }}">Manage</a></td>
     </td>
