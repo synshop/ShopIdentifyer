@@ -943,7 +943,7 @@ def insert_log_event(request=None):
         cur.execute(sql_stmt, (stripe_id,))
         member_tmp = cur.fetchone()
 
-        if len(member_tmp) > 0:
+        if member_tmp != None:
             color = 'yellow'
             
             member['name'] = member_tmp[0]
