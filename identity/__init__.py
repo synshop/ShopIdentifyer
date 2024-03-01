@@ -945,9 +945,13 @@ def insert_log_event(request=None):
 
         if member_tmp != None:
             color = 'yellow'
+     
+            handle = get_member_discord_nickname(member_tmp[1])
+            if handle == "No Discord Username":
+                handle = member_tmp[0].split(" ")[0]
             
             member['name'] = member_tmp[0]
-            member['handle'] = get_member_discord_nickname(member_tmp[1])
+            member['handle'] = handle
             member['color'] = color
             member['badge'] = rfid_token_hex
 
