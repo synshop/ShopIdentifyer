@@ -53,7 +53,8 @@
     Vetted: {{ us.total_vetted.count }},
     Not Vetted: {{ us.total_not_vetted.count }},
     Free: {{ us.total_free.count }},
-    Paused: {{ us.total_paused.count }}
+    Paused: {{ us.total_paused.count }},
+    Payment Issue: <span style="color:red;">{{ us.total_failed_payment.count }}</span>
   </div>
 
   <div class="list-group" style="padding-bottom:30px;">

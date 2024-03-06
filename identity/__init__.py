@@ -1045,6 +1045,10 @@ def get_public_stats():
             'count': 0,
             'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "NOT VETTED" AND member_status = "ACTIVE");'
         },
+        'total_failed_payment': {
+            'count': 0,
+            'sql': 'select count(*) from stripe_cache where last_payment_status <> "succeeded"'
+        },
         'total_door_access': {
             'count': 0,
             'sql': 'select count(*) from members'
