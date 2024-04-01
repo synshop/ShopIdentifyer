@@ -555,8 +555,11 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
     cur = db.cursor()
     sql_stmt = "select subscription_id from stripe_cache where stripe_id = %s"
     cur.execute(sql_stmt, (stripe_id,))
-
-    return cur.fetchall()[0][0]
+    subscription_id = cur.fetchall()
+    if subscription_id == ():
+        return "NA"
+    else:
+        return subscription_id[0][0]
 
 
 # Manually insert a new RFID token into the system
