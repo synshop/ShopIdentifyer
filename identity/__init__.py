@@ -964,21 +964,24 @@ def insert_log_event(request=None):
     cur.execute(sql_stmt, (stripe_id, rfid_token_hex, event_type, rfid_token_comment))
     db.commit()
 
-    if stripe_id == 'NA':
-        # Send alert email about a rfid token swiping in but is not assigned to a member in the system
-        send_na_stripe_id_alert_email(rfid_token_hex)
-    else:
-        sub_id = get_subscription_id_from_stripe_cache(stripe_id)
 
-        if config.STRIPE_FETCH_REALTIME_UPDATES:
+    if config.STRIPE_FETCH_REALTIME_UPDATES:
+        subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
+        
+        if subscription_id == 'NA':
+            # Send alert email about a rfid token swiping in but is not assigned to a member in the system
+            send_na_stripe_id_alert_email(rfid_token_hex)
+        else:
+            sub_id = get_subscription_id_from_stripe_cache(stripe_id)
+    
             if identity.stripe.member_is_in_good_standing(sub_id):
                 # Send alert email about a member in good standing
                 send_door_access_alert_email(sub_id)
             else:
                 # Send alert email about a member swiping in but is not in good standing
                 send_payment_alert_email(sub_id)
-        else:
-            app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
+    else:
+        app.logger.info('STRIPE_FETCH_REALTIME_UPDATES set to false, no door alert emails sent.')
 
 
 def post_alert(data):
