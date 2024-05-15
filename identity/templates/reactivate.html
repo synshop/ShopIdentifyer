@@ -57,7 +57,7 @@
       {% else %}
       <td><a href="/member/{{ e['stripe_id'] }}/edit">{{ e['full_name'] }}</a></td>
       {% endif %}
-      <td>{{ e['subscription_description'] | upper }}</td>
+      <td><a href="https://dashboard.stripe.com/customers/{{e['stripe_id']}}" target=”_blank”>{{ e['subscription_description'] | upper }} </a></td>
       <td>{{ e['last_payment_status'] | upper }}</td>
     </tr>
     {% endfor %}
