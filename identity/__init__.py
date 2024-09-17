@@ -356,9 +356,10 @@ def send_door_access_alert_email(sub_id=None):
         member['full_name'],
         stripe_info['stripe_subscription_description'],
         stripe_info['stripe_last_payment_status'],
+        member['discord_username'],
     )
 
-    email_subject = "[DOOR ACCESS ALERT] - %s swiped in" % (member['full_name'],)
+    email_subject = "[DOOR ACCESS ALERT] - %s (%s) swiped in" % (member['full_name'],member['discord_username'])
     email_body = """
     The following member swiped in:
 
@@ -369,6 +370,9 @@ def send_door_access_alert_email(sub_id=None):
     %s
     
     Last Payment Status:
+    %s
+
+    Discord Username:
     %s
 
     """ % email_body_data
