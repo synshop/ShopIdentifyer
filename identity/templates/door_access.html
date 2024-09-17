@@ -79,7 +79,7 @@
     <tr class="table-primary">
         <th>EB ID</th>
         <th>EB Status</th>
-        <th>RFID (Hex)</th>
+        <th>RFID Hex (Int)</th>
         <th>Created On</th>
         <th>Action</th>
     </tr>
@@ -90,7 +90,7 @@
     <tr>
       <td>{{ e['eb_id'] }}</td>
       <td>{{ e['eb_status'] }}</td>
-      <td>{{ e['rfid_token_hex'] }}</td>
+      <td>{{ e['rfid_token_hex'] }} (<script type="text/javascript">document.write(Number("0x{{ e['rfid_token_hex'] }}"));</script>)</td>
       <td>{{ e['created_on'] }}</td>
       <td><a href="javascript:void(0);" class="assignToken" id="{{ e['eb_id'] }}-{{ e['rfid_token_hex'] }}">Assign</a></td>
     </tr>
@@ -105,7 +105,7 @@
   <tr class="table-primary">
       <th>EB ID</th>
       <th>EB Status</th>
-      <th>RFID (Hex)</th>
+      <th>RFID Hex (Int)</th>
       <th>Comment</th>
       <th>Attached To</th>
       <th>Created On</th>
@@ -123,7 +123,7 @@
 
     <td>{{ e['eb_id'] | upper }}</td>
     <td>{{ e['eb_status'] }} / {{ e['status'] }}</td>
-    <td>{{ e['rfid_token_hex'] }}</td>
+    <td>{{ e['rfid_token_hex'] }} (<script type="text/javascript">document.write(Number("0x{{ e['rfid_token_hex'] }}"));</script>)</td>
     <td>{{ e['rfid_token_comment'] }}</td>
     <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['full_name'] }}</a></td>
     <td>{{ e['created_on'] }}</td>
