@@ -50,7 +50,7 @@
     {% for e in inactive_members %}
     <tr>
       <td><a href="/member/{{ e['stripe_id'] }}/edit">{{ e['full_name'] }}</a></td>
-      <td><a href="https://dashboard.stripe.com/customers/{{e['stripe_id']}}" target=”_blank”>No Subscription</a></td>
+      <td><a href="https://dashboard.stripe.com/customers/{{e['stripe_id']}}" target=”_blank”>NO SUBSCRIPTION</a></td>
     </tr>
     {% endfor %}
 </tbody>
