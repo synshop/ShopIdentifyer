@@ -32,4 +32,4 @@ svgwrite==1.4.3
 tzdata==2022.1
 tzlocal==4.2
 urllib3==2.8.0
-Werkzeug==3.0.3
+Werkzeug==3.1.9
