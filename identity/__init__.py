@@ -739,7 +739,7 @@ def get_inactive_members():
 
 
 # Members without a Stripe subscription who still have access:
-# ACTIVE, VETTED or holding RFID token(s)
+# ACTIVE, VETTED or holding RFID token(s) still on the door controller (EB ID set)
 def get_members_to_offboard():
     db = get_db()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -757,7 +757,7 @@ def get_members_to_offboard():
             m.stripe_id NOT IN (select stripe_id from stripe_cache where stripe_id is not null)
         AND
             (m.member_status = "ACTIVE" OR m.is_vetted = "VETTED" OR
-             EXISTS (select 1 from rfid_tokens r where r.stripe_id = m.stripe_id))
+             EXISTS (select 1 from rfid_tokens r where r.stripe_id = m.stripe_id and r.eb_id is not null))
         ORDER BY
             m.full_name
     """
@@ -766,7 +766,7 @@ def get_members_to_offboard():
 
     for m in members:
         cur.execute("select rfid_token_hex, eb_id, eb_status, rfid_token_comment from rfid_tokens "
-                    "where stripe_id = %s", (m['stripe_id'],))
+                    "where stripe_id = %s and eb_id is not null", (m['stripe_id'],))
         m['rfid_tokens'] = cur.fetchall()
 
     return members
@@ -813,17 +813,19 @@ def offboard_member(stripe_id=None):
                 (stripe_id,))
     results.append(("Member status", True, "Set to INACTIVE / NOT VETTED"))
 
-    cur.execute("select rfid_token_hex, eb_id from rfid_tokens where stripe_id = %s", (stripe_id,))
+    # Members keep their tokens; they're deactivated and taken off the door controller (EB ID cleared)
+    cur.execute("select rfid_token_hex, eb_id from rfid_tokens where stripe_id = %s and eb_id is not null",
+                (stripe_id,))
     tokens = cur.fetchall()
-    cur.execute("update rfid_tokens set stripe_id = NULL, status = 'UNASSIGNED', eb_status = 'INACTIVE', "
-                "eb_id = NULL where stripe_id = %s", (stripe_id,))
+    cur.execute("update rfid_tokens set eb_status = 'INACTIVE', eb_id = NULL where stripe_id = %s and "
+                "eb_id is not null", (stripe_id,))
     db.commit()
 
     if tokens:
         token_list = ", ".join("%s (EB ID %s)" % (t['rfid_token_hex'], t['eb_id']) for t in tokens)
-        results.append(("RFID token(s)", True, "Unassigned and set INACTIVE: " + token_list))
+        results.append(("RFID token(s)", True, "Set INACTIVE and cleared EB ID: " + token_list))
     else:
-        results.append(("RFID token(s)", True, "Member had no tokens"))
+        results.append(("RFID token(s)", True, "Member had no tokens on the door controller"))
 
     app.logger.info("[OFFBOARD] - User %s offboarded %s, tokens: %s" % (
         session.get('email'), stripe_id, [t['rfid_token_hex'] for t in tokens]))
