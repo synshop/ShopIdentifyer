@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
   <meta charset="utf-8">
@@ -17,7 +17,7 @@
   {# Pages can set brand_href before their blocks; an empty value renders the brand without a link #}
   {% set brand_href = brand_href if brand_href is defined else '/admin' %}
 
-  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+  <nav class="navbar navbar-expand bg-body-tertiary" style="margin-bottom:30px;">
     <div class="container">
       <a class="navbar-brand"{% if brand_href %} href="{{ brand_href }}"{% endif %}>
         SYN Shop Identity Management
