@@ -716,6 +716,7 @@ def get_inactive_members():
             m.full_name,
             m.is_vetted,
             m.changed_on,
+            COALESCE(s.discord_username, m.discord_username) AS discord_username,
             s.subscription_id,
             s.subscription_description,
             s.last_payment_status
