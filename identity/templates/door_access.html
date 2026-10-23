@@ -69,7 +69,16 @@
   <input type="hidden" id="rfid_token_hex" name="rfid_token_hex" />
   
   <div class="alert alert-success" role="alert">
-    What should I say here?
+    This page tracks RFID tokens in this system. It doesn't change the door controller, so add or
+    remove cards there by hand as well.
+    <ul style="margin-top:10px;margin-bottom:0px;">
+      <li><b>Unassigned:</b> tokens not attached to a member. Use <b>Add New Token</b> to register a new
+        card, then <b>Assign</b> to give it to a vetted, active member.</li>
+      <li><b>Assigned:</b> members' tokens that are on the door controller (they have an EB ID).</li>
+      <li><b>Inactive:</b> members' tokens that have been taken off the door controller (no EB ID), usually
+        because the member was offboarded. Rows in yellow are marked Active but have no EB ID, so check
+        the controller.</li>
+    </ul>
   </div>
 
   <h2>Unassigned RFID Tokens</h2>
