@@ -45,16 +45,16 @@
       Onboard New Members
       <span class="badge bg-primary rounded-pill">{{ us.total_need_onboarding.count }}</span>
     </a>
-    <a href="/admin/reactivate" class="list-group-item d-flex justify-content-between align-items-center">
-      Reactivate Member
-      <span class="badge bg-primary rounded-pill">{{ us.total_need_reactivation.count }}</span>
-    </a>
     <a href="/admin/offboard" class="list-group-item d-flex justify-content-between align-items-center">
       Offboard Cancelled Members
       <span class="badge bg-primary rounded-pill">{{ us.total_need_offboarding.count }}</span>
     </a>
-    <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
+    <a href="/admin/reactivate" class="list-group-item d-flex justify-content-between align-items-center">
+      Reactivate Member
+      <span class="badge bg-primary rounded-pill">{{ us.total_need_reactivation.count }}</span>
+    </a>
     <a href="/admin/dooraccess" class="list-group-item">RFID Token Management</a>
+    <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
   </div>
 
   <h2>Last 5 Door Access Events</h2>
