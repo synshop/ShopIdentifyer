@@ -874,6 +874,46 @@ def get_member_rfid_tokens(stripe_id=None):
     return ", ".join(rfid_tokens)
 
 
+# Granted door swipes for a member: totals per year, and per month for the current year
+def get_member_swipe_history(stripe_id=None):
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    today = datetime.date.today()
+
+    cur.execute('''
+        SELECT
+            YEAR(created_on) AS year,
+            COUNT(*) AS swipes,
+            COUNT(DISTINCT DATE(created_on)) AS days_visited
+        FROM event_log
+        WHERE stripe_id = %s AND event_type = "ACCESS_GRANT"
+        GROUP BY YEAR(created_on)
+        ORDER BY year DESC''', (stripe_id,))
+    years = cur.fetchall()
+
+    cur.execute('''
+        SELECT
+            MONTH(created_on) AS month,
+            COUNT(*) AS swipes,
+            COUNT(DISTINCT DATE(created_on)) AS days_visited
+        FROM event_log
+        WHERE stripe_id = %s AND event_type = "ACCESS_GRANT" AND created_on >= %s
+        GROUP BY MONTH(created_on)''', (stripe_id, datetime.date(today.year, 1, 1)))
+    by_month = {r['month']: r for r in cur.fetchall()}
+
+    # Every month from January to now, including months with no swipes
+    months = []
+    for m in range(1, today.month + 1):
+        r = by_month.get(m, {})
+        months.append({
+            'month': datetime.date(today.year, m, 1).strftime('%B'),
+            'swipes': r.get('swipes', 0),
+            'days_visited': r.get('days_visited', 0)
+        })
+
+    return {'year': today.year, 'years': years, 'months': months}
+
+
 # Insert a newly on-boarded member into the system
 def insert_new_member(stripe_id=None, r=None):
 
@@ -1316,7 +1356,9 @@ def onboard_new_member(stripe_id):
 @app.route('/member/<stripe_id>')
 @login_required
 def show_member(stripe_id):
-    return render_template('show_member.html', member=get_member(stripe_id))
+    member = get_member(stripe_id)
+    swipes = get_member_swipe_history(stripe_id) if member['rfid_tokens'] else None
+    return render_template('show_member.html', member=member, swipes=swipes)
 
 
 # Edit member details
