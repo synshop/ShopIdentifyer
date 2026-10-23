@@ -47,7 +47,7 @@
       <tbody>
       {% for e in el %}
         {% if e['event_type'] | upper == "ACCESS_DENY" %}
-        <tr class="table-danger">
+        <tr class="table-warning">
         {% else %}
         <tr>
         {% endif %}
@@ -87,7 +87,7 @@
         {% if entry['subscription_description'] | upper == "PAUSED MEMBERSHIP" %}
         <tr class="table-warning paused">
         {% elif entry['last_payment_status'] | upper != "SUCCEEDED" and entry['last_payment_status'] != None %}
-        <tr class="table-danger">
+        <tr class="table-warning">
         {% else %}
         <tr>
         {% endif %}
