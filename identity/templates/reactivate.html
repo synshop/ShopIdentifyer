@@ -37,19 +37,24 @@
     Please note that only members with <b>Active</b> Stripe subscriptions 
     can be reactivated.  
   </div>
-  <form method="POST">
-    
+  {% set with_sub = inactive_members | selectattr('subscription_id') | list %}
+  {% set no_sub = inactive_members | rejectattr('subscription_id') | list %}
+
+  <h3>{{ with_sub | length }} Member(s) Need Reactivation</h3>
+  <p>Inactive members who have a subscription in Stripe.</p>
+
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
         <th>Full Name</th>
         <th>Discord</th>
         <th>Subscription Plan</th>
+        <th>Subscription Status</th>
         <th>Record Last Modified</th>
     </tr>
     </thead>
     <tbody>
-    {% for e in inactive_members %}
+    {% for e in with_sub %}
     <tr>
       {% if e['subscription_status'] == 'active' %}
       <td><a href="/member/{{ e['stripe_id'] }}/edit">{{ e['full_name'] }}</a></td>
@@ -57,14 +62,41 @@
       <td>{{ e['full_name'] }}</td>
       {% endif %}
       <td>{{ e['discord_username'] or '' }}</td>
-      <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['subscription_description'] or 'NO SUBSCRIPTION' }}</a></td>
+      <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['subscription_description'] }}</a></td>
+      <td>{{ e['subscription_status'] | upper }}</td>
       <td>{{ e['changed_on'] }}</td>
     </tr>
+    {% else %}
+    <tr><td colspan="5">No inactive members currently have a subscription</td></tr>
     {% endfor %}
-</tbody>
-</table>
+    </tbody>
+  </table>
 
-</form>
+  <h3 style="margin-top:30px;">{{ no_sub | length }} Member(s) With No Subscription</h3>
+  <p>Inactive members with no subscription in Stripe. They can't be reactivated until they resubscribe.</p>
+
+  <table class="table table-hover table-bordered">
+    <thead>
+    <tr class="table-primary">
+        <th>Full Name</th>
+        <th>Discord</th>
+        <th>Stripe</th>
+        <th>Record Last Modified</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for e in no_sub %}
+    <tr>
+      <td>{{ e['full_name'] }}</td>
+      <td>{{ e['discord_username'] or '' }}</td>
+      <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">NO SUBSCRIPTION</a></td>
+      <td>{{ e['changed_on'] }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4">None</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
 
 </div>
 </body>
