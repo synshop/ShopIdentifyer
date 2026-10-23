@@ -1178,6 +1178,13 @@ def get_public_stats():
             'sql': 'select count(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
         },
+        # Same criteria as get_members_to_offboard()
+        'total_need_offboarding': {
+            'count': 0,
+            'sql': 'SELECT COUNT(*) FROM members m WHERE m.stripe_id NOT IN (SELECT stripe_id FROM stripe_cache '
+                   'WHERE stripe_id IS NOT NULL) AND (m.member_status = "ACTIVE" OR m.is_vetted = "VETTED" OR '
+                   'EXISTS (SELECT 1 FROM rfid_tokens r WHERE r.stripe_id = m.stripe_id AND r.eb_id IS NOT NULL))'
+        },
         'total_vetted': {
             'count': 0,
             'sql': 'SELECT COUNT(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" AND stripe_id IN (SELECT stripe_id FROM members WHERE IS_VETTED = "VETTED" AND member_status = "ACTIVE");'
