@@ -536,7 +536,7 @@ def m_add_all_discord_roles():
         cur = db.cursor()
 
         # Get discord handles for Vetted Members
-        stmt = 'select discord_handle from members where IS_VETTED = "VETTED" and discord_handle IS NOT NULL'
+        stmt = 'select discord_username from members where IS_VETTED = "VETTED" and discord_username IS NOT NULL'
         cur.execute(stmt)
         for member in cur.fetchall():
             discord_id = get_member_discord_id(member[0])
@@ -544,8 +544,8 @@ def m_add_all_discord_roles():
             time.sleep(5)
 
         # Get discord handles for ACTIVE Members with valid Subscription Plans
-        stmt = 'select m.discord_handle, m.stripe_id, sc.subscription_description from members m, stripe_cache sc ' \
-               'where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_handle IS NOT NULL '
+        stmt = 'select m.discord_username, m.stripe_id, sc.subscription_description from members m, stripe_cache sc ' \
+               'where m.stripe_id = sc.stripe_id AND m.member_status = "ACTIVE" and m.discord_username IS NOT NULL '
         cur.execute(stmt)
         for member in cur.fetchall():
             discord_id = get_member_discord_id(member[0])
@@ -715,10 +715,11 @@ def get_inactive_members():
             m.stripe_id,
             m.full_name,
             m.is_vetted,
+            m.changed_on,
             s.subscription_id,
             s.subscription_description,
             s.last_payment_status
-        FROM 
+        FROM
             members m
         LEFT JOIN
             stripe_cache s on s.stripe_id = m.stripe_id
@@ -808,7 +809,13 @@ def get_member(stripe_id=None):
 
     db = get_db()
     cur = db.cursor()
-    if config.STRIPE_FETCH_REALTIME_UPDATES:
+    if subscription_id in ("NA", None):
+        # Members without an active subscription aren't in stripe_cache, so there's nothing to fetch
+        app.logger.info("[STRIPE] - no subscription found for %s, skipping real-time update" % (stripe_id,))
+        member["stripe_status"] = "NO SUBSCRIPTION"
+        member["stripe_plan"] = "NO SUBSCRIPTION"
+        member["stripe_email"] = None
+    elif config.STRIPE_FETCH_REALTIME_UPDATES:
         app.logger.info("[STRIPE] - updating real-time stripe information for %s" % (stripe_id,))
         stripe_info = identity.stripe.get_realtime_stripe_info(subscription_id)
 
@@ -836,17 +843,17 @@ def get_member(stripe_id=None):
                 m.mobile,
                 m.emergency_contact_name,
                 m.emergency_contact_mobile,
-                sc.full_name,
+                COALESCE(sc.full_name, m.full_name) AS full_name,
                 sc.email,
                 sc.subscription_status,
                 sc.last_payment_status,
-                sc.discord_username
+                COALESCE(sc.discord_username, m.discord_username, '') AS discord_username
             FROM
-                members m,
-                stripe_cache sc
+                members m
+            LEFT JOIN
+                stripe_cache sc ON sc.stripe_id = m.stripe_id
             WHERE
-                m.stripe_id = sc.stripe_id and
-                sc.stripe_id = %s
+                m.stripe_id = %s
             """
     
     cur = db.cursor(MySQLdb.cursors.DictCursor)

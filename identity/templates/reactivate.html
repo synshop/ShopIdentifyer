@@ -44,13 +44,15 @@
     <tr class="table-primary">
         <th>Full Name</th>
         <th>Subscription Plan</th>
+        <th>Record Last Modified</th>
     </tr>
     </thead>
     <tbody>
     {% for e in inactive_members %}
     <tr>
       <td><a href="/member/{{ e['stripe_id'] }}/edit">{{ e['full_name'] }}</a></td>
-      <td><a href="https://dashboard.stripe.com/customers/{{e['stripe_id']}}" target=”_blank”>NO SUBSCRIPTION</a></td>
+      <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['subscription_description'] or 'NO SUBSCRIPTION' }}</a></td>
+      <td>{{ e['changed_on'] }}</td>
     </tr>
     {% endfor %}
 </tbody>
