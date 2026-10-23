@@ -10,6 +10,13 @@
   <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <style>
+    /* Flatly colours links mint green; use the theme's blue instead */
+    :root {
+      --bs-link-color: #3498db;
+      --bs-link-color-rgb: 52, 152, 219;
+      --bs-link-hover-color: #2a7aaf;
+      --bs-link-hover-color-rgb: 42, 122, 175;
+    }
     /* Bootstrap's table-danger/warning/success rows keep their light colours in dark mode;
        use the theme's subtle palette instead */
     [data-bs-theme=dark] .table-danger,
