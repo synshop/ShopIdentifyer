@@ -1,33 +1,6 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<title>SYN Shop Admin Interface</title>
-
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-
-  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-
-</head>
-<body>
-
-  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container">
-      <a class="navbar-brand" href="/admin">
-        SYN Shop Identity Management
-      </a>
-      <ul class="navbar-nav">
-        {% if session.logged_in %}
-        <li><a class="nav-link active" aria-current="page" href="/logout">Logout</a></li>
-        {% else %}
-        <li><a class="nav-link active" aria-current="page" href="/login">Login</a></li>
-        {% endif %}  
-      </ul>
-    </div>
-  </nav>
-
+{% block content %}
 <div class="container">
 
   <div class="alert alert-success" role="alert" role="alert">
@@ -99,5 +72,4 @@
   </table>
 
 </div>
-</body>
-</html>
+{% endblock %}

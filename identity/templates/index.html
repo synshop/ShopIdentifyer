@@ -1,32 +1,8 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<title>SYN Shop Admin Interface</title>
+{% set brand_href = '' %}
 
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="shortcut icon" href="/static/images/favicon.ico">
-  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-  <script src="/static/js/bootstrap.bundle.min.js"></script>
-</head>
-
-<body>
-
-  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
-    <div class="container">
-      <a class="navbar-brand">
-        SYN Shop Identity Management
-      </a>
-      <ul class="navbar-nav">
-        {% if session.logged_in %}
-        <li><a class="nav-link active" aria-current="page" href="/logout">Logout</a></li>
-        {% else %}
-        <li><a class="nav-link active" aria-current="page" href="/login">Login</a></li>
-        {% endif %}  
-      </ul>
-    </div>
-  </nav>
-
+{% block content %}
   <div class="container-fluid" style="padding:100px;width:75%;">
       <h1>
         SYN Shop currently has:
@@ -38,5 +14,4 @@
         <h1><li><span class="text-primary">{{ stats['total_need_offboarding']['count'] }} needing offboarding</span></li></h1>
       </ul>
   </div>
-</body>
-</html>
+{% endblock %}
