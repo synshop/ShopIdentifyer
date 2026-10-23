@@ -31,19 +31,27 @@
 <div class="container">
   
   <div class="alert alert-success" role="alert">
-    This data is sent from Electric Badger in real-time.
+    Electric Badger, the door controller, sends every badge swipe here as it happens. Electric Badger
+    decides whether to open the door; this page only records the result.
+    <ul style="margin-top:10px;margin-bottom:0px;">
+      <li><b>Top 10:</b> the members with the most granted swipes since January 1st.</li>
+      <li><b>Recent Events:</b> the last 100 swipes, newest first. <b>ACCESS_GRANT</b> means the door opened
+        and <b>ACCESS_DENY</b> means it didn't.</li>
+      <li><b>UNREGISTERED BADGE:</b> the badge isn't attached to a member in this system. Check RFID Token
+        Management if it was let in.</li>
+    </ul>
   </div>
 
-  <h2>Top 10 Member Logins for {{ year }}</h2>
+  <h2>Top 10 Members by Door Swipes for {{ year }}</h2>
   <p>Granted door swipes since January 1st. Days Visited counts each day once, however many times they swiped.</p>
   <table class="table table-hover table-bordered">
     <thead>
     <tr class="table-primary">
       <th>Rank</th>
       <th>Member Name</th>
-      <th>Logins</th>
+      <th>Door Swipes</th>
       <th>Days Visited</th>
-      <th>Last Login</th>
+      <th>Last Swipe</th>
     </tr>
     </thead>
     <tbody>
@@ -56,7 +64,7 @@
       <td>{{ t['last_login'] }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="5">No logins yet this year</td></tr>
+    <tr><td colspan="5">No door swipes yet this year</td></tr>
     {% endfor %}
     </tbody>
   </table>
