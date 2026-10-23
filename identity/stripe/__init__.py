@@ -65,6 +65,7 @@ def get_customer_attributes(subscription):
     return user
 
 def get_stripe_customers(incremental=False):
+    
     member_array = []
     subscriptions = stripe.Subscription.list()
 
