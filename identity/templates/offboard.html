@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<title>SYN Shop Admin Interface</title>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+</head>
+<body>
+
+  <nav class="navbar navbar-expand bg-primary" data-bs-theme="dark" style="margin-bottom:30px;">
+    <div class="container">
+      <a class="navbar-brand" href="/admin">
+        SYN Shop Identity Management
+      </a>
+      <ul class="navbar-nav">
+        {% if session.logged_in %}
+        <li><a class="nav-link active" aria-current="page" href="/logout">Logout</a></li>
+        {% else %}
+        <li><a class="nav-link active" aria-current="page" href="/login">Login</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+
+  <div class="alert alert-success" role="alert">
+    These members no longer have a Stripe subscription but still have access to the shop.
+    Offboarding a member sets them to Inactive / Not Vetted, unassigns and deactivates their
+    RFID token(s), and removes their Paid and Vetted Discord roles.
+    <br/><br/>
+    <b>RFID tokens must be removed from the door controller by hand first.</b>
+    Members with tokens can only be offboarded once you've confirmed that.
+  </div>
+
+  {% if error %}
+  <div class="alert alert-danger" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <h3>{{ members | length }} Member(s) Need Offboarding</h3>
+  <code>Cache Rebuilt: {{ stripe_cache_rebuild }}</code>
+
+  <table class="table table-hover table-bordered" id="results">
+    <thead>
+    <tr class="table-primary">
+        <th>Full Name</th>
+        <th>Status</th>
+        <th>RFID Token(s)</th>
+        <th>Discord</th>
+        <th>Record Last Modified</th>
+        <th>Offboard</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for e in members %}
+    <tr>
+      <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['full_name'] }}</a></td>
+      <td>{{ e['member_status'] }} / {{ e['is_vetted'] }}</td>
+      <td>
+        {% for t in e['rfid_tokens'] %}
+          {{ t['rfid_token_hex'] }} (EB ID {{ t['eb_id'] }}, {{ t['eb_status'] }})<br/>
+        {% else %}
+          None
+        {% endfor %}
+      </td>
+      <td>{{ e['discord_username'] or '' }}</td>
+      <td>{{ e['changed_on'] }}</td>
+      <td>
+        <form method="POST" action="/admin/offboard/{{ e['stripe_id'] }}"
+              onsubmit='return confirm({{ ("Offboard " ~ e["full_name"] ~ "?") | tojson }});'>
+          {% if e['rfid_tokens'] %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="controller_confirmed" value="yes"
+                   id="confirm-{{ e['stripe_id'] }}" required>
+            <label class="form-check-label" for="confirm-{{ e['stripe_id'] }}">
+              Card(s) removed from door controller
+            </label>
+          </div>
+          {% endif %}
+          <button type="submit" class="btn btn-danger btn-sm">Offboard</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No members currently need offboarding</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+</body>
+</html>

@@ -173,38 +173,29 @@ def refresh_members_table():
 
 
 
-# Archive (set m.status to INACTIVE) for members w/o a subscription
-# and send a nightly email report
+# Nightly email report of members who no longer have a Stripe subscription
+# but still have access. Offboarding itself is done manually at /admin/offboard
 @s1.scheduled_job(CronTrigger.from_crontab(app.config['STRIPE_CACHE_DEACTIVATE_CRON']))
-def archive_members_no_sub():
+def report_members_to_offboard():
     with app.app_context():
 
-        app.logger.info("[ARCHIVE MEMBERS] - Starting archiving process...")
+        app.logger.info("[OFFBOARD REPORT] - Checking for members to offboard...")
         db = get_db()
         cur = db.cursor()
-        sql = 'select m.stripe_id, m.full_name, created_on, m.discord_username from members m where m.stripe_id not in (select stripe_id from stripe_cache) and m.member_status = "ACTIVE"'
+        cur.execute("select count(*) from stripe_cache")
 
-        cur.execute(sql)
-        members = cur.fetchall()
+        # An empty cache means the rebuild failed, and every member would look cancelled
+        if cur.fetchone()[0] == 0:
+            app.logger.info("[OFFBOARD REPORT] - stripe_cache is empty, skipping report.")
+            return
 
-        if len(members) != 0:
+        members = get_members_to_offboard()
+        bad_standing = get_members_in_bad_standing()
 
-            for member in members:
-                send_member_deactivation_email(member)
-
-                # Remove Vetted and Paid Member Discord Roles if member has a discord handle
-                if member[3] != None and app.config["DISCORD_MANAGE_ROLES"]:
-                    app.logger.info("[ARCHIVE MEMBERS] - Removing Discord Roles for " + member[0])
-                    discord_id = get_member_discord_id(member[3])
-                    unassign_discord_role(app.config['DISCORD_ROLE_PAID_MEMBER'], discord_id)
-                    unassign_discord_role(app.config['DISCORD_ROLE_VETTED_MEMBER'], discord_id)
-
-            # Do the deactivation
-            sql_stmt = 'update members set member_status = "INACTIVE", is_vetted = "NOT VETTED" where stripe_id = %s'
-            cur.execute(sql_stmt,(member[0],))
-            db.commit()
+        if len(members) != 0 or len(bad_standing) != 0:
+            send_offboarding_report_email(members, bad_standing)
         else:
-            app.logger.info("[ARCHIVE MEMBERS] - No members need archiving.")
+            app.logger.info("[OFFBOARD REPORT] - No members need offboarding or are in bad standing.")
 
 
 if config.SCHEDULER_ENABLED == True:
@@ -270,26 +261,35 @@ def is_admin(email=None):
             return False
    
 
-# Send a nightly report
-def send_member_deactivation_email(member):
-    has_tokens = member_has_authorized_rfid(member[0])
+# Send a nightly report of members who need offboarding
+def send_offboarding_report_email(members, bad_standing=()):
+    email_subject = "[OFFBOARDING] - %s member(s) need offboarding, %s in bad standing" % (
+        len(members), len(bad_standing))
 
-    email_subject = "[ARCHIVING MEMBER] - %s no longer has a Stripe subscription" % (member[1],)
-    email_body = """
-    
-    Full Name:
-    %s
-    
-    Account Created On:
-    %s
+    lines = []
+    for m in members:
+        tokens = ", ".join(t['rfid_token_hex'] for t in m['rfid_tokens']) or "none"
+        lines.append("%s (%s)\n      Status: %s, %s\n      RFID Token(s): %s\n      Discord: %s" % (
+            m['full_name'], m['stripe_id'], m['member_status'], m['is_vetted'], tokens,
+            m['discord_username'] or "none"))
 
-    Has RFID Token(s)
-    %s
+    bad_lines = []
+    for m in bad_standing:
+        bad_lines.append("%s (%s)\n      Subscription: %s, %s\n      Last Payment: %s\n      Email: %s\n"
+                         "      Has RFID Token(s): %s" % (
+            m['full_name'], m['stripe_id'], m['subscription_description'], m['subscription_status'],
+            m['last_payment_status'], m['email'], member_has_authorized_rfid(m['stripe_id'])))
 
-    """ % (member[1], member[2], has_tokens)
+    email_body = "NEED OFFBOARDING\n" \
+                 "These members no longer have a Stripe subscription but still have access.\n" \
+                 "Offboard them at /admin/offboard\n\n" + ("\n\n".join(lines) or "None") + "\n\n\n" \
+                 "BAD STANDING (heads up, no action needed yet)\n" \
+                 "These active members have a past due or unpaid subscription. Stripe will cancel it\n" \
+                 "if payment keeps failing, and they'll then show up for offboarding.\n\n" + \
+                 ("\n\n".join(bad_lines) or "None") + "\n"
 
     if config.SMTP_SEND_EMAIL:
-        app.logger.info("Sending alert email about archiving a member")
+        app.logger.info("Sending offboarding report email")
         msg = EmailMessage()
         msg["to"] = config.SMTP_ALERT_TO
         msg["from"] = config.SMTP_ALERT_FROM
@@ -299,9 +299,10 @@ def send_member_deactivation_email(member):
             smtp.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             smtp.send_message(msg)
     else:
-        log_message = "[ARCHIVING MEMBERS][EMAIL DISABLED] - Deactivating %s in the system, Has RFIDs = %s" % (
-            member[0], has_tokens)
-        app.logger.info(log_message)
+        app.logger.info("[OFFBOARD REPORT][EMAIL DISABLED] - %s member(s) need offboarding: %s; "
+                        "%s in bad standing: %s" % (
+            len(members), ", ".join(m['stripe_id'] for m in members),
+            len(bad_standing), ", ".join(m['stripe_id'] for m in bad_standing)))
 
 
 # Send alert email about a member swiping in
@@ -735,6 +736,125 @@ def get_inactive_members():
     members = cur.fetchall()
 
     return members
+
+
+# Members without a Stripe subscription who still have access:
+# ACTIVE, VETTED or holding RFID token(s)
+def get_members_to_offboard():
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql_stmt = """
+        SELECT
+            m.stripe_id,
+            m.full_name,
+            m.member_status,
+            m.is_vetted,
+            m.discord_username,
+            m.changed_on
+        FROM
+            members m
+        WHERE
+            m.stripe_id NOT IN (select stripe_id from stripe_cache where stripe_id is not null)
+        AND
+            (m.member_status = "ACTIVE" OR m.is_vetted = "VETTED" OR
+             EXISTS (select 1 from rfid_tokens r where r.stripe_id = m.stripe_id))
+        ORDER BY
+            m.full_name
+    """
+    cur.execute(sql_stmt)
+    members = cur.fetchall()
+
+    for m in members:
+        cur.execute("select rfid_token_hex, eb_id, eb_status, rfid_token_comment from rfid_tokens "
+                    "where stripe_id = %s", (m['stripe_id'],))
+        m['rfid_tokens'] = cur.fetchall()
+
+    return members
+
+
+# Active members whose subscription is past_due or unpaid
+def get_members_in_bad_standing():
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql_stmt = """
+        SELECT
+            m.stripe_id,
+            COALESCE(s.full_name, m.full_name) AS full_name,
+            s.email,
+            s.subscription_description,
+            s.subscription_status,
+            s.last_payment_status
+        FROM
+            members m
+        JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        WHERE
+            m.member_status = "ACTIVE"
+        AND
+            s.subscription_status in ("past_due", "unpaid")
+        ORDER BY
+            s.subscription_status, full_name
+    """
+    cur.execute(sql_stmt)
+    return cur.fetchall()
+
+
+# Revoke vetted status, deactivate RFID token(s) and remove Discord roles.
+# Returns a list of (step, ok, detail) for the results page
+def offboard_member(stripe_id=None):
+    results = []
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+
+    cur.execute("select full_name, discord_username from members where stripe_id = %s", (stripe_id,))
+    member = cur.fetchone()
+
+    cur.execute("update members set member_status = 'INACTIVE', is_vetted = 'NOT VETTED' where stripe_id = %s",
+                (stripe_id,))
+    results.append(("Member status", True, "Set to INACTIVE / NOT VETTED"))
+
+    cur.execute("select rfid_token_hex, eb_id from rfid_tokens where stripe_id = %s", (stripe_id,))
+    tokens = cur.fetchall()
+    cur.execute("update rfid_tokens set stripe_id = NULL, status = 'UNASSIGNED', eb_status = 'INACTIVE', "
+                "eb_id = NULL where stripe_id = %s", (stripe_id,))
+    db.commit()
+
+    if tokens:
+        token_list = ", ".join("%s (EB ID %s)" % (t['rfid_token_hex'], t['eb_id']) for t in tokens)
+        results.append(("RFID token(s)", True, "Unassigned and set INACTIVE: " + token_list))
+    else:
+        results.append(("RFID token(s)", True, "Member had no tokens"))
+
+    app.logger.info("[OFFBOARD] - User %s offboarded %s, tokens: %s" % (
+        session.get('email'), stripe_id, [t['rfid_token_hex'] for t in tokens]))
+
+    discord_username = member['discord_username'] if member else None
+
+    if not app.config["DISCORD_MANAGE_ROLES"]:
+        results.append(("Discord roles", False, "Discord role management is disabled, remove roles manually"))
+    elif discord_username in (None, "", "None"):
+        results.append(("Discord roles", True, "Member has no Discord username"))
+    else:
+        try:
+            discord_id = get_member_discord_id(discord_username)
+            if discord_id == "000000000000000000":
+                results.append(("Discord roles", False,
+                                "%s not found in the Discord server, remove roles manually" % (discord_username,)))
+            else:
+                failed = []
+                for role in ("DISCORD_ROLE_PAID_MEMBER", "DISCORD_ROLE_VETTED_MEMBER"):
+                    r = unassign_discord_role(app.config[role], discord_id)
+                    if r.status_code != 204:
+                        failed.append("%s (HTTP %s)" % (role, r.status_code))
+                if failed:
+                    results.append(("Discord roles", False, "Failed to remove: " + ", ".join(failed)))
+                else:
+                    results.append(("Discord roles", True, "Removed Paid and Vetted roles from " + discord_username))
+        except Exception as e:
+            app.logger.info("[OFFBOARD] - Discord error for %s: %s" % (stripe_id, e))
+            results.append(("Discord roles", False, "Error talking to Discord (%s), remove roles manually" % (e,)))
+
+    return results
 
 
 # Fetch the rfid_token(s) for a user
@@ -1346,3 +1466,32 @@ def show_eventlog_landing():
 @login_required
 def show_reactivate_member():
     return render_template('reactivate.html', inactive_members=get_inactive_members())
+
+
+@app.route('/admin/offboard', methods=['GET'])
+@login_required
+def show_offboard_members():
+    return render_template('offboard.html', members=get_members_to_offboard(),
+                           stripe_cache_rebuild=get_kv_item('stripe_cache_rebuild'))
+
+
+@app.route('/admin/offboard/<stripe_id>', methods=['POST'])
+@login_required
+def offboard_member_post(stripe_id):
+    member = next((m for m in get_members_to_offboard() if m['stripe_id'] == stripe_id), None)
+
+    # Only offboard members on the list, never someone with a current subscription
+    if member is None:
+        return render_template('offboard.html', members=get_members_to_offboard(),
+                               stripe_cache_rebuild=get_kv_item('stripe_cache_rebuild'),
+                               error="That member can't be offboarded: they have a Stripe subscription or "
+                                     "nothing left to revoke.")
+
+    if member['rfid_tokens'] and request.form.get('controller_confirmed') != 'yes':
+        return render_template('offboard.html', members=get_members_to_offboard(),
+                               stripe_cache_rebuild=get_kv_item('stripe_cache_rebuild'),
+                               error="Confirm that %s's card(s) have been removed from the door controller "
+                                     "before offboarding." % (member['full_name'],))
+
+    results = offboard_member(stripe_id)
+    return render_template('offboard_result.html', member=member, results=results)
