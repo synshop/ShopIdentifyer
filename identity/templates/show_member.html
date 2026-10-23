@@ -45,43 +45,6 @@
       </div>
     </div>
 
-    {% if swipes %}
-    <div class="card" style="margin-bottom:10px;">
-      <div class="card-header">
-        <h2 class="card-title">Door Swipes:</h2>
-      </div>
-      <div class="card-body">
-      <p>Granted door swipes. Days Visited counts each day once, however many times they swiped.</p>
-
-      <h5>{{ swipes.year }} by Month</h5>
-      <table class="table table-striped table-bordered">
-        <thead>
-        <tr><th>Month</th><th>Door Swipes</th><th>Days Visited</th></tr>
-        </thead>
-        <tbody>
-        {% for m in swipes.months %}
-        <tr><td>{{ m.month }}</td><td>{{ m.swipes }}</td><td>{{ m.days_visited }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-
-      <h5>By Year</h5>
-      <table class="table table-striped table-bordered">
-        <thead>
-        <tr><th>Year</th><th>Door Swipes</th><th>Days Visited</th></tr>
-        </thead>
-        <tbody>
-        {% for y in swipes.years %}
-        <tr><td>{{ y.year }}</td><td>{{ y.swipes }}</td><td>{{ y.days_visited }}</td></tr>
-        {% else %}
-        <tr><td colspan="3">No door swipes yet</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      </div>
-    </div>
-    {% endif %}
-
     <div class="card" style="margin-bottom:10px;">
       <div class="card-header">
         <h2 class="card-title">Emergency Contact Information:</h2>
@@ -118,6 +81,44 @@
       </table>
     </div>
     </div>
+
+
+    {% if swipes %}
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header">
+        <h2 class="card-title">Door Swipes:</h2>
+      </div>
+      <div class="card-body">
+      <p>Granted door swipes. Days Visited counts each day once, however many times they swiped.</p>
+
+      <h5>{{ swipes.year }} by Month</h5>
+      <table class="table table-striped table-bordered">
+        <thead>
+        <tr><th>Month</th><th>Door Swipes</th><th>Days Visited</th></tr>
+        </thead>
+        <tbody>
+        {% for m in swipes.months %}
+        <tr><td>{{ m.month }}</td><td>{{ m.swipes }}</td><td>{{ m.days_visited }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      <h5>By Year</h5>
+      <table class="table table-striped table-bordered">
+        <thead>
+        <tr><th>Year</th><th>Door Swipes</th><th>Days Visited</th></tr>
+        </thead>
+        <tbody>
+        {% for y in swipes.years %}
+        <tr><td>{{ y.year }}</td><td>{{ y.swipes }}</td><td>{{ y.days_visited }}</td></tr>
+        {% else %}
+        <tr><td colspan="3">No door swipes yet</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% endif %}
 
   </div>
 {% endblock %}
