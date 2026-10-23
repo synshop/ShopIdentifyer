@@ -32,20 +32,27 @@
 
   <div class="alert alert-success" role="alert">
     <h5>Current Member Statistics:</h5>
-    Total: {{ us.total_membership.count }},
     Active: {{ us.total_vetted.count + us.total_not_vetted.count }},
     Vetted: {{ us.total_vetted.count }},
     Not Vetted: {{ us.total_not_vetted.count }},
     Free: {{ us.total_free.count }},
-    Payment Issue: <span style="color:red;">{{ us.total_failed_payment.count }}</span>,
-    Need Offboarding: <a href="/admin/offboard" class="alert-link">{{ us.total_need_offboarding.count }}</a>
+    Payment Issue: <span style="color:red;">{{ us.total_failed_payment.count }}</span>
   </div>
 
   <div class="list-group" style="padding-bottom:30px;">
     <h2>What do you want to do?</h2>
-    <a href="/admin/onboard" class="list-group-item">Onboard New Members</a>
-    <a href="/admin/reactivate" class="list-group-item">Reactivate Member</a>
-    <a href="/admin/offboard" class="list-group-item">Offboard Cancelled Members</a>
+    <a href="/admin/onboard" class="list-group-item d-flex justify-content-between align-items-center">
+      Onboard New Members
+      <span class="badge bg-primary rounded-pill">{{ us.total_need_onboarding.count }}</span>
+    </a>
+    <a href="/admin/reactivate" class="list-group-item d-flex justify-content-between align-items-center">
+      Reactivate Member
+      <span class="badge bg-primary rounded-pill">{{ us.total_need_reactivation.count }}</span>
+    </a>
+    <a href="/admin/offboard" class="list-group-item d-flex justify-content-between align-items-center">
+      Offboard Cancelled Members
+      <span class="badge bg-primary rounded-pill">{{ us.total_need_offboarding.count }}</span>
+    </a>
     <a href="/admin/eventlog" class="list-group-item">View Access Control Event Log</a>
     <a href="/admin/dooraccess" class="list-group-item">RFID Token Management</a>
   </div>
