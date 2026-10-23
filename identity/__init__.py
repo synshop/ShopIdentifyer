@@ -1161,10 +1161,6 @@ def get_event_log(n=100):
 # Get public membership statistics
 def get_public_stats():
     stats = {
-        'total_membership': {
-            'count': 0,
-            'sql': 'select count(*) from stripe_cache'
-        },
         'total_free': {
             'count': 0,
             'sql': 'select count(*) from stripe_cache where subscription_description = "Free Membership"'
@@ -1177,6 +1173,12 @@ def get_public_stats():
             'count': 0,
             'sql': 'select count(*) FROM stripe_cache WHERE subscription_description <> "Paused Membership" and '
                    'stripe_id NOT IN (SELECT stripe_id FROM members) '
+        },
+        # Inactive members with a subscription, the "Need Reactivation" section of reactivate.html
+        'total_need_reactivation': {
+            'count': 0,
+            'sql': 'SELECT COUNT(*) FROM members m JOIN stripe_cache s ON s.stripe_id = m.stripe_id '
+                   'WHERE m.member_status = "INACTIVE" AND s.subscription_id IS NOT NULL'
         },
         # Same criteria as get_members_to_offboard()
         'total_need_offboarding': {
