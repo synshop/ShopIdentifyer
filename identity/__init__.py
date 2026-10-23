@@ -1158,6 +1158,36 @@ def get_event_log(n=100):
     return cur.fetchall()
 
 
+# Top members by granted door swipes since January 1st of the current year
+def get_top_logins(n=10):
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    sql_stmt = '''
+        SELECT
+            e.stripe_id,
+            m.full_name,
+            COUNT(*) AS logins,
+            COUNT(DISTINCT DATE(e.created_on)) AS days_visited,
+            MAX(e.created_on) AS last_login
+        FROM
+            event_log e
+        JOIN members m
+        ON
+            e.stripe_id = m.stripe_id
+        WHERE
+            e.event_type = "ACCESS_GRANT"
+        AND
+            e.created_on >= MAKEDATE(YEAR(CURDATE()), 1)
+        GROUP BY
+            e.stripe_id, m.full_name
+        ORDER BY
+            logins DESC
+        LIMIT %s'''
+
+    cur.execute(sql_stmt, (n,))
+    return cur.fetchall()
+
+
 # Get public membership statistics
 def get_public_stats():
     stats = {
@@ -1470,7 +1500,8 @@ def show_door_access_token_unassign():
 @app.route('/admin/eventlog', methods=['GET'])
 @login_required
 def show_eventlog_landing():
-    return render_template('event_log.html', entries=get_event_log())
+    return render_template('event_log.html', entries=get_event_log(), top_logins=get_top_logins(),
+                           year=datetime.date.today().year)
 
 
 @app.route('/admin/reactivate', methods=['GET'])

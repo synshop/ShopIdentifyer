@@ -31,9 +31,37 @@
 <div class="container">
   
   <div class="alert alert-success" role="alert">
-    This data is sent from Electric Badger in real-time.  
+    This data is sent from Electric Badger in real-time.
   </div>
 
+  <h2>Top 10 Member Logins for {{ year }}</h2>
+  <p>Granted door swipes since January 1st. Days Visited counts each day once, however many times they swiped.</p>
+  <table class="table table-hover table-bordered">
+    <thead>
+    <tr class="table-primary">
+      <th>Rank</th>
+      <th>Member Name</th>
+      <th>Logins</th>
+      <th>Days Visited</th>
+      <th>Last Login</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for t in top_logins %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><a href="/member/{{ t['stripe_id'] }}">{{ t['full_name'] }}</a></td>
+      <td>{{ t['logins'] }}</td>
+      <td>{{ t['days_visited'] }}</td>
+      <td>{{ t['last_login'] }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">No logins yet this year</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:30px;">Recent Events</h2>
   <table class="table table-hover table-bordered" id="results">
     <thead>
     <tr class="table-primary">
