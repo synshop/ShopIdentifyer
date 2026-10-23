@@ -12,6 +12,37 @@
   <style>
     /* Table headers use the same background as the navbar (bg-body-tertiary) */
     .table > thead > tr > th { --bs-table-bg: var(--bs-tertiary-bg); }
+
+    /* Bootstrap's table-danger/warning/success rows keep their light colours in dark mode;
+       use the theme's subtle palette instead */
+    [data-bs-theme=dark] .table-danger,
+    [data-bs-theme=dark] .table-warning,
+    [data-bs-theme=dark] .table-success {
+      --bs-table-bg: var(--row-bg);
+      --bs-table-color: var(--row-color);
+      --bs-table-border-color: var(--row-border);
+      --bs-table-striped-bg: var(--row-border);
+      --bs-table-striped-color: var(--row-color);
+      --bs-table-active-bg: var(--row-border);
+      --bs-table-active-color: var(--row-color);
+      --bs-table-hover-bg: var(--row-border);
+      --bs-table-hover-color: var(--row-color);
+    }
+    [data-bs-theme=dark] .table-danger {
+      --row-bg: var(--bs-danger-bg-subtle);
+      --row-color: var(--bs-danger-text-emphasis);
+      --row-border: var(--bs-danger-border-subtle);
+    }
+    [data-bs-theme=dark] .table-warning {
+      --row-bg: var(--bs-warning-bg-subtle);
+      --row-color: var(--bs-warning-text-emphasis);
+      --row-border: var(--bs-warning-border-subtle);
+    }
+    [data-bs-theme=dark] .table-success {
+      --row-bg: var(--bs-success-bg-subtle);
+      --row-color: var(--bs-success-text-emphasis);
+      --row-border: var(--bs-success-border-subtle);
+    }
   </style>
   {% block head %}{% endblock %}
 </head>
