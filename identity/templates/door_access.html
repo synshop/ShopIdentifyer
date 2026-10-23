@@ -99,6 +99,9 @@
 </tbody>
 </table>
 
+{% set on_controller = assigned | rejectattr('eb_id', 'none') | list %}
+{% set inactive = assigned | selectattr('eb_id', 'none') | list %}
+
 <h2>Assigned RFID Tokens</h2>
 <table class="table table-hover table-bordered" id="results">
   <thead>
@@ -113,24 +116,55 @@
   </tr>
   </thead>
   <tbody>
-  
-  {% for e in assigned %}
-    {% if e['eb_id'] | upper == "NONE" and e['eb_status'] == "ACTIVE" %}
-      <tr class="table-warning">
-    {% else %}
-      <tr>
-    {% endif %}
 
-    <td>{{ e['eb_id'] | upper }}</td>
+  {% for e in on_controller %}
+  <tr>
+    <td>{{ e['eb_id'] }}</td>
     <td>{{ e['eb_status'] }} / {{ e['status'] }}</td>
     <td>{{ e['rfid_token_hex'] }} (<script type="text/javascript">document.write(Number("0x{{ e['rfid_token_hex'] }}"));</script>)</td>
     <td>{{ e['rfid_token_comment'] }}</td>
     <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['full_name'] }}</a></td>
     <td>{{ e['created_on'] }}</td>
     <td><a href="javascript:void(0);" class="manageToken" id="{{ e['eb_id'] }}-{{ e['rfid_token_hex'] }}">Manage</a></td>
-    </td>
-
   </tr>
+  {% endfor %}
+
+</tbody>
+</table>
+
+<h2>Inactive RFID Tokens</h2>
+<p>Tokens still attached to a member but with no EB ID, so they're not on the door controller.</p>
+<table class="table table-hover table-bordered">
+  <thead>
+  <tr class="table-primary">
+      <th>EB ID</th>
+      <th>EB Status</th>
+      <th>RFID Hex (Int)</th>
+      <th>Comment</th>
+      <th>Attached To</th>
+      <th>Created On</th>
+      <th>Action</th>
+  </tr>
+  </thead>
+  <tbody>
+
+  {% for e in inactive %}
+    {% if e['eb_status'] == "ACTIVE" %}
+      <tr class="table-warning">
+    {% else %}
+      <tr>
+    {% endif %}
+
+    <td>NONE</td>
+    <td>{{ e['eb_status'] }} / {{ e['status'] }}</td>
+    <td>{{ e['rfid_token_hex'] }} (<script type="text/javascript">document.write(Number("0x{{ e['rfid_token_hex'] }}"));</script>)</td>
+    <td>{{ e['rfid_token_comment'] }}</td>
+    <td><a href="https://dashboard.stripe.com/customers/{{ e['stripe_id'] }}" target="_blank">{{ e['full_name'] }}</a></td>
+    <td>{{ e['created_on'] }}</td>
+    <td><a href="javascript:void(0);" class="manageToken" id="{{ e['eb_id'] }}-{{ e['rfid_token_hex'] }}">Manage</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7">None</td></tr>
   {% endfor %}
 
 </tbody>
