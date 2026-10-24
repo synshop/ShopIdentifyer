@@ -567,6 +567,18 @@ def get_subscription_id_from_stripe_cache(stripe_id=None):
         return subscription_id[0][0]
 
 
+# Inactive members with no Stripe subscription can't be reactivated until they
+# resubscribe, so their record is read-only
+def member_is_read_only(stripe_id=None):
+    cur = get_db().cursor()
+    cur.execute("select member_status from members where stripe_id = %s", (stripe_id,))
+    row = cur.fetchone()
+    if row is None or row[0] != "INACTIVE":
+        return False
+    subscription_id = get_subscription_id_from_stripe_cache(stripe_id)
+    return not subscription_id or subscription_id == "NA"
+
+
 # Manually insert a new RFID token into the system
 def insert_new_rfid_token_record(eb_id=None, rfid_token_hex=None, rfid_token_comment="PRIMARY"):
     db = get_db()
@@ -1358,13 +1370,24 @@ def onboard_new_member(stripe_id):
 def show_member(stripe_id):
     member = get_member(stripe_id)
     swipes = get_member_swipe_history(stripe_id) if member['rfid_tokens'] else None
-    return render_template('show_member.html', member=member, swipes=swipes)
+    return render_template('show_member.html', member=member, swipes=swipes,
+                           readonly=member_is_read_only(stripe_id))
 
 
 # Edit member details
 @app.route('/member/<stripe_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_member_details(stripe_id):
+    if member_is_read_only(stripe_id):
+        app.logger.info("User %s was refused editing read-only member %s" % (session['email'], stripe_id))
+        if request.method == "POST":
+            return "This member has no Stripe subscription and can't be edited until they resubscribe.", 403
+        return redirect(url_for("show_member", stripe_id=stripe_id))
+
+    # update_member() saves the stripe_id in the form, so it must be the member checked above
+    if request.method == "POST" and request.form.get('stripe_id') != stripe_id:
+        return "Member ID in the form doesn't match the URL.", 400
+
     if request.method == "GET":
         user = get_member(stripe_id)
         app.logger.info("User %s is editing member %s " % (session['email'], stripe_id))
