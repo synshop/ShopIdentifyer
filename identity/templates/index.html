@@ -2,16 +2,46 @@
 
 {% set brand_href = '' %}
 
-{% block content %}
-  <div class="container-fluid" style="padding:100px;width:75%;">
-      <h1>
-        SYN Shop currently has:
-      </h1>
-      <ul>
-        <h1><li><span class="text-primary">{{ stats['total_vetted']['count'] }}</span> vetted</li></h1>
-        <h1><li><span class="text-primary">{{ stats['total_not_vetted']['count'] }}</span> regular</li></h1>
-        <h1><li><span class="text-primary">{{ stats['total_need_onboarding']['count'] }} needing onboarding</span></li></h1>
-        <h1><li><span class="text-primary">{{ stats['total_need_offboarding']['count'] }} needing offboarding</span></li></h1>
-      </ul>
+{# Counts in the "Needs Attention" row turn orange when there's something to do #}
+{% macro stat_card(count, label, attention=False) %}
+  <div class="col">
+    <div class="card h-100 text-center{% if attention and count %} border-warning{% endif %}">
+      <div class="card-body">
+        <div class="display-5 fw-bold {{ 'text-warning' if attention and count else 'text-primary' }}">{{ count }}</div>
+        <div class="text-muted">{{ label }}</div>
+      </div>
+    </div>
   </div>
+{% endmacro %}
+
+{% block content %}
+<div class="container pb-5">
+
+  <div class="row align-items-center g-4 mb-5">
+    <div class="col-md-4 text-center">
+      <img src="{{ url_for('static', filename='images/syn_shop_badge_logo.png') }}" alt="SYN Shop logo"
+           class="img-fluid" style="max-width:240px;">
+    </div>
+    <div class="col-md-8 text-center text-md-start">
+      <h1>SYN Shop Identity Management</h1>
+      <p class="lead">Member records, RFID door access and onboarding for SYN Shop, the Las Vegas hackerspace.</p>
+      <a href="/login" class="btn btn-primary btn-lg">Admin Login</a>
+    </div>
+  </div>
+
+  <h5>Members</h5>
+  <div class="row row-cols-1 row-cols-sm-3 g-3 mb-4">
+    {{ stat_card(stats['total_vetted']['count'] + stats['total_not_vetted']['count'], 'Active') }}
+    {{ stat_card(stats['total_vetted']['count'], 'Vetted') }}
+    {{ stat_card(stats['total_not_vetted']['count'], 'Regular') }}
+  </div>
+
+  <h5>Needs Attention</h5>
+  <div class="row row-cols-1 row-cols-sm-3 g-3">
+    {{ stat_card(stats['total_need_onboarding']['count'], 'Need Onboarding', attention=True) }}
+    {{ stat_card(stats['total_need_offboarding']['count'], 'Need Offboarding', attention=True) }}
+    {{ stat_card(stats['total_need_reactivation']['count'], 'Need Reactivation', attention=True) }}
+  </div>
+
+</div>
 {% endblock %}

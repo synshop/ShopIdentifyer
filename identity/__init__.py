@@ -1459,7 +1459,7 @@ def auth0_callback():
 
     except OAuthError as e:
         app.logger.info(e)
-        return render_template("index.html")
+        return redirect(url_for("show_index"))
 
 
 # API for public stats, JSON
