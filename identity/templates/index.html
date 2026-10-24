@@ -2,6 +2,9 @@
 
 {% set brand_href = '' %}
 
+{# The page has its own Admin Login button, so the navbar Login link isn't needed #}
+{% block nav_items %}{% endblock %}
+
 {# Counts in the "Needs Attention" row turn orange when there's something to do #}
 {% macro stat_card(count, label, attention=False) %}
   <div class="col">
