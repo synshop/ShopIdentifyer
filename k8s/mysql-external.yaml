@@ -1,0 +1,32 @@
+# Gives the MySQL server running on the k3s host a stable in-cluster name,
+# so the app can use DATABASE_HOST = 'mysql' instead of a hardcoded IP.
+#
+# A Service normally finds its pods through a label selector. This one has
+# no selector, so Kubernetes won't manage its endpoints; we supply them
+# ourselves with the EndpointSlice below, pointing at the host.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: shopidentifyer
+spec:
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: mysql-host
+  namespace: shopidentifyer
+  labels:
+    # Links this slice to the Service above
+    kubernetes.io/service-name: mysql
+addressType: IPv4
+ports:
+  - name: mysql        # must match the Service's port name
+    port: 3306
+endpoints:
+  - addresses:
+      - 10.42.0.1      # the host, as seen from pods (cni0 bridge)

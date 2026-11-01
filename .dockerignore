@@ -1,0 +1,10 @@
+.git
+.idea
+.venv*
+venv
+activate
+docs
+utils
+**/__pycache__
+**/*.pyc
+identity/config.py

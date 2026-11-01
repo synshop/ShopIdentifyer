@@ -1,4 +1,5 @@
 ENCRYPTED_STRIPE_TOKEN = 'encrypted-token'
+STRIPE_VERSION = '2022-08-01'  # Stripe API version the code was written against
 ENCRYPTED_DATABASE_PASSWORD = 'encrypted-database-password'
 ENCRYPTED_MAIL_USERNAME = 'encrypted-mail-user'
 ENCRYPTED_MAIL_PASSWORD = 'encrypted-mail-pass'
@@ -12,6 +13,10 @@ DISCORD_ROLE_VETTED_MEMBER = 'example-value-here'
 ENCRYPTED_SESSION_KEY = 'encrypted-session'
 ENCRYPTED_ADMIN_PASSPHRASE = "encrypted-admin-pass"
 
+AUTH0_DOMAIN = 'example.us.auth0.com'
+AUTH0_CLIENT_ID = 'example-value-here'
+ENCRYPTED_AUTH0_CLIENT_SECRET = 'encrypted-auth0-secret'
+
 ENCRYPTED_SMTP_USERNAME = 'encrypted-smtp-user'
 ENCRYPTED_SMTP_PASSWORD = 'encrypted-smtp-pass'
 SMTP_SERVER = 'example.com'
@@ -23,7 +28,7 @@ SMTP_ALERT_FROM = "smang@example.org"
 DATABASE_USER = 'synshop'
 DATABASE_HOST = 'localhost'
 DATABASE_PORT = 3306
-DATABASE_SCHEMA = "shopidentifyer"
+DATABASE_SCHEMA = "shopid"  # matches sql/create.sql
 
 LOG_FILE = "/tmp/gunicorn.log"
 
@@ -35,7 +40,7 @@ STRIPE_CACHE_REBUILD_CRON = '46 23 * * *'
 STRIPE_CACHE_REFRESH_CRON = '15 * * * *'
 STRIPE_CACHE_REFRESH_REACHBACK_MIN = 15
 STRIPE_CACHE_DEACTIVATE_CRON = '55 23 * * *'
-MEMBERS_TABLE_REFRESH_CRON = ''
+MEMBERS_TABLE_REFRESH_CRON = '0 0 * * *'  # must be a valid crontab even if SCHEDULER_ENABLED is False
 STRIPE_FETCH_REALTIME_UPDATES = False  # False means no emails sent during swipes
 
 MAIL_SERVER = 'localhost'

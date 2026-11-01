@@ -1,0 +1,24 @@
+# Routes outside HTTP(S) requests for the hostname below to the app's
+# Service. k3s's bundled Traefik is the ingress controller that reads this
+# and does the actual proxying, on the node's ports 80 and 443.
+#
+# nip.io is public wildcard DNS: <anything>.192.168.4.109.nip.io resolves to
+# 192.168.4.109, so there's no /etc/hosts entry to maintain.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shopidentifyer
+  namespace: shopidentifyer
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: shopidentifyer.192.168.4.109.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: shopidentifyer
+                port:
+                  name: http

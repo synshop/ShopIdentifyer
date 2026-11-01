@@ -31,10 +31,15 @@ import MySQLdb as mysql
 import MySQLdb.cursors
 
 from flask import Flask, request, g, flash, redirect, make_response, render_template, jsonify, session, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get()
 
 app = Flask(__name__)
+
+# Trust the X-Forwarded-* headers from one reverse proxy (Traefik/NGINX) so
+# url_for(_external=True) builds https:// URLs, e.g. the Auth0 callback
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 try:
     app.secret_key = CryptoUtil.decrypt(config.ENCRYPTED_SESSION_KEY, ENCRYPTION_KEY)

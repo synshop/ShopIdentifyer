@@ -1,0 +1,18 @@
+# A stable name and virtual IP for the app's pods. Unlike the mysql Service,
+# this one has a selector: Kubernetes tracks every *ready* pod labelled
+# app=shopidentifyer and keeps the endpoints up to date as pods come and go.
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopidentifyer
+  namespace: shopidentifyer
+spec:
+  # ClusterIP (the default) is reachable only inside the cluster; outside
+  # traffic arrives through the Ingress instead
+  type: ClusterIP
+  selector:
+    app: shopidentifyer
+  ports:
+    - name: http
+      port: 80            # what clients of the Service connect to
+      targetPort: http    # the container port *named* http (8000)

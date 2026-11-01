@@ -1,0 +1,75 @@
+# Runs the ShopIdentifyer app. A Deployment manages a ReplicaSet, which in
+# turn keeps the requested number of pods running from the template below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopidentifyer
+  namespace: shopidentifyer
+  labels:
+    app: shopidentifyer
+spec:
+  # Exactly one: the APScheduler cron jobs run inside the app process
+  replicas: 1
+  # Stop the old pod before starting the new one on updates. The default
+  # (RollingUpdate) briefly runs both, which would double up the cron jobs.
+  strategy:
+    type: Recreate
+  # Which pods this Deployment owns; must match the template's labels
+  selector:
+    matchLabels:
+      app: shopidentifyer
+  template:
+    metadata:
+      labels:
+        app: shopidentifyer
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: app
+          # Imported into k3s's containerd; a fixed tag means
+          # imagePullPolicy defaults to IfNotPresent (no Docker Hub pull)
+          image: shopidentifyer:0.1.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # Unlocks the ENCRYPTED_* values, so startup doesn't prompt
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: shopidentifyer-key
+                  key: ENCRYPTION_KEY
+          volumeMounts:
+            # subPath mounts just the one file, leaving the rest of
+            # /app/identity from the image in place. Trade-off: a subPath
+            # file doesn't update when the Secret changes; restart the pod.
+            - name: config
+              mountPath: /app/identity/config.py
+              subPath: config.py
+              readOnly: true
+          # Ready = can serve traffic (this endpoint queries MySQL).
+          # The Service only sends requests to ready pods.
+          readinessProbe:
+            httpGet:
+              path: /api/public_stats
+              port: http
+            periodSeconds: 10
+          # Alive = process is up. Kept independent of MySQL so a database
+          # outage doesn't make Kubernetes restart the app in a loop.
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: config
+          secret:
+            secretName: shopidentifyer-config
