@@ -9,12 +9,14 @@ create table `shopid`.`members` (
   member_status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT "ACTIVE",
   is_vetted ENUM('VETTED','NOT VETTED') NOT NULL DEFAULT "NOT VETTED",
   full_name varchar(255),
+  email varchar(255),
   discord_username varchar(255),
   locker_num varchar(255),
   led_color varchar(255) DEFAULT "#000000,#000000",
   mobile varchar(25),
   emergency_contact_name varchar(255),
   emergency_contact_mobile varchar(25),
+  last_seen_in_stripe TIMESTAMP NULL DEFAULT NULL,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
