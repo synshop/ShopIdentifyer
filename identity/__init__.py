@@ -129,14 +129,15 @@ def rebuild_stripe_cache():
     with app.app_context():
         db = get_db()
 
+        # Build into a staging table and swap it in, so stripe_cache is never empty or partial
         cur = db.cursor()
-        cur.execute("delete from stripe_cache")
-        db.commit()
+        cur.execute("drop table if exists stripe_cache_new")
+        cur.execute("create table stripe_cache_new like stripe_cache")
 
         for member in member_array:
 
             cur = db.cursor()
-            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
+            cur.execute("insert into stripe_cache_new values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
             (
                 member['stripe_id'], 
                 member['stripe_created_on'],
@@ -152,7 +153,12 @@ def rebuild_stripe_cache():
             ))
 
         db.commit()
-    
+
+        # RENAME TABLE swaps both names atomically
+        cur.execute("drop table if exists stripe_cache_old")
+        cur.execute("rename table stripe_cache to stripe_cache_old, stripe_cache_new to stripe_cache")
+        cur.execute("drop table stripe_cache_old")
+
     put_kv_item('stripe_cache_rebuild',datetime.datetime.now())
     app.logger.info("finished rebuilding stripe cache")
 
