@@ -73,6 +73,7 @@
       <thead>
       <tr class="table-primary">
         <th>Full Name</th>
+        <th>Email</th>
         <th>Discord Username</th>
         <th>Vetted?</th>
         <th>RFIDs?</th>
@@ -92,6 +93,7 @@
         {% endif %}
         <tr>
           <td><a href="/member/{{ entry['stripe_id'] }}">{{ entry['full_name'] }}</a>{{ warning_icon(warning) }}</td>
+          <td>{{ entry['email'] or '' }}</td>
           <td>{{ entry['discord_username'] }}</td>
           {% if entry['is_vetted'] == "NOT VETTED" %}
           <td>NV</td>
@@ -119,7 +121,7 @@
         
         </tr>
       {% else %}
-        <tr><td colspan="6">No entries here so far</td></tr>
+        <tr><td colspan="7">No entries here so far</td></tr>
       {% endfor %}
 
     </tbody>
