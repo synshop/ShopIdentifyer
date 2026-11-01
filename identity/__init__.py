@@ -134,14 +134,15 @@ def rebuild_stripe_cache():
     with app.app_context():
         db = get_db()
 
+        # Build into a staging table and swap it in, so stripe_cache is never empty or partial
         cur = db.cursor()
-        cur.execute("delete from stripe_cache")
-        db.commit()
+        cur.execute("drop table if exists stripe_cache_new")
+        cur.execute("create table stripe_cache_new like stripe_cache")
 
         for member in member_array:
 
             cur = db.cursor()
-            cur.execute("insert into stripe_cache values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
+            cur.execute("insert into stripe_cache_new values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
             (
                 member['stripe_id'], 
                 member['stripe_created_on'],
@@ -157,7 +158,12 @@ def rebuild_stripe_cache():
             ))
 
         db.commit()
-    
+
+        # RENAME TABLE swaps both names atomically
+        cur.execute("drop table if exists stripe_cache_old")
+        cur.execute("rename table stripe_cache to stripe_cache_old, stripe_cache_new to stripe_cache")
+        cur.execute("drop table stripe_cache_old")
+
     put_kv_item('stripe_cache_rebuild',datetime.datetime.now())
     app.logger.info("finished rebuilding stripe cache")
 
@@ -167,14 +173,31 @@ def rebuild_stripe_cache():
 def refresh_members_table():
     app.logger.info("updating members table")
 
+    # Stamp with the last successful rebuild, not now, so a failing rebuild doesn't keep members "seen"
+    last_rebuild = get_kv_item('stripe_cache_rebuild')
+    if last_rebuild is None:
+        app.logger.info("stripe_cache has never been rebuilt, skipping members table update")
+        return
+
     with app.app_context():
         db = get_db()
 
+        # Copy Stripe-sourced fields so they survive the member dropping out of stripe_cache.
+        # changed_on is set to itself so the sync doesn't bump it; it tracks the last real edit
         cur = db.cursor()
-        cur.execute("select stripe_id from stripe_cache")
-        members = cur.fetchall()
-        for member in members:
-            pass
+        cur.execute("""
+            UPDATE members m
+            JOIN stripe_cache sc ON sc.stripe_id = m.stripe_id
+            SET
+                m.full_name = COALESCE(NULLIF(sc.full_name, ''), m.full_name),
+                m.email = COALESCE(NULLIF(sc.email, ''), m.email),
+                m.discord_username = COALESCE(NULLIF(sc.discord_username, ''), m.discord_username),
+                m.last_seen_in_stripe = %s,
+                m.changed_on = m.changed_on
+        """, (last_rebuild,))
+        db.commit()
+
+    app.logger.info("finished updating members table")
 
 
 
@@ -950,9 +973,9 @@ def insert_new_member(stripe_id=None, r=None):
     cur = db.cursor()
     cur.execute(
         'insert into members (stripe_id, member_status, full_name, discord_username, mobile,'
-        'emergency_contact_name, emergency_contact_mobile, is_vetted, locker_num)'
-        'values (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-        insert_data)
+        'emergency_contact_name, emergency_contact_mobile, is_vetted, locker_num, email)'
+        'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,(select email from stripe_cache where stripe_id = %s))',
+        insert_data + (stripe_id,))
     db.commit()
     db.close()
     
@@ -1025,7 +1048,7 @@ def get_member(stripe_id=None):
                 m.emergency_contact_name,
                 m.emergency_contact_mobile,
                 COALESCE(sc.full_name, m.full_name) AS full_name,
-                sc.email,
+                COALESCE(sc.email, m.email) AS email,
                 sc.subscription_status,
                 sc.last_payment_status,
                 COALESCE(sc.discord_username, m.discord_username, '') AS discord_username
