@@ -66,6 +66,9 @@ app.config['DISCORD_ROLE_VETTED_MEMBER'] = config.DISCORD_ROLE_VETTED_MEMBER
 app.config['LOG_FILE'] = config.LOG_FILE
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=12)
 
+# Caps uploads (the vetting document PDF); larger requests get a 413
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
+
 app.config['AUTH0_CLIENT_ID'] = config.AUTH0_CLIENT_ID
 app.config['AUTH0_DOMAIN'] = config.AUTH0_DOMAIN
 
@@ -1046,7 +1049,8 @@ def get_member(stripe_id=None):
                 COALESCE(sc.email, m.email) AS email,
                 sc.subscription_status,
                 sc.last_payment_status,
-                COALESCE(sc.discord_username, m.discord_username, '') AS discord_username
+                COALESCE(sc.discord_username, m.discord_username, '') AS discord_username,
+                m.vetting_doc IS NOT NULL AS has_vetting_doc
             FROM
                 members m
             LEFT JOIN
@@ -1068,6 +1072,14 @@ def get_member(stripe_id=None):
     member["kiosk_username"] = get_member_discord_nickname(member["discord_username"])
     
     return member
+
+
+# Store a member's signed Vetted Membership PDF, replacing any existing one
+def update_member_vetting_doc(stripe_id=None, pdf=None):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("update members set vetting_doc = %s where stripe_id = %s", (pdf, stripe_id))
+    db.commit()
 
 
 # Update an existing member 'object'
@@ -1417,9 +1429,36 @@ def edit_member_details(stripe_id):
         return render_template('edit_member.html', member=user)
 
     if request.method == "POST":
+        # No file chosen leaves the stored vetting document as is
+        vetting_doc = request.files.get('vetting_doc')
+        pdf = vetting_doc.read() if vetting_doc and vetting_doc.filename else None
+        if pdf is not None and not pdf.startswith(b'%PDF-'):
+            return "The vetting document must be a PDF.", 400
+
         update_member(request)
+        if pdf is not None:
+            update_member_vetting_doc(stripe_id, pdf)
+            app.logger.info("User %s attached a vetting document to member %s" % (session['email'], stripe_id))
         app.logger.info("User %s updated member %s" % (session['email'], stripe_id))
         return redirect(url_for("show_admin", _scheme='https', _external=True))
+
+
+# Get member's signed Vetted Membership PDF
+@app.route('/member/<stripe_id>/files/vetting.pdf')
+@login_required
+def show_member_vetting_doc(stripe_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("select vetting_doc from members where stripe_id = %s", (stripe_id,))
+    row = cur.fetchone()
+    if row is None or row[0] is None:
+        return "No vetting document on file for this member.", 404
+
+    response = make_response(row[0])
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename="vetting-%s.pdf"' % (stripe_id,)
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 # Get member badge photo

@@ -17,6 +17,7 @@ create table `shopid`.`members` (
   emergency_contact_name varchar(255),
   emergency_contact_mobile varchar(25),
   last_seen_in_stripe TIMESTAMP NULL DEFAULT NULL,
+  vetting_doc MEDIUMBLOB,
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
