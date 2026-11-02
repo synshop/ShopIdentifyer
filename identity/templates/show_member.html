@@ -31,6 +31,7 @@
       <table class="table table-striped">
         <tr><th style="width:200px;">Membership Status:</th><td>{{ member.member_status }}</td></tr>
         <tr><th style="width:200px;">Vetted Status:</th><td>{{ member.is_vetted }}</td></tr>
+        <tr><th style="width:200px;">Vetting Document:</th><td>{% if member.has_vetting_doc %}<a href="/member/{{ member.stripe_id }}/files/vetting.pdf" target="_blank">View</a>{% else %}None on file{% endif %}</td></tr>
         <tr><th style="width:200px;">Subscription Plan:</th><td>{{ member.stripe_plan }}</td></tr>
 
         {% if member.subscription_status == "Delinquent" %}
