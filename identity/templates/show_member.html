@@ -31,7 +31,6 @@
       <table class="table table-striped">
         <tr><th style="width:200px;">Membership Status:</th><td>{{ member.member_status }}</td></tr>
         <tr><th style="width:200px;">Vetted Status:</th><td>{{ member.is_vetted }}</td></tr>
-        <tr><th style="width:200px;">Vetting Document:</th><td>{% if member.has_vetting_doc %}<a href="/member/{{ member.stripe_id }}/files/vetting.pdf" target="_blank">View</a>{% else %}None on file{% endif %}</td></tr>
         <tr><th style="width:200px;">Subscription Plan:</th><td>{{ member.stripe_plan }}</td></tr>
 
         {% if member.subscription_status == "Delinquent" %}
@@ -67,18 +66,10 @@
       <div class="card-body">
       <table class="table table-striped">
 
-        {% if member.has_wavier == True %}
-            <tr><th style="width:300px;">Signed Liability Wavier:</th><td><a href="/member/{{member.stripe_id}}/files/liability-waiver.pdf">liability-waiver.pdf</a></td></tr>
-            {% else %}
-            <tr><th style="width:300px;">Signed Liability Wavier:</th><td>No Waiver on File</td></tr>
-        {% endif %}
-
-        {% if member.vetted_status == "VETTED" %}
-            {% if member.has_vetted == True %}
-                <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td><a href="/member/{{member.stripe_id}}/files/vetted-membership-form.pdf">vetted-membership-form.pdf</a></td></tr>
-            {% else %}
-                <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td>No Form on File</td></tr>
-            {% endif %}
+        {% if member.has_vetting_doc %}
+            <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td><a href="/member/{{ member.stripe_id }}/files/vetting.pdf" target="_blank">vetting.pdf</a></td></tr>
+        {% else %}
+            <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td>No Form on File</td></tr>
         {% endif %}
 
       </table>
