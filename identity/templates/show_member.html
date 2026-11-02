@@ -66,18 +66,10 @@
       <div class="card-body">
       <table class="table table-striped">
 
-        {% if member.has_wavier == True %}
-            <tr><th style="width:300px;">Signed Liability Wavier:</th><td><a href="/member/{{member.stripe_id}}/files/liability-waiver.pdf">liability-waiver.pdf</a></td></tr>
-            {% else %}
-            <tr><th style="width:300px;">Signed Liability Wavier:</th><td>No Waiver on File</td></tr>
-        {% endif %}
-
-        {% if member.vetted_status == "VETTED" %}
-            {% if member.has_vetted == True %}
-                <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td><a href="/member/{{member.stripe_id}}/files/vetted-membership-form.pdf">vetted-membership-form.pdf</a></td></tr>
-            {% else %}
-                <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td>No Form on File</td></tr>
-            {% endif %}
+        {% if member.has_vetting_doc %}
+            <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td><a href="/member/{{ member.stripe_id }}/files/vetting.pdf" target="_blank">vetting.pdf</a></td></tr>
+        {% else %}
+            <tr><th style="width:300px;">Signed Vetted Membership Form:</th><td>No Form on File</td></tr>
         {% endif %}
 
       </table>

@@ -6,7 +6,6 @@ Some of the features included are:
 - Membership Status Tracking
 - Contact Information / Emergency Contact Tracking
 - Real-time Payment Processor Information (via Stripe) to show payment / subscription status
-- Shop Liability Waiver (scanned document) Management
 
 ## Setup (Development)
 
