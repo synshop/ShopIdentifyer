@@ -12,13 +12,24 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: shopidentifyer.192.168.4.109.nip.io
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: shopidentifyer
-                port:
-                  name: http
+  - host: openclaw.tail2e0170.ts.net
+    http:
+      paths:
+      - backend:
+          service:
+            name: shopidentifyer
+            port:
+              name: http
+        path: /
+        pathType: Prefix
+  - host: shopidentifyer.192.168.4.109.nip.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: shopidentifyer
+            port:
+              name: http
+        path: /
+        pathType: Prefix
+
