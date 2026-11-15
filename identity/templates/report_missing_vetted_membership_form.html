@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding-bottom:30px;">
+
+  <div class="alert bg-primary text-white" role="alert">
+    These active, vetted members have no signed Vetted Membership Form on file. To attach one, click
+    the member's name and upload the form on their edit page.
+  </div>
+
+  <h2>{{ members | length }} Member(s) without a Vetted Membership Form</h2>
+  <table class="table table-hover table-bordered">
+    <thead>
+    <tr class="table-primary">
+      <th>Full Name</th>
+      <th>Email</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for m in members %}
+    <tr>
+      <td><a href="/member/{{ m['stripe_id'] }}/edit">{{ m['full_name'] }}</a></td>
+      <td>{{ m['email'] or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2">Every active, vetted member has a form on file</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <a href="/admin/reports">Back to System Reports</a>
+
+</div>
+{% endblock %}

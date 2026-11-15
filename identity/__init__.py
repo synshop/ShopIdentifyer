@@ -1396,6 +1396,32 @@ def get_vetted_member_names():
     return [row[0] for row in cur.fetchall()]
 
 
+# Active, vetted members with no signed Vetted Membership Form on file
+def get_vetted_members_without_form():
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    stmt = """
+        SELECT
+            m.stripe_id,
+            s.full_name,
+            s.email
+        FROM
+            members m
+        JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        WHERE
+            m.member_status = "ACTIVE"
+        AND
+            m.is_vetted = "VETTED"
+        AND
+            m.vetting_doc IS NULL
+        ORDER BY
+            s.full_name
+    """
+    cur.execute(stmt)
+    return cur.fetchall()
+
+
 # Build the Vetted Member List report as a PDF
 def build_vetted_member_list_pdf(names, generated_on):
 
@@ -1714,6 +1740,12 @@ def show_report_vetted_member_list_pdf():
     response.headers['Cache-Control'] = 'no-store'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     return response
+
+
+@app.route('/admin/reports/missing-vetted-membership-form', methods=['GET'])
+@login_required
+def show_report_missing_vetted_membership_form():
+    return render_template('report_missing_vetted_membership_form.html', members=get_vetted_members_without_form())
 
 
 @app.route('/admin/reactivate', methods=['GET'])
