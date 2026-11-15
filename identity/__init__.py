@@ -30,6 +30,9 @@ from apscheduler.triggers.cron import CronTrigger
 import MySQLdb as mysql
 import MySQLdb.cursors
 
+from fpdf import FPDF
+from fpdf.fonts import FontFace
+
 from flask import Flask, request, g, flash, redirect, make_response, render_template, jsonify, session, url_for
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get()
@@ -1371,6 +1374,92 @@ def get_admin_view():
     return ret_members
 
 
+# Full names of the active, vetted members, for the Vetted Member List report
+def get_vetted_member_names():
+    db = get_db()
+    cur = db.cursor()
+    stmt = """
+        SELECT
+            s.full_name
+        FROM
+            members m
+        JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        WHERE
+            m.member_status = "ACTIVE"
+        AND
+            m.is_vetted = "VETTED"
+        ORDER BY
+            s.full_name
+    """
+    cur.execute(stmt)
+    return [row[0] for row in cur.fetchall()]
+
+
+# Active, vetted members with no signed Vetted Membership Form on file
+def get_vetted_members_without_form():
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    stmt = """
+        SELECT
+            m.stripe_id,
+            s.full_name,
+            s.email
+        FROM
+            members m
+        JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        WHERE
+            m.member_status = "ACTIVE"
+        AND
+            m.is_vetted = "VETTED"
+        AND
+            m.vetting_doc IS NULL
+        ORDER BY
+            s.full_name
+    """
+    cur.execute(stmt)
+    return cur.fetchall()
+
+
+# Build the Vetted Member List report as a PDF
+def build_vetted_member_list_pdf(names, generated_on):
+
+    # The built-in PDF fonts only cover Latin-1, anything else prints as "?"
+    def txt(value):
+        return str(value if value is not None else '').encode('latin-1', 'replace').decode('latin-1')
+
+    class ReportPDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 14)
+            self.cell(0, 8, 'SYN Shop Vetted Member List', new_x='LMARGIN', new_y='NEXT')
+            self.set_font('Helvetica', '', 9)
+            self.cell(0, 5, 'Generated %s - %d vetted members' % (generated_on.strftime('%Y-%m-%d %H:%M'), len(names)),
+                      new_x='LMARGIN', new_y='NEXT')
+            self.ln(3)
+
+        def footer(self):
+            self.set_y(-12)
+            self.set_font('Helvetica', '', 8)
+            self.cell(0, 8, 'Page %d of {nb}' % (self.page_no(),), align='C')
+
+    pdf = ReportPDF(orientation='portrait', format='letter')
+    pdf.set_title('SYN Shop Vetted Member List')
+    pdf.set_margins(15, 12, 15)
+    pdf.set_auto_page_break(True, margin=14)
+    pdf.add_page()
+    pdf.set_font('Helvetica', '', 10)
+
+    heading = FontFace(emphasis='BOLD', color=255, fill_color=(44, 62, 80))
+    with pdf.table(headings_style=heading, cell_fill_color=(240, 243, 244), cell_fill_mode='ROWS',
+                   line_height=6, text_align='LEFT') as table:
+        table.row(('Full Name',))
+        for name in names:
+            table.row((txt(name),))
+
+    return bytes(pdf.output())
+
+
 # Decorator for Required Auth
 def login_required(f):
     @wraps(f)
@@ -1444,7 +1533,7 @@ def edit_member_details(stripe_id):
 
 
 # Get member's signed Vetted Membership PDF
-@app.route('/member/<stripe_id>/files/vetting.pdf')
+@app.route('/member/<stripe_id>/files/Vetted_Membership_Form.pdf')
 @login_required
 def show_member_vetting_doc(stripe_id):
     db = get_db()
@@ -1456,7 +1545,7 @@ def show_member_vetting_doc(stripe_id):
 
     response = make_response(row[0])
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = 'inline; filename="vetting-%s.pdf"' % (stripe_id,)
+    response.headers['Content-Disposition'] = 'inline; filename="Vetted_Membership_Form-%s.pdf"' % (stripe_id,)
     response.headers['X-Content-Type-Options'] = 'nosniff'
     return response
 
@@ -1629,6 +1718,34 @@ def show_door_access_token_unassign():
 def show_eventlog_landing():
     return render_template('event_log.html', entries=get_event_log(), top_logins=get_top_logins(),
                            year=datetime.date.today().year)
+
+
+@app.route('/admin/reports', methods=['GET'])
+@login_required
+def show_reports_landing():
+    return render_template('reports.html')
+
+
+@app.route('/admin/reports/vetted-member-list.pdf', methods=['GET'])
+@login_required
+def show_report_vetted_member_list_pdf():
+    now = datetime.datetime.now()
+    pdf = build_vetted_member_list_pdf(get_vetted_member_names(), now)
+    app.logger.info("User %s exported the vetted member list report" % (session['email'],))
+
+    # inline, so the PDF opens in the browser tab instead of downloading
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename="synshop-vetted-member-list-%s.pdf"' % (now.strftime('%Y-%m-%d'),)
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
+@app.route('/admin/reports/missing-vetted-membership-form', methods=['GET'])
+@login_required
+def show_report_missing_vetted_membership_form():
+    return render_template('report_missing_vetted_membership_form.html', members=get_vetted_members_without_form())
 
 
 @app.route('/admin/reactivate', methods=['GET'])
