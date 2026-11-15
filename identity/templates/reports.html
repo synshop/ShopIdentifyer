@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding-bottom:30px;">
+
+  <div class="alert bg-primary text-white" role="alert">
+    System reports are generated from the current data each time you run one.
+  </div>
+
+  <h2>System Reports</h2>
+  <table class="table table-hover table-bordered">
+    <thead>
+    <tr class="table-primary">
+      <th>Report</th>
+      <th>Description</th>
+      <th>Export</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td>Active Member List</td>
+      <td>Every active member with their email, Discord username, vetted status, RFID status,
+        subscription plan and last payment status. The same list as the Active Members table on the
+        admin page.</td>
+      <td><a href="/admin/reports/member-list.pdf" class="btn btn-primary btn-sm">PDF</a></td>
+    </tr>
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

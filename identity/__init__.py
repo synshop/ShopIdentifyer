@@ -30,6 +30,9 @@ from apscheduler.triggers.cron import CronTrigger
 import MySQLdb as mysql
 import MySQLdb.cursors
 
+from fpdf import FPDF
+from fpdf.fonts import FontFace
+
 from flask import Flask, request, g, flash, redirect, make_response, render_template, jsonify, session, url_for
 
 ENCRYPTION_KEY = SettingsUtil.EncryptionKey.get()
@@ -1371,6 +1374,56 @@ def get_admin_view():
     return ret_members
 
 
+# Build the Active Member List report as a PDF, the same members as the /admin table
+def build_member_list_pdf(members, generated_on):
+
+    # The built-in PDF fonts only cover Latin-1, anything else prints as "?"
+    def txt(value):
+        return str(value if value is not None else '').encode('latin-1', 'replace').decode('latin-1')
+
+    class ReportPDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 14)
+            self.cell(0, 8, 'SYN Shop Active Member List', new_x='LMARGIN', new_y='NEXT')
+            self.set_font('Helvetica', '', 9)
+            self.cell(0, 5, 'Generated %s - %d active members' % (generated_on.strftime('%Y-%m-%d %H:%M'), len(members)),
+                      new_x='LMARGIN', new_y='NEXT')
+            self.ln(3)
+
+        def footer(self):
+            self.set_y(-12)
+            self.set_font('Helvetica', '', 8)
+            self.cell(0, 8, 'Page %d of {nb}' % (self.page_no(),), align='C')
+
+    pdf = ReportPDF(orientation='landscape', format='letter')
+    pdf.set_title('SYN Shop Active Member List')
+    pdf.set_margins(10, 10, 10)
+    pdf.set_auto_page_break(True, margin=14)
+    pdf.add_page()
+    pdf.set_font('Helvetica', '', 8)
+
+    heading = FontFace(emphasis='BOLD', color=255, fill_color=(44, 62, 80))
+    with pdf.table(col_widths=(48, 62, 36, 14, 14, 56, 28), headings_style=heading,
+                   cell_fill_color=(240, 243, 244), cell_fill_mode='ROWS', line_height=5,
+                   text_align='LEFT') as table:
+        table.row(('Full Name', 'Email', 'Discord Username', 'Vetted?', 'RFIDs?', 'Subscription Plan', 'Payment'))
+        for m in members:
+            plan = (m['subscription_description'] or 'NO SUBSCRIPTION PLAN').upper()
+            if str(m['coupon']).upper() != 'NONE':
+                plan = '%s + %s' % (plan, str(m['coupon']).upper())
+            table.row((
+                txt(m['full_name']),
+                txt(m['email']),
+                txt(m['discord_username']),
+                'NV' if m['is_vetted'] == 'NOT VETTED' else 'V',
+                txt(m['has_rfid']).upper(),
+                txt(plan),
+                txt(m['last_payment_status'] or 'N/A').upper(),
+            ))
+
+    return bytes(pdf.output())
+
+
 # Decorator for Required Auth
 def login_required(f):
     @wraps(f)
@@ -1629,6 +1682,27 @@ def show_door_access_token_unassign():
 def show_eventlog_landing():
     return render_template('event_log.html', entries=get_event_log(), top_logins=get_top_logins(),
                            year=datetime.date.today().year)
+
+
+@app.route('/admin/reports', methods=['GET'])
+@login_required
+def show_reports_landing():
+    return render_template('reports.html')
+
+
+@app.route('/admin/reports/member-list.pdf', methods=['GET'])
+@login_required
+def show_report_member_list_pdf():
+    now = datetime.datetime.now()
+    pdf = build_member_list_pdf(get_admin_view(), now)
+    app.logger.info("User %s exported the member list report" % (session['email'],))
+
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename="synshop-member-list-%s.pdf"' % (now.strftime('%Y-%m-%d'),)
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 @app.route('/admin/reactivate', methods=['GET'])
