@@ -13,16 +13,19 @@
     <tr class="table-primary">
       <th>Report</th>
       <th>Description</th>
-      <th>Export</th>
+      <th>Open</th>
     </tr>
     </thead>
     <tbody>
     <tr>
-      <td>Active Member List</td>
-      <td>Every active member with their email, Discord username, vetted status, RFID status,
-        subscription plan and last payment status. The same list as the Active Members table on the
-        admin page.</td>
-      <td><a href="/admin/reports/member-list.pdf" class="btn btn-primary btn-sm">PDF</a></td>
+      <td>Vetted Member List</td>
+      <td>The full name of every active, vetted member, in alphabetical order.</td>
+      <td><a href="/admin/reports/vetted-member-list.pdf" class="btn btn-primary btn-sm" target="_blank" rel="noopener">PDF</a></td>
+    </tr>
+    <tr>
+      <td>Members without a Vetted Membership Form</td>
+      <td>Active, vetted members who have no signed Vetted Membership Form on file.</td>
+      <td><a href="/admin/reports/missing-vetted-membership-form" class="btn btn-primary btn-sm">View</a></td>
     </tr>
     </tbody>
   </table>
