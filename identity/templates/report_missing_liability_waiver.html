@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding-bottom:30px;">
+
+  <div class="alert bg-primary text-white" role="alert">
+    These active members have no signed liability waiver on file. Waivers are signed during
+    Stripe signup and appear here after the next Stripe cache rebuild.
+  </div>
+
+  <h2>{{ members | length }} Member(s) without a Liability Waiver</h2>
+  <table class="table table-hover table-bordered">
+    <thead>
+    <tr class="table-primary">
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Discord</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for m in members %}
+    <tr>
+      <td><a href="/member/{{ m['stripe_id'] }}">{{ m['full_name'] }}</a></td>
+      <td>{{ m['email'] or '' }}</td>
+      <td>{{ m['discord_username'] or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">Every active member has a signed waiver on file</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <a href="/admin/reports">Back to System Reports</a>
+
+</div>
+{% endblock %}
