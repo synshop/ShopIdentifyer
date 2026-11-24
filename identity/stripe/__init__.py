@@ -6,6 +6,20 @@ ACTIVE_SUBSCRIPTION = "active"
 PAUSED_MEMBERSHIP = "Paused Membership"
 FREE_MEMBERSHIP = "Free Membership"
 
+# Liability waiver details the signup flow writes to the Stripe customer's metadata.
+# Stored under the same names in stripe_cache and members
+WAIVER_FIELDS = (
+    "waiver_auth0_sub",
+    "waiver_dob",
+    "waiver_esign_consent",
+    "waiver_sha256",
+    "waiver_signed_at",
+    "waiver_signed_ip",
+    "waiver_signed_name",
+    "waiver_user_agent",
+    "waiver_version",
+)
+
 stripe.api_version = app.config['STRIPE_VERSION']
 stripe.api_key = app.config['STRIPE_TOKEN']
 
@@ -42,10 +56,11 @@ def get_customer_attributes(subscription):
     user["stripe_subscription_created_on"] = subscription.created
     user["stripe_subscription_id"] = subscription.id
     
-    if customer["metadata"]:
-        user["stripe_discord_username"] = customer["metadata"]["discord_id"]
-    else:
-        user["stripe_discord_username"] = ""
+    metadata = customer["metadata"] or {}
+    user["stripe_discord_username"] = metadata.get("discord_id", "")
+
+    for field in WAIVER_FIELDS:
+        user[field] = metadata.get(field)
 
     if customer["discount"]:
         user["stripe_coupon_description"] = customer["discount"]["coupon"]["name"]

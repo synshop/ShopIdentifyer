@@ -18,6 +18,15 @@ create table `shopid`.`members` (
   emergency_contact_mobile varchar(25),
   last_seen_in_stripe TIMESTAMP NULL DEFAULT NULL,
   vetting_doc MEDIUMBLOB,
+  waiver_auth0_sub varchar(255),
+  waiver_dob varchar(255),
+  waiver_esign_consent varchar(255),
+  waiver_sha256 varchar(255),
+  waiver_signed_at varchar(255),
+  waiver_signed_ip varchar(255),
+  waiver_signed_name varchar(255),
+  waiver_user_agent text,
+  waiver_version varchar(255),
   created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   changed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -33,7 +42,16 @@ create table `shopid`.`stripe_cache` (
   subscription_description varchar(255),
   subscription_status varchar(255),
   subscription_created_on varchar(255),
-  coupon varchar(255)
+  coupon varchar(255),
+  waiver_auth0_sub varchar(255),
+  waiver_dob varchar(255),
+  waiver_esign_consent varchar(255),
+  waiver_sha256 varchar(255),
+  waiver_signed_at varchar(255),
+  waiver_signed_ip varchar(255),
+  waiver_signed_name varchar(255),
+  waiver_user_agent text,
+  waiver_version varchar(255)
 );
 
 create table `shopid`.`event_log` (

@@ -142,21 +142,24 @@ def rebuild_stripe_cache():
 
         for member in member_array:
 
+            row = {
+                'stripe_id': member['stripe_id'],
+                'created_on': member['stripe_created_on'],
+                'email': member['stripe_email'],
+                'full_name': member['stripe_full_name'],
+                'discord_username': member['stripe_discord_username'],
+                'last_payment_status': member['stripe_last_payment_status'],
+                'subscription_id': member['stripe_subscription_id'],
+                'subscription_description': member['stripe_subscription_description'],
+                'subscription_status': member['stripe_subscription_status'],
+                'subscription_created_on': member['stripe_subscription_created_on'],
+                'coupon': member['stripe_coupon_description'],
+            }
+            row.update({f: member[f] for f in identity.stripe.WAIVER_FIELDS})
+
             cur = db.cursor()
-            cur.execute("insert into stripe_cache_new values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s)",
-            (
-                member['stripe_id'], 
-                member['stripe_created_on'],
-                member['stripe_email'],
-                member['stripe_full_name'],
-                member['stripe_discord_username'],
-                member['stripe_last_payment_status'],
-                member['stripe_subscription_id'], 
-                member['stripe_subscription_description'],
-                member['stripe_subscription_status'], 
-                member['stripe_subscription_created_on'],
-                member['stripe_coupon_description']
-            ))
+            cur.execute("insert into stripe_cache_new (%s) values (%s)" % (
+                ', '.join(row), ', '.join(['%s'] * len(row))), tuple(row.values()))
 
         db.commit()
 
@@ -196,10 +199,29 @@ def refresh_members_table():
                 m.last_seen_in_stripe = %s,
                 m.changed_on = m.changed_on
         """, (last_rebuild,))
+        copy_waiver_from_stripe_cache(cur)
         db.commit()
 
     app.logger.info("finished updating members table")
 
+
+
+# Copy liability waiver details from stripe_cache to members, for one member or all of them.
+# The fields describe one signature, so they're copied as a set, and only when Stripe has a
+# signed waiver. A member who drops out of stripe_cache keeps their last waiver
+def copy_waiver_from_stripe_cache(cur, stripe_id=None):
+    waiver_set = ', '.join('m.%s = sc.%s' % (f, f) for f in identity.stripe.WAIVER_FIELDS)
+    sql_stmt = """
+        UPDATE members m
+        JOIN stripe_cache sc ON sc.stripe_id = m.stripe_id
+        SET %s, m.changed_on = m.changed_on
+        WHERE NULLIF(sc.waiver_signed_at, '') IS NOT NULL
+    """ % waiver_set
+
+    if stripe_id is None:
+        cur.execute(sql_stmt)
+    else:
+        cur.execute(sql_stmt + " AND m.stripe_id = %s", (stripe_id,))
 
 
 # Nightly email report of members who no longer have a Stripe subscription
@@ -977,6 +999,7 @@ def insert_new_member(stripe_id=None, r=None):
         'emergency_contact_name, emergency_contact_mobile, is_vetted, locker_num, email)'
         'values (%s,%s,%s,%s,%s,%s,%s,%s,%s,(select email from stripe_cache where stripe_id = %s))',
         insert_data + (stripe_id,))
+    copy_waiver_from_stripe_cache(cur, stripe_id)
     db.commit()
     db.close()
     
@@ -1053,7 +1076,11 @@ def get_member(stripe_id=None):
                 sc.subscription_status,
                 sc.last_payment_status,
                 COALESCE(sc.discord_username, m.discord_username, '') AS discord_username,
-                m.vetting_doc IS NOT NULL AS has_vetting_doc
+                m.vetting_doc IS NOT NULL AS has_vetting_doc,
+                m.waiver_signed_name,
+                m.waiver_signed_at,
+                m.waiver_version,
+                m.waiver_esign_consent
             FROM
                 members m
             LEFT JOIN
