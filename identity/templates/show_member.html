@@ -61,6 +61,24 @@
 
     <div class="card" style="margin-bottom:10px;">
       <div class="card-header bg-primary-subtle">
+        <h5 class="card-title">Liability Waiver:</h5>
+      </div>
+      <div class="card-body">
+      <table class="table table-striped">
+        {% if member.waiver_signed_at %}
+        <tr><th style="width:200px;">Signed By:</th><td>{{ member.waiver_signed_name }}</td></tr>
+        <tr><th style="width:200px;">Signed At:</th><td>{{ member.waiver_signed_at }}</td></tr>
+        <tr><th style="width:200px;">Waiver Version:</th><td>{{ member.waiver_version }}</td></tr>
+        <tr><th style="width:200px;">E-Sign Consent:</th><td>{{ member.waiver_esign_consent }}</td></tr>
+        {% else %}
+        <tr><th style="width:200px;">Waiver Status:</th><td>No Waiver on File</td></tr>
+        {% endif %}
+      </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header bg-primary-subtle">
         <h5 class="card-title">Attachments:</h5>
       </div>
       <div class="card-body">
