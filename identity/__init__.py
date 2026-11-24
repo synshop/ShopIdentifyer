@@ -1449,6 +1449,34 @@ def get_vetted_members_without_form():
     return cur.fetchall()
 
 
+# Active members with no signed liability waiver. A waiver counts if it's in either table,
+# since stripe_cache can have a new signature before the members refresh copies it over
+def get_active_members_without_waiver():
+    db = get_db()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    stmt = """
+        SELECT
+            m.stripe_id,
+            COALESCE(NULLIF(s.full_name, ''), m.full_name) AS full_name,
+            COALESCE(NULLIF(s.email, ''), m.email) AS email,
+            COALESCE(NULLIF(s.discord_username, ''), m.discord_username) AS discord_username
+        FROM
+            members m
+        JOIN
+            stripe_cache s on s.stripe_id = m.stripe_id
+        WHERE
+            m.member_status = "ACTIVE"
+        AND
+            NULLIF(m.waiver_signed_at, '') IS NULL
+        AND
+            NULLIF(s.waiver_signed_at, '') IS NULL
+        ORDER BY
+            full_name
+    """
+    cur.execute(stmt)
+    return cur.fetchall()
+
+
 # Build the Vetted Member List report as a PDF
 def build_vetted_member_list_pdf(names, generated_on):
 
@@ -1773,6 +1801,12 @@ def show_report_vetted_member_list_pdf():
 @login_required
 def show_report_missing_vetted_membership_form():
     return render_template('report_missing_vetted_membership_form.html', members=get_vetted_members_without_form())
+
+
+@app.route('/admin/reports/missing-liability-waiver', methods=['GET'])
+@login_required
+def show_report_missing_liability_waiver():
+    return render_template('report_missing_liability_waiver.html', members=get_active_members_without_waiver())
 
 
 @app.route('/admin/reactivate', methods=['GET'])
