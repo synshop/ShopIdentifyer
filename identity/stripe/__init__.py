@@ -70,9 +70,12 @@ def get_customer_attributes(subscription):
         user["stripe_last_payment_status"] = last_payment_intent.status
 
     sub_array = []
-    subs = stripe.Subscription.retrieve(subscription.id)
+    subs = stripe.Subscription.retrieve(subscription.id, expand=['items.data.plan.product'])
     for s in subs['items']['data']:
-        sub_array.append(s.plan.nickname)
+        # Prices without a nickname fall back to the product name, then the price id
+        product = s.plan.product
+        product_name = None if isinstance(product, str) else getattr(product, 'name', None)
+        sub_array.append(s.plan.nickname or product_name or s.plan.id)
     
     subs_string = ' + '.join(sub_array)
     user["stripe_subscription_description"] = subs_string
