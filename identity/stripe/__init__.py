@@ -82,15 +82,32 @@ def get_customer_attributes(subscription):
 
     return user
 
+# When a customer has more than one subscription, the cache keeps the one with the
+# best status (earliest in this list), then the most recently created
+SUBSCRIPTION_STATUS_PREFERENCE = ("active", "trialing", "past_due", "unpaid", "incomplete", "paused")
+
+def _subscription_rank(subscription):
+    status = subscription.status
+    status_rank = SUBSCRIPTION_STATUS_PREFERENCE.index(status) \
+        if status in SUBSCRIPTION_STATUS_PREFERENCE else len(SUBSCRIPTION_STATUS_PREFERENCE)
+    return (status_rank, -subscription.created)
+
 def get_stripe_customers(incremental=False):
-    
-    member_array = []
-    subscriptions = stripe.Subscription.list()
 
-    for subscription in subscriptions.auto_paging_iter():
-        member_array.append(get_customer_attributes(subscription))
+    # stripe_cache holds one row per customer, so pick one subscription for each
+    by_customer = {}
+    for subscription in stripe.Subscription.list().auto_paging_iter():
+        current = by_customer.get(subscription.customer)
+        if current is None:
+            by_customer[subscription.customer] = subscription
+            continue
 
-    return member_array
+        keep, drop = sorted((current, subscription), key=_subscription_rank)
+        app.logger.warning("customer %s has more than one subscription, keeping %s (%s) over %s (%s)",
+                           subscription.customer, keep.id, keep.status, drop.id, drop.status)
+        by_customer[subscription.customer] = keep
+
+    return [get_customer_attributes(s) for s in by_customer.values()]
 
 def get_realtime_stripe_info(subscription_id=None):
     
